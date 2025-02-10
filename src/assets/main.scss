@@ -2,3 +2,7 @@
   $primary: hsl(261.6, 51.87%, 47.25%)
 );
 @use 'bulma/sass';
+
+html {
+  overflow: auto;
+}
