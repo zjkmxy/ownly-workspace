@@ -22,7 +22,7 @@
 @media (min-width: 1024px) {
   .wrapper {
     margin: auto;
-    margin-right: 100px;
+    margin-right: 10vw;
     min-width: 350px;
   }
 }
