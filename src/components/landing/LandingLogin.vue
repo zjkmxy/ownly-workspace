@@ -20,7 +20,7 @@
                 type="email"
                 placeholder="name@email.com"
                 v-model="emailAddress"
-                @keyup.enter="submitEmail"
+                @keyup.enter="emailSubmit"
               />
               <span class="icon is-small is-left">
                 <FontAwesomeIcon :icon="fas.faEnvelope" />
@@ -33,7 +33,7 @@
             <p v-if="emailError" class="help is-danger">{{ emailError }}</p>
           </div>
 
-          <button class="button mt-3 is-primary is-fullwidth" @click="submitEmail">Continue</button>
+          <button class="button mt-3 is-primary is-fullwidth" @click="emailSubmit">Continue</button>
         </div>
       </div>
     </Transition>
@@ -56,15 +56,25 @@
                 maxlength="6"
                 minlength="6"
                 v-model="codeInput"
-                @keyup.enter="codeSubmit"
+                @keyup="codeSubmit"
               />
               <span class="icon is-small is-left">
                 <FontAwesomeIcon :icon="fas.faKey" />
               </span>
               <p v-if="codeError" class="help is-danger">{{ codeError }}</p>
             </div>
+
+            <a class="is-size-7 mt-3 ml-1 has-text-primary" @click="codeCancel">
+              Go back to the previous step
+            </a>
           </div>
         </div>
+      </div>
+    </Transition>
+
+    <Transition @after-leave="afterTransition">
+      <div class="anim-rtl-fade p-4 has-text-centered" v-if="showSuccess">
+        <FontAwesomeIcon class="success" :icon="fas.faCircleCheck" />
       </div>
     </Transition>
   </div>
@@ -83,6 +93,7 @@ import ndn from '@/services/ndn'
 const showLoading = ref(false)
 const showEmail = ref(true)
 const showCode = ref(false)
+const showSuccess = ref(false)
 const afterTransition = ref(() => {})
 
 const loadStatus = ref('')
@@ -95,7 +106,7 @@ const codeError = ref('')
 const codeSubmit = ref(() => {})
 
 /** Validate email and move to step 2 */
-function submitEmail() {
+function emailSubmit() {
   if (!showEmail.value) return
 
   if (!emailAddress.value) {
@@ -110,6 +121,12 @@ function submitEmail() {
 
   afterTransition.value = startChallenge
   showEmail.value = false
+}
+
+/** Cancel code verification and go back to email step */
+function codeCancel() {
+  afterTransition.value = () => (showEmail.value = true)
+  showCode.value = false
 }
 
 async function startChallenge() {
@@ -146,19 +163,22 @@ async function startChallenge() {
 
       return new Promise((resolve) => {
         codeSubmit.value = () => {
-          if (codeInput.value.length !== 6) {
-            codeError.value = 'Invalid verification code'
-            return
-          }
+          if (codeInput.value.length !== 6) return
 
           afterTransition.value = () => {
             showLoading.value = true
+            loadStatus.value = 'Completing challenge ...'
             resolve(codeInput.value)
           }
           showCode.value = false
         }
       })
     })
+
+    // We are certified!
+    loadStatus.value = 'Certified!'
+    afterTransition.value = () => (showSuccess.value = true)
+    showLoading.value = false
   } catch (err) {
     alert('Failed to setup NDN service') // TODO
     console.error(err)
@@ -172,6 +192,11 @@ async function startChallenge() {
 .wrapper {
   display: flex;
   flex-direction: column;
+}
+
+.success {
+  color: white;
+  font-size: 5rem;
 }
 
 @media (min-width: 1024px) {
