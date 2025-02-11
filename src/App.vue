@@ -6,7 +6,12 @@
 
   <Transition>
     <!-- This view will show the main app -->
-    <RouterView v-if="showMain" class="anim-fade" />
+    <main v-if="showMain" class="full-h has-background-primary is-fullwidth anim-fade">
+      <NavBar></NavBar>
+      <div class="box full-h-nav">
+        <RouterView />
+      </div>
+    </main>
   </Transition>
 </template>
 
@@ -14,7 +19,14 @@
 import { RouterView } from 'vue-router'
 import { ref } from 'vue'
 import LandingView from '@/views/LandingView.vue'
+import NavBar from './components/NavBar.vue'
 
 const showLogin = ref(true)
 const showMain = ref(false)
 </script>
+
+<style scoped lang="scss">
+main > .box.full-h-nav {
+  height: calc(100vh - 20px - 40px);
+}
+</style>

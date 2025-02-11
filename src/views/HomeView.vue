@@ -1,8 +1,4 @@
-<template>
-  <main class="full-h has-background-primary is-fullwidth">
-    <div class="box full-h"></div>
-  </main>
-</template>
+<template></template>
 
 <script setup lang="ts"></script>
 

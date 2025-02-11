@@ -1,6 +1,6 @@
 <template>
   <div class="wrapper">
-    <img alt="logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
+    <img alt="logo" class="logo" src="@/assets/logo.svg" />
     <hr class="logo-sep" />
 
     <div class="header is-size-4">
