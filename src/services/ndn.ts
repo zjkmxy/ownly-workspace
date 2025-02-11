@@ -4,6 +4,9 @@ interface NDNAPI {
 
     /** Callback on connectivity change */
     onConnectivityChange(callback: (connected: boolean, router: string) => void): void;
+
+    /** NDNCERT email verfication challenge */
+    ndncertEmail(email: string, code: (status: string) => Promise<string>): Promise<void>;
 }
 /**
  * Named Data Networking Service

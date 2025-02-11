@@ -43,10 +43,27 @@
         <div class="header is-size-4 has-text-weight-semibold">Let's verify you</div>
 
         <div class="login mt-2">
-          We have sent a verification code to your email address. Enter the code below to continue.
-          <input class="input mt-3" type="text" placeholder="123456" />
-
-          <button class="button mt-3 is-primary is-fullwidth">Continue</button>
+          <div class="field">
+            <label>
+              We have sent a verification code to your email address. Enter the code below to
+              continue.
+            </label>
+            <div class="control has-icons-left mt-3">
+              <input
+                :class="{ input: true, 'is-danger': codeError }"
+                type="text"
+                placeholder="123456"
+                maxlength="6"
+                minlength="6"
+                v-model="codeInput"
+                @keyup.enter="codeSubmit"
+              />
+              <span class="icon is-small is-left">
+                <FontAwesomeIcon :icon="fas.faKey" />
+              </span>
+              <p v-if="codeError" class="help is-danger">{{ codeError }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </Transition>
@@ -63,15 +80,19 @@ import { fas } from '@fortawesome/free-solid-svg-icons'
 import * as utils from '@/utils/email'
 import ndn from '@/services/ndn'
 
-let showLoading = ref(false)
-let showEmail = ref(true)
-let showCode = ref(false)
-let afterTransition = ref(() => {})
+const showLoading = ref(false)
+const showEmail = ref(true)
+const showCode = ref(false)
+const afterTransition = ref(() => {})
 
-let loadStatus = ref('')
+const loadStatus = ref('')
 
-let emailAddress = ref('varunpatil@ucla.edu')
-let emailError = ref('')
+const emailAddress = ref('varunpatil@ucla.edu')
+const emailError = ref('')
+
+const codeInput = ref('')
+const codeError = ref('')
+const codeSubmit = ref(() => {})
 
 /** Validate email and move to step 2 */
 function submitEmail() {
@@ -98,12 +119,51 @@ async function startChallenge() {
     // Entrypoint - make sure service is loaded
     loadStatus.value = 'Setting up NDN service ...'
     await ndn.setup()
+
+    // Connect to testbed
+    loadStatus.value = 'Connecting to NDN testbed ...'
+    await ndn.api.connectTestbed()
+
+    // Start NDN challenge
+    loadStatus.value = 'Starting NDNCERT challenge ...'
+    await ndn.api.ndncertEmail(emailAddress.value, (status) => {
+      codeError.value = ''
+      codeInput.value = ''
+
+      switch (status) {
+        case 'need-code':
+          break
+        case 'wrong-code':
+          codeError.value = 'Invalid verification code'
+          break
+        default:
+          codeError.value = 'Verfication error: ' + status
+          break
+      }
+
+      afterTransition.value = () => (showCode.value = true)
+      showLoading.value = false
+
+      return new Promise((resolve) => {
+        codeSubmit.value = () => {
+          if (codeInput.value.length !== 6) {
+            codeError.value = 'Invalid verification code'
+            return
+          }
+
+          afterTransition.value = () => {
+            showLoading.value = true
+            resolve(codeInput.value)
+          }
+          showCode.value = false
+        }
+      })
+    })
   } catch (err) {
     alert('Failed to setup NDN service') // TODO
+    console.error(err)
     showLoading.value = false
-    afterTransition.value = () => {
-      showEmail.value = true
-    }
+    afterTransition.value = () => (showEmail.value = true)
   }
 }
 </script>
