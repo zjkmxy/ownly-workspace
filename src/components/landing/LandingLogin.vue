@@ -11,8 +11,26 @@
         <div class="header is-size-4 has-text-weight-semibold">Get started</div>
 
         <div class="login mt-2">
-          First, you need an email address to verify your unique identity.
-          <input class="input mt-3" type="email" placeholder="name@email.com" />
+          <div class="field">
+            <label>First, you need an email address to verify your unique identity.</label>
+            <div class="control has-icons-left has-icons-right mt-3">
+              <input
+                :class="{ input: true, 'is-danger': emailError }"
+                type="email"
+                placeholder="name@email.com"
+                v-model="emailAddress"
+                @keyup.enter="submitEmail"
+              />
+              <span class="icon is-small is-left">
+                <FontAwesomeIcon :icon="fas.faEnvelope" />
+              </span>
+
+              <span class="icon is-small is-right" v-if="emailError">
+                <FontAwesomeIcon :icon="fas.faExclamationTriangle" />
+              </span>
+            </div>
+            <p v-if="emailError" class="help is-danger">{{ emailError }}</p>
+          </div>
 
           <button class="button mt-3 is-primary is-fullwidth" @click="submitEmail">Continue</button>
         </div>
@@ -38,12 +56,30 @@
 import { ref } from 'vue'
 import Spinner from '@/components/Spinner.vue'
 
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { fas } from '@fortawesome/free-solid-svg-icons'
+import * as utils from '@/utils/email'
+
 let showLoading = ref(false)
 let showEmail = ref(true)
 let showCode = ref(false)
 let afterTransition = ref(() => {})
 
+let emailAddress = ref('')
+let emailError = ref('')
+
+/** Validate email and move to step 2 */
 function submitEmail() {
+  if (!emailAddress.value) {
+    emailError.value = 'Email address is required'
+    return
+  }
+
+  if (!utils.validateEmail(emailAddress.value)) {
+    emailError.value = 'Invalid email address'
+    return
+  }
+
   afterTransition.value = () => (showLoading.value = true)
   showEmail.value = false
 }

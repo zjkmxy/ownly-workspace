@@ -1,0 +1,29 @@
+.anim-fade {
+  &.v-enter-active,
+  &.v-leave-active {
+    transition: opacity 0.2s ease;
+  }
+  &.v-enter-from {
+    opacity: 0;
+  }
+  &.v-leave-to {
+    opacity: 0;
+  }
+}
+
+.anim-rtl-fade {
+  &.v-enter-active,
+  &.v-leave-active {
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+  &.v-enter-from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  &.v-leave-to {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
