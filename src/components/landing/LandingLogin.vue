@@ -90,8 +90,10 @@ import { fas } from '@fortawesome/free-solid-svg-icons'
 import * as utils from '@/utils/email'
 import ndn from '@/services/ndn'
 
-const showLoading = ref(false)
-const showEmail = ref(true)
+const emit = defineEmits(['login'])
+
+const showLoading = ref(true)
+const showEmail = ref(false)
 const showCode = ref(false)
 const showSuccess = ref(false)
 const afterTransition = ref(() => {})
@@ -133,10 +135,6 @@ async function startChallenge() {
   showLoading.value = true
 
   try {
-    // Entrypoint - make sure service is loaded
-    loadStatus.value = 'Setting up NDN service ...'
-    await ndn.setup()
-
     // Connect to testbed
     loadStatus.value = 'Connecting to NDN testbed ...'
     await ndn.api.connectTestbed()
@@ -179,13 +177,36 @@ async function startChallenge() {
     loadStatus.value = 'Certified!'
     afterTransition.value = () => (showSuccess.value = true)
     showLoading.value = false
+    setTimeout(() => emit('login'), 1500)
   } catch (err) {
-    alert('Failed to setup NDN service') // TODO
     console.error(err)
     showLoading.value = false
     afterTransition.value = () => (showEmail.value = true)
   }
 }
+
+async function setup() {
+  try {
+    // Entrypoint - make sure service is loaded
+    loadStatus.value = 'Setting up NDN service ...'
+    await ndn.setup()
+
+    // Check if we are already certified
+    if (await ndn.api.hasTestbedKey()) {
+      afterTransition.value = () => (showSuccess.value = true)
+      showLoading.value = false
+      setTimeout(() => emit('login'), 250)
+      return
+    }
+
+    afterTransition.value = () => (showEmail.value = true)
+    showLoading.value = false
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+setup()
 </script>
 
 <style scoped lang="scss">

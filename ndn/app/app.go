@@ -7,25 +7,79 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"syscall/js"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/engine/face"
+	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/security/keychain"
 	"github.com/named-data/ndnd/std/security/ndncert"
 	spec_ndncert "github.com/named-data/ndnd/std/security/ndncert/tlv"
 )
 
 //go:embed testbed.root.cert
 var testbedRootCert []byte
+var testbedPrefix = enc.Name{enc.NewGenericComponent("ndn")}
 
 type App struct {
-	face   face.Face
-	engine ndn.Engine
+	face     face.Face
+	engine   ndn.Engine
+	store    ndn.Store
+	keychain ndn.KeyChain
 }
 
 func NewApp() *App {
-	return &App{}
+	return &App{
+		store: object.NewMemoryStore(),
+	}
+}
+
+func (a *App) SetupKeyChain(api js.Value) (err error) {
+	a.keychain, err = keychain.NewKeyChainJS(api, a.store)
+	if err != nil {
+		log.Error(nil, "app.SetupKeyChain: %+v", err)
+	}
+	return err
+}
+
+func (a *App) HasTestbedKey() bool {
+	// TODO: move most of this to NDNd
+	now := time.Now()
+
+	for _, id := range a.keychain.Identities() {
+		if !testbedPrefix.IsPrefix(id.Name()) {
+			continue
+		}
+
+		for _, key := range id.Keys() {
+			for _, cname := range key.UniqueCerts() {
+				certw, _ := a.store.Get(cname.Prefix(-1), true)
+				if certw == nil {
+					log.Error(nil, "Failed to find certificate", "name", cname)
+					continue
+				}
+
+				cert, _, err := spec_2022.Spec{}.ReadData(enc.NewBufferView(certw))
+				if err != nil {
+					log.Error(nil, "Failed to decode certificate", "err", err)
+					continue
+				}
+
+				notBefore, notAfter := cert.Signature().Validity()
+				if notBefore.Before(now) && notAfter.After(now) {
+					log.Info(nil, "Found valid testbed cert", "name", cert.Name())
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 func (a *App) ConnectTestbed() error {
@@ -51,6 +105,7 @@ func (a *App) NdncertEmail(email string, CodeCb func(status string) string) (err
 		return err
 	}
 
+	// Request a certificate from NDNCERT
 	certRes, err := certClient.RequestCert(ndncert.RequestCertArgs{
 		Challenge: &ndncert.ChallengePin{
 			// Email: email,
@@ -80,7 +135,13 @@ func (a *App) NdncertEmail(email string, CodeCb func(status string) string) (err
 		return err
 	}
 
-	fmt.Fprintf(os.Stderr, "Certification response: %s\n", certRes)
+	// Store the certificate and the signer key
+	if err = a.keychain.InsertKey(certRes.Signer); err != nil {
+		return err
+	}
+	if err = a.keychain.InsertCert(certRes.CertWire.Join()); err != nil {
+		return err
+	}
 
 	return nil
 }

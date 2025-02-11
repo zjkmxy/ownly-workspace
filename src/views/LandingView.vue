@@ -1,13 +1,15 @@
 <template>
   <main class="full-h has-background-primary is-fullwidth">
     <LandingLeft class="left" />
-    <LandingLogin class="login" />
+    <LandingLogin class="login" @login="emit('login')" />
   </main>
 </template>
 
 <script setup lang="ts">
 import LandingLeft from '@/components/landing/LandingLeft.vue'
 import LandingLogin from '@/components/landing/LandingLogin.vue'
+
+const emit = defineEmits(['login'])
 </script>
 
 <style scoped lang="scss">

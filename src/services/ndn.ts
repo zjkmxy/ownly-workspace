@@ -1,4 +1,12 @@
+import { KeyChainJS } from "./keychain";
+
 interface NDNAPI {
+    /** Setup the keychain */
+    setupKeyChain(keyChain: KeyChainJS): Promise<void>;
+
+    /** Check if there is a valid testbed key in the keychain */
+    hasTestbedKey(): Promise<boolean>;
+
     /** Connect to the global NDN testbed */
     connectTestbed(): Promise<void>;
 
@@ -35,6 +43,10 @@ class NDNService {
 
         go.run(result.instance);
         this.api = await ndnPromise as NDNAPI;
+
+        // Provide JS APIs
+        await this.api.setupKeyChain(new KeyChainJS());
+
         console.log("NDN API setup is complete", this.api);
     }
 }
