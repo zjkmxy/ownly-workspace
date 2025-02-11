@@ -6,9 +6,9 @@
 
   <Transition>
     <!-- This view will show the main app -->
-    <main v-if="showMain" class="full-h has-background-primary is-fullwidth anim-fade">
+    <main v-if="showMain" class="full-h is-fullwidth anim-fade">
       <NavBar></NavBar>
-      <div class="box full-h-nav">
+      <div class="container">
         <RouterView />
       </div>
     </main>
@@ -26,7 +26,12 @@ const showMain = ref(false)
 </script>
 
 <style scoped lang="scss">
-main > .box.full-h-nav {
-  height: calc(100vh - 20px - 40px);
+main {
+  display: flex;
+  flex-direction: row;
+  > .container.full-h-nav {
+    margin: 0 !important;
+    height: calc(100vh);
+  }
 }
 </style>

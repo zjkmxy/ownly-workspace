@@ -11,8 +11,6 @@ html {
 
 main.full-h {
   min-height: 100vh;
-  padding: 10px;
-
   > .box.full-h {
     height: calc(100vh - 20px);
   }
