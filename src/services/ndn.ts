@@ -17,6 +17,8 @@ class NDNService {
     constructor() { }
 
     async setup() {
+        if (this.api) return;
+
         const go = new (<any>window).Go();
         const result = await WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject);
 

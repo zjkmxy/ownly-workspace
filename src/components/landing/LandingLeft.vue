@@ -39,7 +39,8 @@ hr.logo-sep {
 
 @media (min-width: 1024px) {
   .wrapper {
-    margin: auto 90px;
+    margin: auto 20px;
+    margin-left: 120px;
     padding-bottom: 80px;
   }
 

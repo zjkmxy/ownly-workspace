@@ -1,5 +1,5 @@
 <template>
-  <main class="has-background-primary is-fullwidth p-2">
+  <main class="full-h has-background-primary is-fullwidth">
     <LandingLeft class="left" />
     <LandingLogin class="login" />
   </main>
