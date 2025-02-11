@@ -28,3 +28,7 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# WebAssembly
+*.wasm
+wasm_exec.js

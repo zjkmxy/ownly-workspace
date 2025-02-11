@@ -1,0 +1,37 @@
+interface NDNAPI {
+    /** Connect to the global NDN testbed */
+    connectTestbed(): Promise<void>;
+
+    /** Callback on connectivity change */
+    onConnectivityChange(callback: (connected: boolean, router: string) => void): void;
+}
+/**
+ * Named Data Networking Service
+ */
+class NDNService {
+    public api!: NDNAPI;
+
+    constructor() { }
+
+    async setup() {
+        const go = new (<any>window).Go();
+        const result = await WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject);
+
+        // Callback given by WebAssembly to set the NDN API
+        const ndnPromise = new Promise((resolve, reject) => {
+            const cancel = setTimeout(() => reject(new Error("NDN API not set")), 5000);
+            (<any>window).setNdn = (ndn: any) => {
+                (<any>window).setNdn = undefined;
+                (<any>window).ndnApi = ndn;
+                resolve(ndn);
+                clearTimeout(cancel);
+            };
+        });
+
+        go.run(result.instance);
+        this.api = await ndnPromise as NDNAPI;
+        console.log("NDN API setup is complete", this.api);
+    }
+}
+
+export default new NDNService();

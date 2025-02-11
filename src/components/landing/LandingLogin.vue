@@ -1,8 +1,9 @@
 <template>
   <div class="wrapper">
     <Transition @after-leave="afterTransition">
-      <div class="loading anim-fade has-text-white-bis" v-if="showLoading">
+      <div class="loading anim-fade has-text-white-bis has-text-centered" v-if="showLoading">
         <Spinner />
+        {{ loadStatus }}
       </div>
     </Transition>
 
@@ -58,18 +59,24 @@ import Spinner from '@/components/Spinner.vue'
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
+
 import * as utils from '@/utils/email'
+import ndn from '@/services/ndn'
 
 let showLoading = ref(false)
 let showEmail = ref(true)
 let showCode = ref(false)
 let afterTransition = ref(() => {})
 
-let emailAddress = ref('')
+let loadStatus = ref('')
+
+let emailAddress = ref('varunpatil@ucla.edu')
 let emailError = ref('')
 
 /** Validate email and move to step 2 */
 function submitEmail() {
+  if (!showEmail.value) return
+
   if (!emailAddress.value) {
     emailError.value = 'Email address is required'
     return
@@ -80,8 +87,24 @@ function submitEmail() {
     return
   }
 
-  afterTransition.value = () => (showLoading.value = true)
+  afterTransition.value = startChallenge
   showEmail.value = false
+}
+
+async function startChallenge() {
+  showLoading.value = true
+
+  try {
+    // Entrypoint - make sure service is loaded
+    loadStatus.value = 'Setting up NDN service ...'
+    await ndn.setup()
+  } catch (err) {
+    alert('Failed to setup NDN service') // TODO
+    showLoading.value = false
+    afterTransition.value = () => {
+      showEmail.value = true
+    }
+  }
 }
 </script>
 
