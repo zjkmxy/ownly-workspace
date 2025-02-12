@@ -15,10 +15,6 @@ export function escapeUrlName(input: string) {
         .replace(/\//g, "-");
 }
 
-function unescape(input: string) {
-
-}
-
 /**
  * Unescape URL parameter to NDN name.
  * @param name Escaped NDN name
