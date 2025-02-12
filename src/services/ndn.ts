@@ -48,21 +48,26 @@ export interface WorkspaceAPI {
     svs_alo: SVSALOAPI;
 };
 
+/** API of the SVS ALO instance */
 export interface SVSALOAPI {
-    /** Publish content to SVS ALO */
-    publish(content: Uint8Array): Promise<void>;
-
     /** Set the error callback */
     set_on_error(): Promise<void>;
 
-    /** Subscribe to a publisher */
-    subscribe_publisher(prefix: string, callback: (pub: {
-        publisher: string,
-        content: Uint8Array,
-        boot_time: number,
-        seq_num: number,
-    }) => void): Promise<void>;
+    /** Publish chat message to SVS ALO */
+    publish_chat(message: Uint8Array): Promise<void>;
+
+    /** Set SVS ALO subscription callbacks */
+    subscribe(params: {
+        on_chat: SvsAloSub<{ message: Uint8Array; }>,
+    }): Promise<void>;
 };
+
+/** Subscription to SVS ALO */
+type SvsAloSub<T> = (info: {
+    publisher: string;
+    boot_time: number;
+    seq_num: number;
+}, pub: T) => void;
 
 /**
  * Named Data Networking Service

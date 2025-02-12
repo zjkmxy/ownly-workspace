@@ -61,6 +61,11 @@ export class Workspace {
         this.api = await ndn.api.make_workspace(this.metadata.name);
         console.log("Workspace started", this.api);
         (<any>window).wksp = this.api;
+        this.api.svs_alo.subscribe({
+            on_chat: (info, pub) => {
+                console.log("Received SVS ALO content", info, pub);
+            },
+        });
     }
 
     stop() {

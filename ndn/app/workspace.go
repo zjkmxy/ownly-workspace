@@ -9,12 +9,14 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn/svs_ps"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security"
 	sig "github.com/named-data/ndnd/std/security/signer"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	"github.com/named-data/ndnd/std/utils"
+	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
 
 func (a *App) CreateWorkspace(nameStr string) (nameStrFinal string, err error) {
@@ -133,19 +135,6 @@ func (a *App) MakeWorkspace(nameStr string) (api js.Value, err error) {
 
 func SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 	return js.ValueOf(map[string]any{
-		// publish(content: Uint8Array): Promise<void>;
-		"publish": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			content := utils.JsArrayToSlice(p[0])
-
-			name, _, err := alo.Publish(enc.Wire{content})
-			if err != nil {
-				return nil, err
-			}
-			// TODO: persist state
-
-			return js.ValueOf(name.String()), nil
-		}),
-
 		// set_on_error(): Promise<void>;
 		"set_on_error": js.FuncOf(func(this js.Value, p []js.Value) any {
 			alo.SetOnError(func(err error) {
@@ -154,37 +143,66 @@ func SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 			return nil
 		}),
 
-		// subscribe_publisher(name: string, callback): Promise<void>;
-		"subscribe_publisher": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			name, err := enc.NameFromStr(p[0].String())
+		// publish_chat(message: Uint8Array): Promise<void>;
+		"publish_chat": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			pub := &tlv.Message{
+				Chat: &tlv.ChatMessage{
+					Message: utils.JsArrayToSlice(p[0]),
+				},
+			}
+
+			name, _, err := alo.Publish(pub.Encode())
 			if err != nil {
 				return nil, err
 			}
-			callback := p[1]
+			// TODO: persist state
 
-			alo.SubscribePublisher(name, func(pub ndn_sync.SvsPub) {
-				publisher := js.ValueOf(pub.Publisher.String())
+			return js.ValueOf(name.String()), nil
+		}),
 
-				if !pub.IsSnapshot {
-					callback.Invoke(js.ValueOf(map[string]any{
-						"publisher": publisher,
-						"content":   utils.SliceToJsArray(pub.Content.Join()),
-						"boot_time": js.ValueOf(pub.BootTime),
-						"seq_num":   js.ValueOf(pub.SeqNum),
+		// subscribe(name: string, on_chat): Promise<void>;
+		"subscribe": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			// Send a single publication to the subscriber
+			sendPub := func(pub ndn_sync.SvsPub) {
+				info := js.ValueOf(map[string]any{
+					"publisher": js.ValueOf(pub.Publisher.String()),
+					"boot_time": js.ValueOf(pub.BootTime),
+					"seq_num":   js.ValueOf(pub.SeqNum),
+				})
+
+				pmsg, err := tlv.ParseMessage(enc.NewWireView(pub.Content), true)
+				if err != nil {
+					log.Error(nil, "Failed to parse publication", "err", err)
+					return
+				}
+
+				// All possible message type conversions listed here
+				switch {
+				case pmsg.Chat != nil:
+					p[0].Get("on_chat").Invoke(info, js.ValueOf(map[string]any{
+						"message": utils.SliceToJsArray(pmsg.Chat.Message),
 					}))
+				default:
+					log.Error(nil, "Unknown message type", "msg", pmsg)
+				}
+			}
+
+			// Subscribe to the SVS instance
+			alo.SubscribePublisher(enc.Name{}, func(pub ndn_sync.SvsPub) {
+				if !pub.IsSnapshot {
+					sendPub(pub)
 				} else {
 					snapshot, err := svs_ps.ParseHistorySnap(enc.NewWireView(pub.Content), true)
 					if err != nil {
 						panic(err) // we encode this, so this never happens
 					}
-
 					for _, entry := range snapshot.Entries {
-						callback.Invoke(js.ValueOf(map[string]any{
-							"publisher": publisher,
-							"content":   utils.SliceToJsArray(entry.Content.Join()),
-							"boot_time": js.ValueOf(pub.BootTime),
-							"seq_num":   js.ValueOf(entry.SeqNo),
-						}))
+						sendPub(ndn_sync.SvsPub{
+							Publisher: pub.Publisher,
+							Content:   entry.Content,
+							BootTime:  pub.BootTime,
+							SeqNum:    entry.SeqNo,
+						})
 					}
 				}
 
