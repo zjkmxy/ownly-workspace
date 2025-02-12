@@ -119,11 +119,11 @@ function formatTime(item: IChatMessage) {
 
 /** Send a message to the workspace */
 async function send(event: Event) {
-  if (!outMessage.value) return
   if (event instanceof KeyboardEvent) {
     if (event.shiftKey) return
     event.preventDefault()
   }
+  if (!outMessage.value) return
 
   // Send the message to the workspace
   const message = {
