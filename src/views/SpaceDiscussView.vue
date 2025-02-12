@@ -31,7 +31,7 @@
               <div class="avatar">
                 <img
                   v-if="!skipHeader(item, index)"
-                  :src="`https://api.dicebear.com/9.x/pixel-art/svg?seed=${item.user}`"
+                  :src="utils.makeAvatar(item.user)"
                   alt="avatar"
                 />
               </div>
@@ -72,7 +72,9 @@ import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
+import * as utils from '@/utils'
 import * as workspace from '@/services/workspace'
+
 import type { IChatMessage } from '@/services/types'
 
 const scroller = ref<InstanceType<typeof DynamicScroller>>()
