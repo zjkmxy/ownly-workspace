@@ -106,14 +106,13 @@ function skipHeader(item: IChatMessage, index: number) {
 
 /** Format the time of a chat message */
 function formatTime(item: IChatMessage) {
-  const opts: Intl.DateTimeFormatOptions = {
+  const formatter = new Intl.DateTimeFormat(undefined, {
     year: 'numeric',
     month: 'numeric',
     day: 'numeric',
     hour: 'numeric',
     minute: 'numeric',
-  }
-  const formatter = new Intl.DateTimeFormat(undefined, opts)
+  })
   return formatter.format(new Date(item.ts))
 }
 
