@@ -3,44 +3,22 @@ import ndn from "@/services/ndn";
 import storage from "@/services/storage";
 import type { IWorkspace } from "@/services/types";
 import { useToast } from "vue-toast-notification";
+import * as utils from "@/utils/index";
 
-/**
- * Escape NDN name to URL parameter.
- * All / are replaced with -
- * All - are replaced with %2D
- */
-export function escapeUrlName(input: string) {
-    if (input[0] === "/") input = input.slice(1);
-    return input
-        .replace(/-/g, "--")
-        .replace(/\//g, "-");
-}
-
-/**
- * Unescape URL parameter to NDN name.
- * @param name Escaped NDN name
- */
-export function unescapeUrlName(input: string) {
-    let output = input
-        .replace(/--/g, "||")
-        .replace(/-/g, "/")
-        .replace(/\|\|/g, "-");
-    if (output[0] !== "/") output = "/" + output;
-    return output;
-}
+let active: Workspace | null = null;
 
 /**
  * Setup workspace from URL parameter or redirect to home.
  * @returns Workspace object or null if not found
  */
-export async function setupWorkspaceOrRedirect(): Promise<IWorkspace | null> {
+export async function setupOrRedir(): Promise<Workspace | null> {
     // Unescape workspace name from URL
     let space = String(router.currentRoute.value?.params?.space);
     if (!space) {
         router.replace("/");
         return null;
     }
-    space = unescapeUrlName(space);
+    space = utils.unescapeUrlName(space);
 
     // Get workspace configuration from storage
     const wksp = await storage.db.workspaces.get(space);
@@ -51,8 +29,31 @@ export async function setupWorkspaceOrRedirect(): Promise<IWorkspace | null> {
         return null;
     }
 
-    // Start state vector sync
-    ndn.startWorkspace(wksp.name);
+    // Start workspace if not already active
+    if (active?.metadata.name !== wksp.name) {
+        active?.stop();
+        active = new Workspace(wksp);
+        await active.start();
+    }
 
-    return wksp;
+    return active;
+}
+
+/**
+ * Workspace service
+ */
+export class Workspace {
+    constructor(public metadata: IWorkspace) {
+    }
+
+    async start() {
+        // Start connection to testbed
+        await ndn.api.connect_testbed();
+
+        // TODO: start SVS instance
+    }
+
+    stop() {
+        // TODO: Stop SVS instance
+    }
 }

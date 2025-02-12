@@ -132,11 +132,11 @@ async function startChallenge() {
   try {
     // Connect to testbed
     loadStatus.value = 'Connecting to NDN testbed ...'
-    await ndn.api.connectTestbed()
+    await ndn.api.connect_testbed()
 
     // Start NDN challenge
     loadStatus.value = 'Starting NDNCERT challenge ...'
-    await ndn.api.ndncertEmail(emailAddress.value, (status) => {
+    await ndn.api.ndncert_email(emailAddress.value, (status) => {
       codeError.value = ''
       codeInput.value = ''
 
@@ -186,7 +186,7 @@ async function setup() {
     await ndn.setup()
 
     // Check if we are already certified
-    if (await ndn.api.hasTestbedKey()) {
+    if (await ndn.api.has_testbed_key()) {
       showLoading.value = false
       showSuccess.value = true
       setTimeout(() => emit('login'), 250)

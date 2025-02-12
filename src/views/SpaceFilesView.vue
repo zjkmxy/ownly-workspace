@@ -3,11 +3,14 @@
 </template>
 
 <script setup lang="ts">
-import * as utils from '@/utils/index'
+import * as workspace from '@/services/workspace'
+import { ref } from 'vue'
+
+const wksp = ref(null as workspace.Workspace | null)
 
 async function setup() {
-  const wksp = await utils.setupWorkspaceOrRedirect()
-  if (!wksp) return // redirects
+  wksp.value = await workspace.setupOrRedir()
+  if (!wksp.value) return
 }
 
 setup()

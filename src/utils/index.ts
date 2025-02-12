@@ -1,2 +1,2 @@
 export * from "./email";
-export * from "./workspace";
+export * from "./url";
