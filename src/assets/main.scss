@@ -16,6 +16,12 @@ main.full-h {
   }
 }
 
+/** Thin scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(0, 0%, 90%) hsl(0, 0%, 100%);
+}
+
 .modal-content {
   padding: 20px;
 }

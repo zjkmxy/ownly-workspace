@@ -22,3 +22,21 @@ export function unescapeUrlName(input: string) {
     if (output[0] !== "/") output = "/" + output;
     return output;
 }
+
+/**
+ * Encode JSON data to Uint8Array
+ * @param data Data to encode
+ */
+export function byteify<T>(data: T): Uint8Array {
+    const encoder = new TextEncoder();
+    return encoder.encode(JSON.stringify(data));
+}
+
+/**
+ * Decode JSON data from Uint8Array
+ * @param data Data to decode
+ */
+export function unbyteify<T>(data: Uint8Array): T {
+    const decoder = new TextDecoder();
+    return JSON.parse(decoder.decode(data));
+}

@@ -4,6 +4,7 @@ import router from './router';
 
 import './assets/main.scss';
 import 'vue-toast-notification/dist/theme-default.css';
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 
 const app = createApp(App);
 

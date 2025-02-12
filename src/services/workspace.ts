@@ -1,7 +1,7 @@
 import router from "@/router";
-import ndn, { type WorkspaceAPI } from "@/services/ndn";
+import ndn, { type SvsAloPubInfo, type WorkspaceAPI } from "@/services/ndn";
 import storage from "@/services/storage";
-import type { IWorkspace } from "@/services/types";
+import type { IChatMessage, IWorkspace } from "@/services/types";
 import { useToast } from "vue-toast-notification";
 import * as utils from "@/utils/index";
 
@@ -50,9 +50,12 @@ export async function setupOrRedir(): Promise<Workspace | null> {
 export class Workspace {
     public api!: WorkspaceAPI;
 
-    constructor(public metadata: IWorkspace) {
-    }
+    constructor(public metadata: IWorkspace) { }
 
+    /**
+     * Start the workspace.
+     * This will connect to the testbed and start the SVS instance.
+     */
     async start() {
         // Start connection to testbed
         await ndn.api.connect_testbed();
@@ -63,16 +66,37 @@ export class Workspace {
 
         // Setup all subscriptions
         this.api.svs_alo.subscribe({
-            on_chat: (info, pub) => {
-                console.log("Received SVS ALO content", info, pub);
-            },
+            on_chat: (info, pub) => this.onChat(info, utils.unbyteify(pub.message)),
         });
 
         // Start SVS instance
         await this.api.start();
     }
 
-    stop() {
-        // TODO: Stop SVS instance
+    /**
+     * Stop the workspace.
+     * This will stop the SVS instance and disconnect from the testbed.
+     */
+    async stop() {
+        await this.api.stop();
+    }
+
+    /**
+     * Send chat message to SVS ALO
+     * @param pub Chat message
+     */
+    async sendChat(pub: IChatMessage) {
+        await this.api.svs_alo.publish_chat(utils.byteify(pub));
+    }
+
+    /**
+     * Process incoming chat message
+     * @param info Publication metadata
+     * @param msg Chat message
+     */
+    onChat(info: SvsAloPubInfo, msg: IChatMessage): void {
+        console.log("Received SVS ALO chat", info, msg);
     }
 }
+
+

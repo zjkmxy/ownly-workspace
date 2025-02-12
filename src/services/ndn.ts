@@ -45,11 +45,11 @@ export interface WorkspaceAPI {
     stop(): Promise<void>;
 
     /** SVS ALO instance */
-    svs_alo: SVSALOAPI;
+    svs_alo: SvsAloApi;
 };
 
 /** API of the SVS ALO instance */
-export interface SVSALOAPI {
+export interface SvsAloApi {
     /** Set the error callback */
     set_on_error(): Promise<void>;
 
@@ -63,11 +63,14 @@ export interface SVSALOAPI {
 };
 
 /** Subscription to SVS ALO */
-type SvsAloSub<T> = (info: {
+export type SvsAloSub<T> = (info: SvsAloPubInfo, pub: T) => void;
+
+/** Metadata of received publication */
+export type SvsAloPubInfo = {
     publisher: string;
     boot_time: number;
     seq_num: number;
-}, pub: T) => void;
+};
 
 /**
  * Named Data Networking Service
