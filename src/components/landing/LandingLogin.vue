@@ -1,14 +1,12 @@
 <template>
   <div class="wrapper">
-    <Transition @after-leave="afterTransition">
-      <div class="loading anim-fade has-text-white-bis has-text-centered" v-if="showLoading">
+    <Transition name="fade-rtl" mode="out-in">
+      <div class="loading has-text-white-bis has-text-centered" v-if="showLoading">
         <Spinner />
         {{ loadStatus }}
       </div>
-    </Transition>
 
-    <Transition @after-leave="afterTransition">
-      <div class="box anim-rtl-fade p-4" v-if="showEmail">
+      <div class="box anim-rtl-fade p-4" v-else-if="showEmail">
         <div class="header is-size-4 has-text-weight-semibold">Get started</div>
 
         <div class="login mt-2">
@@ -36,10 +34,8 @@
           <button class="button mt-3 is-primary is-fullwidth" @click="emailSubmit">Continue</button>
         </div>
       </div>
-    </Transition>
 
-    <Transition @after-leave="afterTransition">
-      <div class="box anim-rtl-fade p-4" v-if="showCode">
+      <div class="box anim-rtl-fade p-4" v-else-if="showCode">
         <div class="header is-size-4 has-text-weight-semibold">Let's verify you</div>
 
         <div class="login mt-2">
@@ -70,10 +66,8 @@
           </div>
         </div>
       </div>
-    </Transition>
 
-    <Transition @after-leave="afterTransition">
-      <div class="anim-rtl-fade p-4 has-text-centered" v-if="showSuccess">
+      <div class="anim-rtl-fade p-4 has-text-centered" v-else-if="showSuccess">
         <FontAwesomeIcon class="success" :icon="fas.faCircleCheck" />
       </div>
     </Transition>
@@ -98,7 +92,6 @@ const showLoading = ref(true)
 const showEmail = ref(false)
 const showCode = ref(false)
 const showSuccess = ref(false)
-const afterTransition = ref(() => {})
 
 const loadStatus = ref('')
 
@@ -123,14 +116,14 @@ function emailSubmit() {
     return
   }
 
-  afterTransition.value = startChallenge
   showEmail.value = false
+  startChallenge()
 }
 
 /** Cancel code verification and go back to email step */
 function codeCancel() {
-  afterTransition.value = () => (showEmail.value = true)
   showCode.value = false
+  showEmail.value = true
 }
 
 async function startChallenge() {
@@ -158,33 +151,31 @@ async function startChallenge() {
           break
       }
 
-      afterTransition.value = () => (showCode.value = true)
       showLoading.value = false
+      showCode.value = true
 
       return new Promise((resolve) => {
         codeSubmit.value = () => {
           if (codeInput.value.length !== 6) return
 
-          afterTransition.value = () => {
-            showLoading.value = true
-            loadStatus.value = 'Completing challenge ...'
-            resolve(codeInput.value)
-          }
           showCode.value = false
+          showLoading.value = true
+          loadStatus.value = 'Completing challenge ...'
+          resolve(codeInput.value)
         }
       })
     })
 
     // We are certified!
     loadStatus.value = 'Certified!'
-    afterTransition.value = () => (showSuccess.value = true)
     showLoading.value = false
+    showSuccess.value = true
     setTimeout(() => emit('login'), 1500)
   } catch (err) {
     $toast.error('Failed to complete challenge')
     console.error(err)
     showLoading.value = false
-    afterTransition.value = () => (showEmail.value = true)
+    showEmail.value = true
   }
 }
 
@@ -196,14 +187,14 @@ async function setup() {
 
     // Check if we are already certified
     if (await ndn.api.hasTestbedKey()) {
-      afterTransition.value = () => (showSuccess.value = true)
       showLoading.value = false
+      showSuccess.value = true
       setTimeout(() => emit('login'), 250)
       return
     }
 
-    afterTransition.value = () => (showEmail.value = true)
     showLoading.value = false
+    showEmail.value = true
   } catch (err) {
     console.error(err)
   }

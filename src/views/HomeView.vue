@@ -1,33 +1,35 @@
 <template>
-  <section class="hero">
-    <div class="hero-body pb-1">
-      <p class="title">Dashboard</p>
-      <p class="subtitle mt-2">You can create or join one or more workspaces below</p>
-    </div>
-  </section>
+  <div>
+    <section class="hero">
+      <div class="hero-body pb-1">
+        <p class="title">Dashboard</p>
+        <p class="subtitle mt-2">You can create or join one or more workspaces below</p>
+      </div>
+    </section>
 
-  <div class="spacelist">
-    <Workspace
-      v-for="ws in workspaces"
-      :key="ws.name"
-      :name="ws.label"
-      :subtitle="ws.name"
-      @click="open(ws)"
-    />
+    <div class="spacelist">
+      <Workspace
+        v-for="ws in workspaces"
+        :key="ws.name"
+        :name="ws.label"
+        :subtitle="ws.name"
+        @click="open(ws)"
+      />
 
-    <div class="workspace card">
-      <div class="card-content">
-        <div class="content">
-          <button class="button is-fullwidth mb-2" @click="showCreate = true">Create New</button>
-          <button class="button is-primary is-fullwidth">Join Workspace</button>
+      <div class="workspace card">
+        <div class="card-content">
+          <div class="content">
+            <button class="button is-fullwidth mb-2" @click="showCreate = true">Create New</button>
+            <button class="button is-primary is-fullwidth">Join Workspace</button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <Transition>
-    <CreateWorkspaceModal v-if="showCreate" @create="refreshList" @close="showCreate = false" />
-  </Transition>
+    <Transition name="fade-2">
+      <CreateWorkspaceModal v-if="showCreate" @create="refreshList" @close="showCreate = false" />
+    </Transition>
+  </div>
 </template>
 
 <script setup lang="ts">

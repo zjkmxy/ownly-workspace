@@ -1,28 +1,28 @@
-.anim-fade {
-  &.v-enter-active,
-  &.v-leave-active {
+.fade-2 {
+  &-enter-active,
+  &-leave-active {
     transition: opacity 0.2s ease;
   }
-  &.v-enter-from {
+  &-enter-from {
     opacity: 0;
   }
-  &.v-leave-to {
+  &-leave-to {
     opacity: 0;
   }
 }
 
-.anim-rtl-fade {
-  &.v-enter-active,
-  &.v-leave-active {
+.fade-rtl {
+  &-enter-active,
+  &-leave-active {
     transition:
       opacity 0.2s ease,
       transform 0.2s ease;
   }
-  &.v-enter-from {
+  &-enter-from {
     opacity: 0;
     transform: translateX(10px);
   }
-  &.v-leave-to {
+  &-leave-to {
     opacity: 0;
     transform: translateX(-10px);
   }

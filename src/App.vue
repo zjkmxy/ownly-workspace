@@ -1,15 +1,17 @@
 <template>
-  <Transition @after-leave="showMain = true">
+  <Transition name="fade-2" mode="out-in">
     <!-- This view will set up WASM and make sure we have a key -->
-    <LandingView v-if="showLogin" @login="showLogin = false" class="anim-fade" />
-  </Transition>
+    <LandingView v-if="showLogin" @login="showLogin = false" />
 
-  <Transition>
     <!-- This view will show the main app -->
-    <main v-if="showMain" class="full-h is-fullwidth anim-fade router-view">
+    <main v-else-if="!showLogin" class="full-h is-fullwidth router-view">
       <NavBar></NavBar>
       <div class="container">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <Transition name="fade-2" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </RouterView>
       </div>
     </main>
   </Transition>
@@ -22,7 +24,6 @@ import LandingView from '@/views/LandingView.vue'
 import NavBar from './components/NavBar.vue'
 
 const showLogin = ref(true)
-const showMain = ref(false)
 </script>
 
 <style scoped lang="scss">

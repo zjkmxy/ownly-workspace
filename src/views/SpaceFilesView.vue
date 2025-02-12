@@ -1,4 +1,6 @@
-<template>Hello World</template>
+<template>
+  <div>Hello World</div>
+</template>
 
 <script setup lang="ts">
 import * as utils from '@/utils/index'
