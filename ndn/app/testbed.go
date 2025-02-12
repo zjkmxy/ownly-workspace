@@ -1,6 +1,7 @@
 package app
 
 import (
+	_ "embed"
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -10,6 +11,10 @@ import (
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 )
+
+//go:embed testbed.root.cert
+var testbedRootCert []byte
+var testbedPrefix = enc.Name{enc.NewGenericComponent("ndn")}
 
 func (a *App) GetTestbedKey() ndn.Signer {
 	// TODO: move most of this to NDNd
@@ -25,6 +30,11 @@ func (a *App) GetTestbedKey() ndn.Signer {
 				certw, _ := a.store.Get(cname.Prefix(-1), true)
 				if certw == nil {
 					log.Error(nil, "Failed to find certificate", "name", cname)
+					continue
+				}
+
+				// TODO: actually validate the certificate with testbed root cert
+				if cname.At(-2).String() != "NDNCERT" {
 					continue
 				}
 

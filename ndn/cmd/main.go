@@ -50,6 +50,11 @@ func main() {
 		"create_workspace": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return me.CreateWorkspace(p[0].String())
 		}),
+
+		// make_workspace(name: string): Promise<WorkspaceAPI>;
+		"make_workspace": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			return me.MakeWorkspace(p[0].String())
+		}),
 	}
 
 	js.Global().Call("set_ndn", js.ValueOf(api))

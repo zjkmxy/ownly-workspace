@@ -3,20 +3,14 @@
 package app
 
 import (
-	_ "embed"
 	"syscall/js"
 
-	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/engine/face"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security/keychain"
 )
-
-//go:embed testbed.root.cert
-var testbedRootCert []byte
-var testbedPrefix = enc.Name{enc.NewGenericComponent("ndn")}
 
 type App struct {
 	face     face.Face

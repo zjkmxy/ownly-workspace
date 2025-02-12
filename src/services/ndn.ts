@@ -28,7 +28,17 @@ interface NDNAPI {
 
     /** Create new workspace */
     create_workspace(name: string): Promise<string>;
+
+    /** Make an existing workspace */
+    make_workspace(name: string): Promise<WorkspaceAPI>;
 }
+
+export interface WorkspaceAPI {
+    /** Name of the workspace */
+    name: string;
+    /** Start the workspace */
+};
+
 /**
  * Named Data Networking Service
  */
