@@ -9,19 +9,20 @@ import (
 	sig "github.com/named-data/ndnd/std/security/signer"
 )
 
-func (a *App) CreateWorkspace(nameStr string) (err error) {
+func (a *App) CreateWorkspace(nameStr string) (cname string, err error) {
 	name, err := enc.NameFromStr(nameStr)
 	if err != nil {
-		return err
+		return
 	}
+	cname = name.String()
 
 	keyName := security.MakeKeyName(name)
 	signer, err := sig.KeygenEcc(keyName, elliptic.P256())
 	if err != nil {
-		return err
+		return
 	}
 	if err = a.keychain.InsertKey(signer); err != nil {
-		return err
+		return
 	}
 
 	// Create self-signed certificate trust anchor
@@ -31,11 +32,11 @@ func (a *App) CreateWorkspace(nameStr string) (err error) {
 		NotAfter:  time.Now().Add(time.Hour * 24 * 365 * 10), // 10 years
 	})
 	if err != nil {
-		return err
+		return
 	}
 	if err = a.keychain.InsertCert(cert.Join()); err != nil {
-		return err
+		return
 	}
 
-	return nil
+	return
 }

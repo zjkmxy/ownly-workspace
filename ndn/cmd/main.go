@@ -46,9 +46,9 @@ func main() {
 			})
 		}),
 
-		// createWorkspace(name: string): Promise<void>;
+		// createWorkspace(name: string): Promise<string>;
 		"createWorkspace": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			return nil, me.CreateWorkspace(p[0].String())
+			return me.CreateWorkspace(p[0].String())
 		}),
 	}
 

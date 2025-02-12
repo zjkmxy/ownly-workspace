@@ -17,7 +17,7 @@ interface NDNAPI {
     ndncertEmail(email: string, code: (status: string) => Promise<string>): Promise<void>;
 
     /** Create new workspace */
-    createWorkspace(name: string): Promise<void>;
+    createWorkspace(name: string): Promise<string>;
 }
 /**
  * Named Data Networking Service
@@ -31,7 +31,7 @@ class NDNService {
         if (this.api) return;
 
         const go = new (<any>window).Go();
-        const result = await WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject);
+        const result = await WebAssembly.instantiateStreaming(fetch("/main.wasm"), go.importObject);
 
         // Callback given by WebAssembly to set the NDN API
         const ndnPromise = new Promise((resolve, reject) => {

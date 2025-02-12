@@ -6,7 +6,7 @@ import type * as types from "./types";
  */
 class StorageService {
     public db = new Dexie('ownly') as Dexie & {
-        workspaces: Dexie.Table<types.IWorkspace, number>;
+        workspaces: Dexie.Table<types.IWorkspace, string>;
     };
 
     constructor() {

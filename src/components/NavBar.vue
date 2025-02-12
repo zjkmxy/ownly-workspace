@@ -1,10 +1,12 @@
 <template>
   <aside class="menu has-background-primary">
-    <img alt="logo" class="logo" src="@/assets/logo.svg" />
+    <router-link to="/" v-slot="{ navigate }">
+      <img alt="logo" class="logo" src="@/assets/logo.svg" @click="navigate" />
+    </router-link>
 
     <p class="menu-label">General</p>
     <ul class="menu-list">
-      <li><a :class="{ 'is-active': route == 'home' }">Dashboard</a></li>
+      <li><router-link to="/">Dashboard</router-link></li>
     </ul>
 
     <p class="menu-label">Settings</p>
@@ -44,7 +46,8 @@ const route = computed(() => router.currentRoute.value.name)
       background-color: transparent;
       color: white;
 
-      &.is-active {
+      &.is-active,
+      &.router-link-active {
         background-color: var(--bulma-body-background-color);
         color: var(---bulma-text-strong);
       }

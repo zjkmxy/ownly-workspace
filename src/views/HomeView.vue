@@ -7,7 +7,13 @@
   </section>
 
   <div class="spacelist">
-    <Workspace v-for="ws in workspaces" :key="ws.name" :name="ws.label" :subtitle="ws.name" />
+    <Workspace
+      v-for="ws in workspaces"
+      :key="ws.name"
+      :name="ws.label"
+      :subtitle="ws.name"
+      @click="open(ws)"
+    />
 
     <div class="workspace card">
       <div class="card-content">
@@ -25,11 +31,16 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+
 import CreateWorkspaceModal from '@/components/home/CreateWorkspaceModal.vue'
 import Workspace from '@/components/home/Workspace.vue'
+
+import router from '@/router'
 import storage from '@/services/storage'
+import * as utils from '@/utils/index'
+
 import type * as types from '@/services/types'
-import { ref } from 'vue'
 
 const showCreate = ref(false)
 const workspaces = ref([] as types.IWorkspace[])
@@ -38,6 +49,15 @@ async function refreshList() {
   workspaces.value = await storage.db.workspaces.toArray()
 }
 refreshList()
+
+function open(ws: types.IWorkspace) {
+  router.push({
+    name: 'space',
+    params: {
+      space: utils.escapeUrlName(ws.name),
+    },
+  })
+}
 </script>
 
 <style scoped lang="scss">

@@ -88,7 +88,7 @@ import Spinner from '@/components/Spinner.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
-import * as utils from '@/utils/email'
+import * as utils from '@/utils/index'
 import ndn from '@/services/ndn'
 
 const emit = defineEmits(['login'])

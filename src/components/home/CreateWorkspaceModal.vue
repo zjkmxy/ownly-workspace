@@ -68,11 +68,11 @@ async function create() {
   try {
     loading.value = true
 
-    await ndn.api.createWorkspace(opts.value.name)
+    const name = await ndn.api.createWorkspace(opts.value.name)
 
     await storage.db.workspaces.put({
       label: opts.value.label,
-      name: opts.value.name,
+      name: name,
       owner: true,
     })
 
