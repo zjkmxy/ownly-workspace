@@ -1,7 +1,7 @@
 import Dexie from 'dexie';
 
 export class KeyChainJS {
-    private db = new Dexie('KeyChain') as Dexie & {
+    private db = new Dexie('keychain') as Dexie & {
         keys: Dexie.Table<{ name: string, blob: Uint8Array; }, number>;
     };
 
@@ -17,6 +17,6 @@ export class KeyChainJS {
     }
 
     public async write(name: string, blob: Uint8Array) {
-        await this.db.keys.add({ name, blob });
+        await this.db.keys.put({ name, blob });
     }
 }

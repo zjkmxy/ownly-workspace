@@ -1,0 +1,63 @@
+package app
+
+import (
+	"encoding/base64"
+	"fmt"
+	"os"
+
+	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/security/ndncert"
+	spec_ndncert "github.com/named-data/ndnd/std/security/ndncert/tlv"
+)
+
+func (a *App) NdncertEmail(email string, CodeCb func(status string) string) (err error) {
+	rootCert, err := base64.StdEncoding.DecodeString(string(testbedRootCert))
+	if err != nil {
+		panic(err)
+	}
+
+	certClient, err := ndncert.NewClient(a.engine, rootCert)
+	if err != nil {
+		return err
+	}
+
+	// Request a certificate from NDNCERT
+	certRes, err := certClient.RequestCert(ndncert.RequestCertArgs{
+		Challenge: &ndncert.ChallengePin{
+			// Email: email,
+			CodeCallback: CodeCb,
+		},
+		OnProfile: func(profile *spec_ndncert.CaProfile) error {
+			fmt.Fprintf(os.Stderr, "NDNCERT CA: %s\n", profile.CaInfo)
+			return nil
+		},
+		OnProbeParam: func(key string) ([]byte, error) {
+			switch key {
+			case ndncert.KwEmail:
+				return []byte(email), nil
+			default:
+				return nil, fmt.Errorf("unknown probe key: %s", key)
+			}
+		},
+		OnChooseKey: func(suggestions []enc.Name) int {
+			return 0 // choose the first key
+		},
+		OnKeyChosen: func(keyName enc.Name) error {
+			fmt.Fprintf(os.Stderr, "Certifying key: %s\n", keyName)
+			return nil
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Store the certificate and the signer key
+	if err = a.keychain.InsertKey(certRes.Signer); err != nil {
+		return err
+	}
+	if err = a.keychain.InsertCert(certRes.CertWire.Join()); err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -6,7 +6,7 @@
 
   <Transition>
     <!-- This view will show the main app -->
-    <main v-if="showMain" class="full-h is-fullwidth anim-fade">
+    <main v-if="showMain" class="full-h is-fullwidth anim-fade router-view">
       <NavBar></NavBar>
       <div class="container">
         <RouterView />
@@ -26,7 +26,7 @@ const showMain = ref(false)
 </script>
 
 <style scoped lang="scss">
-main {
+main.router-view {
   display: flex;
   flex-direction: row;
   > .container.full-h-nav {

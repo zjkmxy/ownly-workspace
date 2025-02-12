@@ -82,8 +82,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import Spinner from '@/components/Spinner.vue'
+import { useToast } from 'vue-toast-notification'
 
+import Spinner from '@/components/Spinner.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
@@ -91,6 +92,7 @@ import * as utils from '@/utils/email'
 import ndn from '@/services/ndn'
 
 const emit = defineEmits(['login'])
+const $toast = useToast()
 
 const showLoading = ref(true)
 const showEmail = ref(false)
@@ -179,6 +181,7 @@ async function startChallenge() {
     showLoading.value = false
     setTimeout(() => emit('login'), 1500)
   } catch (err) {
+    $toast.error('Failed to complete challenge')
     console.error(err)
     showLoading.value = false
     afterTransition.value = () => (showEmail.value = true)

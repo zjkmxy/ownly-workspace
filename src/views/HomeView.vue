@@ -7,6 +7,8 @@
   </section>
 
   <div class="spacelist">
+    <Workspace v-for="ws in workspaces" :key="ws.name" :name="ws.label" :subtitle="ws.name" />
+
     <div class="workspace card">
       <div class="card-content">
         <div class="content">
@@ -18,16 +20,24 @@
   </div>
 
   <Transition>
-    <CreateWorkspaceModal v-if="showCreate" @close="showCreate = false" />
+    <CreateWorkspaceModal v-if="showCreate" @create="refreshList" @close="showCreate = false" />
   </Transition>
 </template>
 
 <script setup lang="ts">
 import CreateWorkspaceModal from '@/components/home/CreateWorkspaceModal.vue'
 import Workspace from '@/components/home/Workspace.vue'
+import storage from '@/services/storage'
+import type * as types from '@/services/types'
 import { ref } from 'vue'
 
 const showCreate = ref(false)
+const workspaces = ref([] as types.IWorkspace[])
+
+async function refreshList() {
+  workspaces.value = await storage.db.workspaces.toArray()
+}
+refreshList()
 </script>
 
 <style scoped lang="scss">
