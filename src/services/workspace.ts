@@ -1,9 +1,12 @@
 import router from "@/router";
 import ndn, { type SvsAloPubInfo, type WorkspaceAPI } from "@/services/ndn";
 import storage from "@/services/storage";
-import type { IChatMessage, IWorkspace } from "@/services/types";
 import { useToast } from "vue-toast-notification";
+import { EventEmitter } from "events";
 import * as utils from "@/utils/index";
+
+import type { IChatMessage, IWorkspace } from "@/services/types";
+import type TypedEmitter from "typed-emitter";
 
 let active: Workspace | null = null;
 
@@ -50,6 +53,10 @@ export async function setupOrRedir(): Promise<Workspace | null> {
 export class Workspace {
     public api!: WorkspaceAPI;
 
+    public events = new EventEmitter() as TypedEmitter<{
+        chat: (msg: IChatMessage) => void;
+    }>;
+
     constructor(public metadata: IWorkspace) { }
 
     /**
@@ -94,8 +101,8 @@ export class Workspace {
      * @param info Publication metadata
      * @param msg Chat message
      */
-    onChat(info: SvsAloPubInfo, msg: IChatMessage): void {
-        console.log("Received SVS ALO chat", info, msg);
+    private onChat(info: SvsAloPubInfo, msg: IChatMessage): void {
+        this.events.emit("chat", msg);
     }
 }
 

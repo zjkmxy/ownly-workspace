@@ -66,7 +66,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -78,24 +78,33 @@ import type { IChatMessage } from '@/services/types'
 const scroller = ref<InstanceType<typeof DynamicScroller>>()
 const wksp = ref(null as workspace.Workspace | null)
 const outMessage = ref(String())
-
 const items = ref([] as IChatMessage[])
 
+onMounted(setup)
+onUnmounted(() => {
+  wksp.value?.events.removeListener('chat', onChatMessage)
+})
+
+/** Set up the workspace and chat */
 async function setup() {
   wksp.value = await workspace.setupOrRedir()
   if (!wksp.value) return
 
   // Scroll to the end of the chat
   scroller.value.scrollToBottom()
-}
-setup()
 
+  // Subscribe to chat messages
+  wksp.value.events.addListener('chat', onChatMessage)
+}
+
+/** Skip the header if the user is the same and the message is within a minute */
 function skipHeader(item: IChatMessage, index: number) {
   if (index === 0) return false
   const prev = items.value[index - 1]
   return prev.user === item.user && item.ts - prev.ts < 1000 * 60
 }
 
+/** Format the time of a chat message */
 function formatTime(item: IChatMessage) {
   const opts: Intl.DateTimeFormatOptions = {
     year: 'numeric',
@@ -108,6 +117,7 @@ function formatTime(item: IChatMessage) {
   return formatter.format(new Date(item.ts))
 }
 
+/** Send a message to the workspace */
 async function send(event: Event) {
   if (!outMessage.value) return
   if (event instanceof KeyboardEvent) {
@@ -123,10 +133,15 @@ async function send(event: Event) {
     message: outMessage.value,
   }
   await wksp.value?.sendChat(message)
-  items.value.push(message)
 
-  // Reset the message box
+  // Add the message to the chat and reset
+  onChatMessage(message)
   outMessage.value = ''
+}
+
+/** Trigger for receiving a chat message */
+function onChatMessage(message: IChatMessage) {
+  items.value.push(message)
   scroller.value.scrollToBottom()
 }
 </script>
