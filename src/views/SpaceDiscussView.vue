@@ -123,7 +123,7 @@ async function send(event: Event) {
     if (event.shiftKey) return
     event.preventDefault()
   }
-  if (!outMessage.value) return
+  if (!outMessage.value.trim()) return
 
   // Send the message to the workspace
   const message = {
