@@ -57,15 +57,19 @@ export class Workspace {
         // Start connection to testbed
         await ndn.api.connect_testbed();
 
-        // Start SVS instance
+        // Set up client and ALO
         this.api = await ndn.api.make_workspace(this.metadata.name);
-        console.log("Workspace started", this.api);
         (<any>window).wksp = this.api;
+
+        // Setup all subscriptions
         this.api.svs_alo.subscribe({
             on_chat: (info, pub) => {
                 console.log("Received SVS ALO content", info, pub);
             },
         });
+
+        // Start SVS instance
+        await this.api.start();
     }
 
     stop() {
