@@ -56,6 +56,12 @@ func (a *App) GetTestbedKey() ndn.Signer {
 	return nil
 }
 
+func (a *App) SetCmdKey(key ndn.Signer) {
+	a.engine.SetCmdSec(key, func(n enc.Name, w enc.Wire, s ndn.Signature) bool {
+		return true
+	})
+}
+
 func (a *App) ConnectTestbed() error {
 	// If we already have a face, it should automatically switch
 	if a.face != nil {

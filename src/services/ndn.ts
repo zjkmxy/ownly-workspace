@@ -34,9 +34,15 @@ interface NDNAPI {
 }
 
 export interface WorkspaceAPI {
-    /** Name of the workspace */
+    /** Name of this user / node */
     name: string;
+    /** Overall prefix of workspace */
+    group: string;
+
     /** Start the workspace */
+    start(): Promise<void>;
+    /** Stop the workspace */
+    stop(): Promise<void>;
 };
 
 /**

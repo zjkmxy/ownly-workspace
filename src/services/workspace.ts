@@ -60,6 +60,7 @@ export class Workspace {
         // Start SVS instance
         this.api = await ndn.api.make_workspace(this.metadata.name);
         console.log("Workspace started", this.api);
+        (<any>window).wksp = this.api;
     }
 
     stop() {

@@ -58,21 +58,24 @@ func (a *App) MakeWorkspace(nameStr string) (api js.Value, err error) {
 		err = fmt.Errorf("no testbed key")
 		return
 	}
+	a.SetCmdKey(key)
 	name := key.KeyName().Prefix(-2) // pop KeyId and KEY
 
 	// Create client object for this workspace
 	client := object.NewClient(a.engine, a.store, nil)
 
+	svsAloGroup := group.
+		Append(enc.NewKeywordComponent("svs")).
+		Append(enc.NewKeywordComponent("alo"))
+
 	// Create new SVS ALO instance
-	svsalo := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+	svsAlo := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
 		Name: name,
 		// InitialState: readState(),
 
 		Svs: ndn_sync.SvSyncOpts{
-			Client: client,
-			GroupPrefix: group.
-				Append(enc.NewKeywordComponent("svs")).
-				Append(enc.NewGenericComponent("alo")),
+			Client:      client,
+			GroupPrefix: svsAloGroup,
 		},
 
 		Snapshot: &ndn_sync.SnapshotNodeHistory{
@@ -81,26 +84,41 @@ func (a *App) MakeWorkspace(nameStr string) (api js.Value, err error) {
 		},
 	})
 
+	routes := []enc.Name{
+		svsAlo.SyncPrefix(),
+		svsAlo.DataPrefix(),
+	}
+
 	apiMap := map[string]any{
 		"name":  js.ValueOf(name.String()),
 		"group": js.ValueOf(group.String()),
 
 		"start": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			for _, route := range routes {
+				if err = a.engine.RegisterRoute(route); err != nil {
+					return nil, err
+				}
+			}
 			if err := client.Start(); err != nil {
 				return nil, err
 			}
-			if err := svsalo.Start(); err != nil {
+			if err := svsAlo.Start(); err != nil {
 				return nil, err
 			}
 			return nil, nil
 		}),
 
 		"stop": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			if err := svsAlo.Stop(); err != nil {
+				return nil, err
+			}
 			if err := client.Stop(); err != nil {
 				return nil, err
 			}
-			if err := svsalo.Stop(); err != nil {
-				return nil, err
+			for _, route := range routes {
+				if err = a.engine.UnregisterRoute(route); err != nil {
+					return nil, err
+				}
 			}
 			return nil, nil
 		}),
