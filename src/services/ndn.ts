@@ -43,6 +43,25 @@ export interface WorkspaceAPI {
     start(): Promise<void>;
     /** Stop the workspace */
     stop(): Promise<void>;
+
+    /** SVS ALO instance */
+    svs_alo: SVSALOAPI;
+};
+
+export interface SVSALOAPI {
+    /** Publish content to SVS ALO */
+    publish(content: Uint8Array): Promise<void>;
+
+    /** Set the error callback */
+    set_on_error(): Promise<void>;
+
+    /** Subscribe to a publisher */
+    subscribe_publisher(prefix: string, callback: (pub: {
+        publisher: string,
+        content: Uint8Array,
+        boot_time: number,
+        seq_num: number,
+    }) => void): Promise<void>;
 };
 
 /**

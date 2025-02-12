@@ -9,6 +9,7 @@ import (
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
+	"github.com/named-data/ndnd/std/ndn/svs_ps"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security"
 	sig "github.com/named-data/ndnd/std/security/signer"
@@ -123,7 +124,75 @@ func (a *App) MakeWorkspace(nameStr string) (api js.Value, err error) {
 			}
 			return nil, nil
 		}),
+
+		"svs_alo": SvsAloJs(svsAlo),
 	}
 
 	return js.ValueOf(apiMap), nil
+}
+
+func SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
+	return js.ValueOf(map[string]any{
+		// publish(content: Uint8Array): Promise<void>;
+		"publish": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			content := utils.JsArrayToSlice(p[0])
+
+			name, _, err := alo.Publish(enc.Wire{content})
+			if err != nil {
+				return nil, err
+			}
+			// TODO: persist state
+
+			return js.ValueOf(name.String()), nil
+		}),
+
+		// set_on_error(): Promise<void>;
+		"set_on_error": js.FuncOf(func(this js.Value, p []js.Value) any {
+			alo.SetOnError(func(err error) {
+				p[0].Invoke(js.ValueOf(err.Error()))
+			})
+			return nil
+		}),
+
+		// subscribe_publisher(name: string, callback): Promise<void>;
+		"subscribe_publisher": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			name, err := enc.NameFromStr(p[0].String())
+			if err != nil {
+				return nil, err
+			}
+			callback := p[1]
+
+			alo.SubscribePublisher(name, func(pub ndn_sync.SvsPub) {
+				publisher := js.ValueOf(pub.Publisher.String())
+
+				if !pub.IsSnapshot {
+					callback.Invoke(js.ValueOf(map[string]any{
+						"publisher": publisher,
+						"content":   utils.SliceToJsArray(pub.Content.Join()),
+						"boot_time": js.ValueOf(pub.BootTime),
+						"seq_num":   js.ValueOf(pub.SeqNum),
+					}))
+				} else {
+					snapshot, err := svs_ps.ParseHistorySnap(enc.NewWireView(pub.Content), true)
+					if err != nil {
+						panic(err) // we encode this, so this never happens
+					}
+
+					for _, entry := range snapshot.Entries {
+						callback.Invoke(js.ValueOf(map[string]any{
+							"publisher": publisher,
+							"content":   utils.SliceToJsArray(entry.Content.Join()),
+							"boot_time": js.ValueOf(pub.BootTime),
+							"seq_num":   js.ValueOf(entry.SeqNo),
+						}))
+					}
+				}
+
+				// TODO: persist state
+
+				return
+			})
+			return nil, nil
+		}),
+	})
 }
