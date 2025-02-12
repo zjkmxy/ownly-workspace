@@ -65,7 +65,6 @@ func (a *App) MakeWorkspace(nameStr string) (api js.Value, err error) {
 	client := object.NewClient(a.engine, a.store, nil)
 
 	svsAloGroup := group.
-		Append(enc.NewKeywordComponent("svs")).
 		Append(enc.NewKeywordComponent("alo"))
 
 	// Create new SVS ALO instance
