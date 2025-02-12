@@ -5,9 +5,20 @@
     </router-link>
 
     <p class="menu-label">General</p>
-    <ul class="menu-list">
-      <li><router-link to="/">Dashboard</router-link></li>
-    </ul>
+
+    <!-- non-workspace general routes -->
+    <template v-if="routeIsDashboard">
+      <ul class="menu-list">
+        <li><router-link to="/">Dashboard</router-link></li>
+      </ul>
+    </template>
+
+    <template v-if="routeIsWorkspace">
+      <ul class="menu-list">
+        <li><router-link :to="linkFiles">Files</router-link></li>
+        <li><router-link :to="linkDiscuss">Discussion</router-link></li>
+      </ul>
+    </template>
 
     <p class="menu-label">Settings</p>
     <ul class="menu-list">
@@ -18,10 +29,22 @@
 </template>
 
 <script setup lang="ts">
-import router from '@/router'
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
-const route = computed(() => router.currentRoute.value.name)
+const route = useRoute()
+
+const routeIsDashboard = computed(() => route.name === 'home')
+const routeIsWorkspace = computed(() => ['files', 'discuss'].includes(String(route.name)))
+
+const linkFiles = computed(() => ({
+  name: 'files',
+  params: { space: route.params.space },
+}))
+const linkDiscuss = computed(() => ({
+  name: 'discuss',
+  params: { space: route.params.space },
+}))
 </script>
 
 <style scoped lang="scss">

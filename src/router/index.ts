@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
-import SpaceHomeView from '@/views/SpaceHomeView.vue';
+import SpaceFilesView from '@/views/SpaceFilesView.vue';
+import SpaceDiscussView from '@/views/SpaceDiscussView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,9 +13,18 @@ const router = createRouter({
     },
     {
       path: '/:space/',
-      name: 'space',
-      component: SpaceHomeView,
-    }
+      name: 'files',
+      component: SpaceFilesView,
+    },
+    {
+      path: '/:space/discuss',
+      name: 'discuss',
+      component: SpaceDiscussView,
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/',
+    },
   ],
 });
 

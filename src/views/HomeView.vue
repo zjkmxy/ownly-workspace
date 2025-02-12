@@ -52,7 +52,7 @@ refreshList()
 
 function open(ws: types.IWorkspace) {
   router.push({
-    name: 'space',
+    name: 'files',
     params: {
       space: utils.escapeUrlName(ws.name),
     },
