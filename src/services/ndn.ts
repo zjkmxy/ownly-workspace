@@ -52,6 +52,13 @@ class NDNService {
 
         console.log("NDN API setup is complete", this.api);
     }
+
+    async startWorkspace(name: string) {
+        // Start connection to testbed
+        await this.api.connectTestbed();
+
+        // TODO: start SVS instance
+    }
 }
 
 export default new NDNService();

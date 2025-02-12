@@ -1,4 +1,5 @@
 import router from "@/router";
+import ndn from "@/services/ndn";
 import storage from "@/services/storage";
 import type { IWorkspace } from "@/services/types";
 import { useToast } from "vue-toast-notification";
@@ -28,15 +29,20 @@ export function unescapeUrlName(input: string) {
     return output;
 }
 
-export async function getWorkspaceOrRedirect(): Promise<IWorkspace | null> {
+/**
+ * Setup workspace from URL parameter or redirect to home.
+ * @returns Workspace object or null if not found
+ */
+export async function setupWorkspaceOrRedirect(): Promise<IWorkspace | null> {
+    // Unescape workspace name from URL
     let space = String(router.currentRoute.value?.params?.space);
     if (!space) {
         router.replace("/");
         return null;
     }
-
     space = unescapeUrlName(space);
 
+    // Get workspace configuration from storage
     const wksp = await storage.db.workspaces.get(space);
     if (!wksp) {
         const $toast = useToast();
@@ -44,6 +50,9 @@ export async function getWorkspaceOrRedirect(): Promise<IWorkspace | null> {
         router.replace("/");
         return null;
     }
+
+    // Start state vector sync
+    ndn.startWorkspace(wksp.name);
 
     return wksp;
 }

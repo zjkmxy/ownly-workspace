@@ -47,6 +47,11 @@ func (a *App) GetTestbedKey() ndn.Signer {
 }
 
 func (a *App) ConnectTestbed() error {
+	// If we already have a face, it should automatically switch
+	if a.face != nil {
+		return nil
+	}
+
 	// TODO: fch and connectivity changes
 	a.face = face.NewWasmWsFace("wss://suns.cs.ucla.edu/ws/", false)
 	a.engine = engine.NewBasicEngine(a.face)

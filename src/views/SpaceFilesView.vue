@@ -6,7 +6,7 @@
 import * as utils from '@/utils/index'
 
 async function setup() {
-  const wksp = await utils.getWorkspaceOrRedirect()
+  const wksp = await utils.setupWorkspaceOrRedirect()
   if (!wksp) return // redirects
 }
 
