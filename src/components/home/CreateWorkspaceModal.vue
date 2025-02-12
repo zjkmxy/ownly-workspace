@@ -52,6 +52,7 @@ import { useToast } from 'vue-toast-notification'
 import Spinner from '../Spinner.vue'
 
 import storage from '@/services/storage'
+import ndn from '@/services/ndn'
 
 const emit = defineEmits(['close', 'create'])
 const $toast = useToast()
@@ -67,6 +68,8 @@ async function create() {
   try {
     loading.value = true
 
+    await ndn.api.createWorkspace(opts.value.name)
+
     await storage.db.workspaces.put({
       label: opts.value.label,
       name: opts.value.name,
@@ -79,7 +82,7 @@ async function create() {
     $toast.success('Workspace created')
   } catch (err) {
     console.error(err)
-    $toast.error('Error creating workspace')
+    $toast.error(`Error creating workspace: ${JSON.stringify(err)}`)
   } finally {
     loading.value = false
   }

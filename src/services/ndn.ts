@@ -15,6 +15,9 @@ interface NDNAPI {
 
     /** NDNCERT email verfication challenge */
     ndncertEmail(email: string, code: (status: string) => Promise<string>): Promise<void>;
+
+    /** Create new workspace */
+    createWorkspace(name: string): Promise<void>;
 }
 /**
  * Named Data Networking Service

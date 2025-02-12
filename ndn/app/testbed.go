@@ -7,10 +7,11 @@ import (
 	"github.com/named-data/ndnd/std/engine"
 	"github.com/named-data/ndnd/std/engine/face"
 	"github.com/named-data/ndnd/std/log"
+	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/spec_2022"
 )
 
-func (a *App) HasTestbedKey() bool {
+func (a *App) GetTestbedKey() ndn.Signer {
 	// TODO: move most of this to NDNd
 	now := time.Now()
 
@@ -36,13 +37,13 @@ func (a *App) HasTestbedKey() bool {
 				notBefore, notAfter := cert.Signature().Validity()
 				if notBefore.Before(now) && notAfter.After(now) {
 					log.Info(nil, "Found valid testbed cert", "name", cert.Name())
-					return true
+					return key.Signer()
 				}
 			}
 		}
 	}
 
-	return false
+	return nil
 }
 
 func (a *App) ConnectTestbed() error {

@@ -21,7 +21,7 @@ func main() {
 
 		// hasTestbedKey(): Promise<boolean>;
 		"hasTestbedKey": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			return me.HasTestbedKey(), nil
+			return me.GetTestbedKey() != nil, nil
 		}),
 
 		// connectTestbed(): Promise<void>;
@@ -44,6 +44,11 @@ func main() {
 				}
 				return code.String()
 			})
+		}),
+
+		// createWorkspace(name: string): Promise<void>;
+		"createWorkspace": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			return nil, me.CreateWorkspace(p[0].String())
 		}),
 	}
 
