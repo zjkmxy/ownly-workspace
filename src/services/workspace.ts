@@ -65,7 +65,7 @@ export class Workspace {
     }>;
 
     private chatDoc = new Y.Doc();
-    private chatPersistence = new IndexeddbPersistence("chat", this.chatDoc);
+    private chatPersistence = new IndexeddbPersistence("chat", this.chatDoc); //TODO: per workspace
     private chatArray = this.chatDoc.getArray<IChatMessage>("chat");
 
     constructor(public metadata: IWorkspace) { }

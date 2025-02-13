@@ -12,6 +12,7 @@
         :items="items"
         :min-item-size="15"
         key-field="uuid"
+        @scroll-end="unreadCount = 0"
       >
         <template #before>
           <div class="title px-4 py-4">#Discussion</div>
@@ -69,6 +70,17 @@
           <FontAwesomeIcon :icon="fas.faPaperPlane" />
         </button>
       </div>
+
+      <Transition name="fade-2">
+        <div
+          class="new-unread tag is-primary"
+          v-if="unreadCount > 0"
+          @click="scroller.scrollToBottom()"
+        >
+          <span class="mr-2">{{ unreadCount }} Unread Messages</span>
+          <FontAwesomeIcon :icon="fas.faArrowDown" />
+        </div>
+      </Transition>
     </template>
   </div>
 </template>
@@ -86,11 +98,17 @@ import * as workspace from '@/services/workspace'
 import type { IChatMessage } from '@/services/types'
 import Spinner from '@/components/Spinner.vue'
 
+// Element references
 const scroller = ref<InstanceType<typeof DynamicScroller>>()
 const chatbox = ref<HTMLTextAreaElement>()
+
+// Data state
 const wksp = ref(null as workspace.Workspace | null)
-const outMessage = ref(String())
 const items = ref(null as IChatMessage[] | null)
+const outMessage = ref(String())
+
+// Show the unread scroll button if the user is not at the bottom
+const unreadCount = ref(0)
 
 onMounted(setup)
 onUnmounted(() => {
@@ -109,7 +127,8 @@ async function setup() {
   wksp.value.events.addListener('chat', onChatMessage)
 
   // Scroll to the end of the chat
-  await nextTick()
+  await nextTick() // load the scroller
+  await nextTick() // figure out sizes
   scroller.value.scrollToBottom()
 }
 
@@ -157,7 +176,14 @@ async function send(event: Event) {
 /** Trigger for receiving a chat message */
 function onChatMessage(message: IChatMessage) {
   items.value!.push(message)
-  scroller.value.scrollToBottom()
+
+  // Scroll to the bottom of the chat if the user is within 200px of the bottom
+  const wrapper = scroller.value.$el
+  if (wrapper.scrollTop + wrapper.clientHeight + 200 >= wrapper.scrollHeight) {
+    scroller.value.scrollToBottom()
+  } else if (message.user !== wksp.value!.api.name) {
+    unreadCount.value++
+  }
 }
 </script>
 
@@ -233,5 +259,13 @@ function onChatMessage(message: IChatMessage) {
       }
     }
   }
+}
+
+.tag.new-unread {
+  cursor: pointer;
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 </style>
