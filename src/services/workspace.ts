@@ -1,10 +1,11 @@
 import router from "@/router";
-import ndn, { type SvsAloPubInfo, type WorkspaceAPI } from "@/services/ndn";
+import ndn, { type WorkspaceAPI } from "@/services/ndn";
 import storage from "@/services/storage";
 import { useToast } from "vue-toast-notification";
 import { EventEmitter } from "events";
 
 import * as Y from 'yjs';
+import { IndexeddbPersistence } from "y-indexeddb";
 import * as utils from "@/utils/index";
 
 import type { IChatMessage, IWorkspace } from "@/services/types";
@@ -60,6 +61,7 @@ export class Workspace {
     }>;
 
     private chatDoc = new Y.Doc();
+    private chatPersistence = new IndexeddbPersistence("chat", this.chatDoc);
     private chatArray = this.chatDoc.getArray<IChatMessage>("chat");
 
     constructor(public metadata: IWorkspace) { }
@@ -130,6 +132,7 @@ export class Workspace {
      * @returns Array of chat messages
      */
     async getChatState(): Promise<IChatMessage[]> {
+        await this.chatPersistence.whenSynced;
         return this.chatArray.toArray();
     }
 }

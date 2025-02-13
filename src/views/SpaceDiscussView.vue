@@ -1,72 +1,79 @@
 <template>
   <div class="outer py-4">
-    <DynamicScroller
-      class="scroller"
-      ref="scroller"
-      :items="items"
-      :min-item-size="15"
-      key-field="uuid"
-    >
-      <template #before>
-        <div class="title px-4 py-4">#Discussion</div>
-      </template>
+    <div class="fixed-center" v-if="!items">
+      <Spinner />
+      Loading your messages ...
+    </div>
 
-      <template #default="{ item, index, active }">
-        <DynamicScrollerItem
-          :item="item"
-          :active="active"
-          :size-dependencies="[item.message]"
-          :data-index="index"
-          :data-active="active"
-          class="chat-message"
-        >
-          <div
-            :class="{
-              'px-4': true,
-              'pt-2': !skipHeader(item, index),
-              'pb-1': true,
-            }"
+    <template v-else>
+      <DynamicScroller
+        class="scroller"
+        ref="scroller"
+        :items="items"
+        :min-item-size="15"
+        key-field="uuid"
+      >
+        <template #before>
+          <div class="title px-4 py-4">#Discussion</div>
+        </template>
+
+        <template #default="{ item, index, active }">
+          <DynamicScrollerItem
+            :item="item"
+            :active="active"
+            :size-dependencies="[item.message]"
+            :data-index="index"
+            :data-active="active"
+            class="chat-message"
           >
-            <div class="holder">
-              <div class="avatar">
-                <img
-                  v-if="!skipHeader(item, index)"
-                  :src="utils.makeAvatar(item.user)"
-                  alt="avatar"
-                />
-              </div>
-
-              <div class="message">
-                <div class="header" v-if="!skipHeader(item, index)">
-                  <span class="name">{{ item.user }}</span>
-                  <span class="time">{{ formatTime(item) }}</span>
+            <div
+              :class="{
+                'px-4': true,
+                'pt-2': !skipHeader(item, index),
+                'pb-1': true,
+              }"
+            >
+              <div class="holder">
+                <div class="avatar">
+                  <img
+                    v-if="!skipHeader(item, index)"
+                    :src="utils.makeAvatar(item.user)"
+                    alt="avatar"
+                  />
                 </div>
 
-                <div class="content">{{ item.message }}</div>
+                <div class="message">
+                  <div class="header" v-if="!skipHeader(item, index)">
+                    <span class="name">{{ item.user }}</span>
+                    <span class="time">{{ formatTime(item) }}</span>
+                  </div>
+
+                  <div class="content">{{ item.message }}</div>
+                </div>
               </div>
             </div>
-          </div>
-        </DynamicScrollerItem>
-      </template>
-    </DynamicScroller>
+          </DynamicScrollerItem>
+        </template>
+      </DynamicScroller>
 
-    <div class="chatbox mt-2 px-4">
-      <textarea
-        class="textarea"
-        rows="2"
-        placeholder="Send a message to start discussing!"
-        v-model="outMessage"
-        @keydown.enter="send"
-      ></textarea>
-      <button class="button mt-2 send" @click="send">
-        <FontAwesomeIcon :icon="fas.faPaperPlane" />
-      </button>
-    </div>
+      <div class="chatbox mt-2 px-4">
+        <textarea
+          class="textarea"
+          rows="2"
+          placeholder="Send a message to start discussing!"
+          v-model="outMessage"
+          @keydown.enter="send"
+        ></textarea>
+        <button class="button mt-2 send" @click="send">
+          <FontAwesomeIcon :icon="fas.faPaperPlane" />
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -76,11 +83,12 @@ import * as utils from '@/utils'
 import * as workspace from '@/services/workspace'
 
 import type { IChatMessage } from '@/services/types'
+import Spinner from '@/components/Spinner.vue'
 
 const scroller = ref<InstanceType<typeof DynamicScroller>>()
 const wksp = ref(null as workspace.Workspace | null)
 const outMessage = ref(String())
-const items = ref([] as IChatMessage[])
+const items = ref(null as IChatMessage[] | null)
 
 onMounted(setup)
 onUnmounted(() => {
@@ -92,20 +100,21 @@ async function setup() {
   wksp.value = await workspace.setupOrRedir()
   if (!wksp.value) return
 
-  // Scroll to the end of the chat
-  scroller.value.scrollToBottom()
-
   // Load the chat messages
   items.value = await wksp.value.getChatState()
 
   // Subscribe to chat messages
   wksp.value.events.addListener('chat', onChatMessage)
+
+  // Scroll to the end of the chat
+  await nextTick()
+  scroller.value.scrollToBottom()
 }
 
 /** Skip the header if the user is the same and the message is within a minute */
 function skipHeader(item: IChatMessage, index: number) {
   if (index === 0) return false
-  const prev = items.value[index - 1]
+  const prev = items.value![index - 1]
   return prev.user === item.user && item.ts - prev.ts < 1000 * 60
 }
 
@@ -144,7 +153,7 @@ async function send(event: Event) {
 
 /** Trigger for receiving a chat message */
 function onChatMessage(message: IChatMessage) {
-  items.value.push(message)
+  items.value!.push(message)
   scroller.value.scrollToBottom()
 }
 </script>
