@@ -60,9 +60,7 @@
               <p v-if="codeError" class="help is-danger">{{ codeError }}</p>
             </div>
 
-            <a class="is-size-7 mt-3 ml-1 has-text-primary-on-scheme" @click="codeCancel">
-              Go back to the previous step
-            </a>
+            <a class="is-size-7 mt-3 ml-1" @click="codeCancel"> Go back to the previous step </a>
           </div>
         </div>
       </div>
