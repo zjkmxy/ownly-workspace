@@ -17,9 +17,9 @@ export class WorkspaceChat {
     this.chatChannels = svdoc.doc.getArray<IChatChannel>('_chan_');
     this.chatMessages = svdoc.doc.getMap<Y.Array<IChatMessage>>('_msg_');
 
-    this.chatChannels.observe(() => {
-      GlobalWkspEvents.emit('chat-channels', this.chatChannels.toArray());
-    });
+    const chanObserver = () => GlobalWkspEvents.emit('chat-channels', this.chatChannels.toArray());
+    this.chatChannels.observe(chanObserver);
+    chanObserver();
 
     this.chatMessages.observeDeep((events) => {
       if (this.events.listenerCount('chat') === 0) return;

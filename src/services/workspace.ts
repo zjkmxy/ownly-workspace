@@ -6,6 +6,8 @@ import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 
 import { WorkspaceChat } from './workspace-chat';
+import { WorkspaceProjManager } from './workspace-proj';
+
 import * as utils from '@/utils/index';
 import storage from '@/services/storage';
 import ndn from '@/services/ndn';
@@ -31,43 +33,47 @@ let active: Workspace | null = null;
  * Workspace service
  */
 export class Workspace {
-  // Workspace API
-  public api!: WorkspaceAPI;
-  public slug!: string;
+  public readonly chat: WorkspaceChat;
+  public readonly proj: WorkspaceProjManager;
 
-  // General group and associated apps
-  private genSvDoc!: SvsYDoc;
-  public chat!: WorkspaceChat;
-
-  constructor(public readonly metadata: IWorkspace) {
-    this.slug = utils.escapeUrlName(metadata.name);
+  private constructor(
+    public readonly metadata: IWorkspace,
+    public readonly slug: string,
+    public readonly api: WorkspaceAPI,
+    public readonly genSvDoc: SvsYDoc,
+  ) {
+    this.chat = new WorkspaceChat(genSvDoc);
+    this.proj = new WorkspaceProjManager(api, genSvDoc);
   }
 
   /**
    * Start the workspace.
    * This will connect to the testbed and start the SVS instance.
    */
-  async start() {
+  private static async start(metadata: IWorkspace): Promise<Workspace> {
     // Start connection to testbed
     await ndn.api.connect_testbed();
 
     // Set up client and ALO
-    this.api = await ndn.api.get_workspace(this.metadata.name);
-    await this.api.start();
-    (<any>window).wksp = this.api;
+    const api = await ndn.api.get_workspace(metadata.name);
+    await api.start();
+    (<any>window).wksp = api;
 
     // Create general SVS group
-    const genGroup = await this.api.svs_alo(`${this.metadata.name}/32=gen`);
-    this.genSvDoc = new SvsYDoc(genGroup, `${this.slug}-gen`);
-    this.chat = new WorkspaceChat(this.genSvDoc);
-    await this.genSvDoc.start();
+    const slug = utils.escapeUrlName(metadata.name);
+    const genGroup = await api.svs_alo(`${metadata.name}/32=gen`);
+    const genSvDoc = new SvsYDoc(genGroup, `${slug}-gen`);
+    await genSvDoc.start();
+
+    // Create workspace object
+    return new Workspace(metadata, slug, api, genSvDoc);
   }
 
   /**
    * Stop the workspace.
    * This will stop the SVS instance and disconnect from the testbed.
    */
-  async stop() {
+  public async stop() {
     await this.genSvDoc?.stop();
     await this.api?.stop();
   }
@@ -76,7 +82,7 @@ export class Workspace {
    * Setup workspace from URL parameter or redirect to home.
    * @returns Workspace object or null if not found
    */
-  static async setupOrRedir(): Promise<Workspace | null> {
+  public static async setupOrRedir(): Promise<Workspace | null> {
     // Unescape workspace name from URL
     let space = String(router.currentRoute.value?.params?.space);
     if (!space) {
@@ -86,19 +92,18 @@ export class Workspace {
     space = utils.unescapeUrlName(space);
 
     // Get workspace configuration from storage
-    const wksp = await storage.db.workspaces.get(space);
-    if (!wksp) {
+    const metadata = await storage.db.workspaces.get(space);
+    if (!metadata) {
       useToast().error(`Workspace not found, have you joined it? <br/> [${space}]`);
       router.replace('/');
       return null;
     }
 
     // Start workspace if not already active
-    if (active?.metadata.name !== wksp.name) {
+    if (active?.metadata.name !== metadata.name) {
       try {
         active?.stop();
-        active = new Workspace(wksp);
-        await active.start();
+        active = await Workspace.start(metadata);
       } catch (e) {
         console.error(e);
         useToast().error(`Failed to start workspace: ${e}`);
