@@ -1,9 +1,8 @@
 import { EventEmitter } from 'events';
 import * as Y from 'yjs';
-import type { IndexeddbPersistence } from 'y-indexeddb';
 
 import type { IChatChannel, IChatMessage } from './types';
-import { GlobalWkspEvents } from './workspace';
+import { GlobalWkspEvents, SvsYDoc } from './workspace';
 
 import type TypedEmitter from "typed-emitter";
 
@@ -14,12 +13,9 @@ export class WorkspaceChat {
         'chat': (channel: string, message: IChatMessage) => void;
     }>;
 
-    constructor(
-        private readonly genDoc: Y.Doc,
-        private readonly genPers: IndexeddbPersistence,
-    ) {
-        this.chatChannels = genDoc.getArray<IChatChannel>("_chan_");
-        this.chatMessages = this.genDoc.getMap<Y.Array<IChatMessage>>("_msg_");
+    constructor(private readonly svdoc: SvsYDoc) {
+        this.chatChannels = svdoc.doc.getArray<IChatChannel>("_chan_");
+        this.chatMessages = svdoc.doc.getMap<Y.Array<IChatMessage>>("_msg_");
 
         this.chatChannels.observe(() => {
             GlobalWkspEvents.emit('chat-channels', this.chatChannels.toArray());
@@ -43,7 +39,7 @@ export class WorkspaceChat {
      * @returns Array of chat channels
      */
     async getChannels(): Promise<IChatChannel[]> {
-        await this.genPers.whenSynced;
+        await this.svdoc.pers.whenSynced;
         return this.chatChannels.toArray();
     };
 
@@ -62,7 +58,7 @@ export class WorkspaceChat {
      * @param channel Chat channel
      */
     private async getArray(channel: string): Promise<Y.Array<IChatMessage>> {
-        await this.genPers.whenSynced;
+        await this.svdoc.pers.whenSynced;
         const array = this.chatMessages.get(channel);
         if (!array) throw new Error("Channel does not exist");
         return array;

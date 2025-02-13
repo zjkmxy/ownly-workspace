@@ -68,19 +68,16 @@ export async function setupOrRedir(): Promise<Workspace | null> {
  * Workspace service
  */
 export class Workspace {
+    // Workspace API
     public api!: WorkspaceAPI;
-    public readonly slug: string;
+    public slug!: string;
 
-    private readonly genDoc = new Y.Doc();
-    private readonly genPers: IndexeddbPersistence;
-    private genSvs!: SvsAloApi;
-
-    public readonly chat: WorkspaceChat;
+    // General group and associated apps
+    private genSvDoc!: SvsYDoc;
+    public chat!: WorkspaceChat;
 
     constructor(public readonly metadata: IWorkspace) {
         this.slug = utils.escapeUrlName(metadata.name);
-        this.genPers = new IndexeddbPersistence(this.slug + "-gen", this.genDoc);
-        this.chat = new WorkspaceChat(this.genDoc, this.genPers);
     }
 
     /**
@@ -97,18 +94,10 @@ export class Workspace {
         (<any>window).wksp = this.api;
 
         // Create general SVS group
-        this.genSvs = await this.api.svs_alo(this.metadata.name + '/32=gen');
-        await this.genSvs.subscribe({
-            on_yjs_delta: (info, pub) => {
-                try { Y.applyUpdateV2(this.genDoc, pub.binary); }
-                catch (e) { console.error("Failed to apply general update", e); }
-            },
-        });
-        await this.genSvs.start();
-        this.genDoc.on("updateV2", async (buf, _1, _2, tx) => {
-            if (!tx.local) return;
-            await this.genSvs.pub_yjs_delta(buf);
-        });
+        const genGroup = await this.api.svs_alo(`${this.metadata.name}/32=gen`);
+        this.genSvDoc = new SvsYDoc(genGroup, `${this.slug}-gen`);
+        this.chat = new WorkspaceChat(this.genSvDoc);
+        await this.genSvDoc.start();
     }
 
     /**
@@ -116,10 +105,42 @@ export class Workspace {
      * This will stop the SVS instance and disconnect from the testbed.
      */
     async stop() {
-        await this.genSvs.stop();
-        await this.api.stop();
-        this.genDoc.destroy();
+        await this.genSvDoc?.stop();
+        await this.api?.stop();
     }
 }
 
+/**
+ * Yjs document backed by an SVS sync group.
+ * Persists to IndexedDB.
+ */
+export class SvsYDoc {
+    public readonly doc = new Y.Doc();
+    public readonly pers: IndexeddbPersistence;
 
+    constructor(
+        public readonly svs: SvsAloApi,
+        public readonly slug: string,
+    ) {
+        this.pers = new IndexeddbPersistence(this.slug, this.doc);
+    }
+
+    async start() {
+        await this.svs.subscribe({
+            on_yjs_delta: (info, pub) => {
+                try { Y.applyUpdateV2(this.doc, pub.binary); }
+                catch (e) { console.error("Failed to apply general update", e); }
+            },
+        });
+        await this.svs.start();
+        this.doc.on("updateV2", async (buf, _1, _2, tx) => {
+            if (!tx.local) return;
+            await this.svs.pub_yjs_delta(buf);
+        });
+    }
+
+    async stop() {
+        await this.svs.stop();
+        this.doc.destroy();
+    }
+}
