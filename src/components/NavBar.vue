@@ -17,7 +17,7 @@
       <ul class="menu-list">
         <li v-for="proj in projects" :key="proj.id">
           <router-link :to="linkProject(proj)" class="chan-name">
-            <FontAwesomeIcon class="mr-1" :icon="fas.faFolder" size="sm" />
+            <FontAwesomeIcon class="mr-1" :icon="fas.faLayerGroup" size="sm" />
             {{ proj.name }}
           </router-link>
         </li>

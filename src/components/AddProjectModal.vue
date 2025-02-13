@@ -16,7 +16,7 @@
               @keyup.enter="create"
             />
             <span class="icon is-small is-left">
-              <FontAwesomeIcon :icon="fas.faFolder" />
+              <FontAwesomeIcon :icon="fas.faLayerGroup" />
             </span>
             <p class="help">
               Projects separate files by purpose or team. Use a short, descriptive name that is easy
