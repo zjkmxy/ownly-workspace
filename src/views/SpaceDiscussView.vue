@@ -22,7 +22,6 @@
           <DynamicScrollerItem
             :item="item"
             :active="active"
-            :size-dependencies="[item.message]"
             :data-index="index"
             :data-active="active"
             class="chat-message"
@@ -39,6 +38,7 @@
                   <img
                     v-if="!skipHeader(item, index)"
                     :src="utils.makeAvatar(item.user)"
+                    :key="item.user"
                     alt="avatar"
                   />
                 </div>
@@ -141,6 +141,9 @@ function skipHeader(item: IChatMessage, index: number) {
 
 /** Format the time of a chat message */
 function formatTime(item: IChatMessage) {
+  if (item.tsStr) return item.tsStr
+  if (!item.ts) return 'Unknown Time'
+
   const formatter = new Intl.DateTimeFormat(undefined, {
     year: 'numeric',
     month: 'numeric',
@@ -148,7 +151,7 @@ function formatTime(item: IChatMessage) {
     hour: 'numeric',
     minute: 'numeric',
   })
-  return formatter.format(new Date(item.ts))
+  return (item.tsStr = formatter.format(new Date(item.ts)))
 }
 
 /** Send a message to the workspace */
@@ -196,6 +199,14 @@ function onChatMessage(message: IChatMessage) {
   .scroller {
     flex: 1;
     overflow-y: auto;
+
+    :deep(.vue-recycle-scroller__item-wrapper) {
+      will-change: scroll-position;
+    }
+
+    :deep(.vue-recycle-scroller__item-view) {
+      will-change: transform;
+    }
   }
 
   .textarea {
@@ -235,6 +246,11 @@ function onChatMessage(message: IChatMessage) {
       border-radius: 5px;
       overflow: hidden;
       margin-right: 10px;
+
+      > img {
+        width: 36px;
+        height: 36px;
+      }
     }
 
     .message {
