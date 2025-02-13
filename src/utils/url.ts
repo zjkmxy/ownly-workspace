@@ -4,10 +4,8 @@
  * All - are replaced with %2D
  */
 export function escapeUrlName(input: string) {
-    if (input[0] === "/") input = input.slice(1);
-    return input
-        .replace(/-/g, "--")
-        .replace(/\//g, "-");
+  if (input[0] === '/') input = input.slice(1);
+  return input.replace(/-/g, '--').replace(/\//g, '-');
 }
 
 /**
@@ -15,12 +13,9 @@ export function escapeUrlName(input: string) {
  * @param name Escaped NDN name
  */
 export function unescapeUrlName(input: string) {
-    let output = input
-        .replace(/--/g, "||")
-        .replace(/-/g, "/")
-        .replace(/\|\|/g, "-");
-    if (output[0] !== "/") output = "/" + output;
-    return output;
+  let output = input.replace(/--/g, '||').replace(/-/g, '/').replace(/\|\|/g, '-');
+  if (output[0] !== '/') output = '/' + output;
+  return output;
 }
 
 /**
@@ -28,8 +23,8 @@ export function unescapeUrlName(input: string) {
  * @param data Data to encode
  */
 export function byteify<T>(data: T): Uint8Array {
-    const encoder = new TextEncoder();
-    return encoder.encode(JSON.stringify(data));
+  const encoder = new TextEncoder();
+  return encoder.encode(JSON.stringify(data));
 }
 
 /**
@@ -37,6 +32,6 @@ export function byteify<T>(data: T): Uint8Array {
  * @param data Data to decode
  */
 export function unbyteify<T>(data: Uint8Array): T {
-    const decoder = new TextDecoder();
-    return JSON.parse(decoder.decode(data));
+  const decoder = new TextDecoder();
+  return JSON.parse(decoder.decode(data));
 }

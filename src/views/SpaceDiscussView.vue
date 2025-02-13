@@ -96,7 +96,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
 import * as utils from '@/utils'
-import * as workspace from '@/services/workspace'
+import { Workspace } from '@/services/workspace'
 
 import type { IChatMessage } from '@/services/types'
 import Spinner from '@/components/Spinner.vue'
@@ -112,7 +112,7 @@ const scroller = ref<InstanceType<typeof DynamicScroller>>()
 const chatbox = ref<HTMLTextAreaElement>()
 
 // Data state
-const wksp = ref(null as workspace.Workspace | null)
+const wksp = ref(null as Workspace | null)
 const items = ref(null as IChatMessage[] | null)
 const outMessage = ref(String())
 
@@ -137,7 +137,7 @@ watch(channelName, setup)
 async function setup() {
   try {
     // Set up the workspace
-    wksp.value = await workspace.setupOrRedir()
+    wksp.value = await Workspace.setupOrRedir()
     if (!wksp.value) return
 
     // Load the chat messages

@@ -44,7 +44,7 @@ import { useToast } from 'vue-toast-notification'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 
-import * as workspace from '@/services/workspace'
+import { Workspace } from '@/services/workspace'
 
 const emit = defineEmits(['close'])
 const $toast = useToast()
@@ -66,7 +66,7 @@ async function create() {
     }
 
     // Get workspace
-    const wksp = await workspace.setupOrRedir()
+    const wksp = await Workspace.setupOrRedir()
     if (!wksp) return
 
     // Check if channel already exists
