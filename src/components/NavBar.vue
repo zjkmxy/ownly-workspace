@@ -16,19 +16,7 @@
       <p class="menu-label">Projects</p>
       <ul class="menu-list">
         <li v-for="proj in projects" :key="proj.id">
-          <router-link :to="linkProject(proj)">
-            <div class="link-inner">
-              <FontAwesomeIcon class="mr-1" :icon="fas.faLayerGroup" size="sm" />
-              {{ proj.name }}
-            </div>
-
-            <button
-              v-if="proj.name === activeProjectName"
-              class="button has-text-black link-button"
-            >
-              <FontAwesomeIcon class="mr-1" :icon="fas.faPlus" size="2xs" />
-            </button>
-          </router-link>
+          <ProjectTree :project="proj" :active="proj.name === activeProjectName" />
         </li>
         <li>
           <a @click="showProjectModal = true">
@@ -83,6 +71,7 @@ import AddProjectModal from './AddProjectModal.vue';
 
 import type { IChatChannel, IProject } from '@/services/types';
 import { GlobalWkspEvents } from '@/services/workspace';
+import ProjectTree from './ProjectTree.vue';
 
 const route = useRoute();
 const routeIsDashboard = computed(() => route.name === 'home');
@@ -97,13 +86,6 @@ const projects = ref([] as IProject[]);
 const showProjectModal = ref(false);
 const activeProjectName = ref(null as string | null);
 
-const linkProject = (project: IProject) => ({
-  name: 'project',
-  params: {
-    space: route.params.space,
-    project: project.name,
-  },
-});
 const linkDiscuss = (channel: IChatChannel) => ({
   name: 'discuss',
   params: {
@@ -171,13 +153,13 @@ onMounted(async () => {
     flex-direction: row;
 
     // Put bulma's padding on the inner element
-    div.link-inner {
+    :deep(div.link-inner) {
       padding-top: 0.5em;
       padding-bottom: 0.5em;
       flex: 1;
     }
 
-    .link-button {
+    :deep(.link-button) {
       margin-right: -6px;
       margin-top: 0.65em;
       padding: 0.2em;
@@ -188,12 +170,12 @@ onMounted(async () => {
     }
 
     &:not(.router-link-active) {
-      .link-button {
+      :deep(.link-button) {
         color: white !important;
       }
     }
     &.router-link-active {
-      .link-button {
+      :deep(.link-button) {
         color: var(--bulma-text-strong) !important;
       }
     }

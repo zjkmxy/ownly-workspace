@@ -14,7 +14,7 @@
           </p>
           <p class="subtitle mt-4">
             Your project is ready to go! <br />
-            Select or upload a file from the sidebar to get started.
+            Select or add a file from the sidebar to get started.
           </p>
         </div>
       </section>
