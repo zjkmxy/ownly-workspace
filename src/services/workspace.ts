@@ -5,7 +5,7 @@ import { EventEmitter } from "events";
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from "y-indexeddb";
 
-import { WorkspaceChat } from "./chat";
+import { WorkspaceChat } from "./workspace-chat";
 import * as utils from "@/utils/index";
 import storage from "@/services/storage";
 import ndn from "@/services/ndn";
