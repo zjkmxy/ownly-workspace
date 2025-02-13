@@ -30,9 +30,5 @@ const showLogin = ref(true)
 main.router-view {
   display: flex;
   flex-direction: row;
-  > .container.full-h-nav {
-    margin: 0 !important;
-    height: calc(100vh);
-  }
 }
 </style>

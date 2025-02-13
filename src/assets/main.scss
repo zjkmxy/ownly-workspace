@@ -11,9 +11,7 @@ html {
 
 main.full-h {
   min-height: 100vh;
-  > .box.full-h {
-    height: calc(100vh - 20px);
-  }
+  overflow-x: hidden;
 }
 
 /** Thin scrollbars */

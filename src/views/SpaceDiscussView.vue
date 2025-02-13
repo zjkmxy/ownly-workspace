@@ -128,6 +128,7 @@ async function setup() {
 
   // Scroll to the end of the chat
   await nextTick() // load the scroller
+  scroller.value.scrollToBottom()
   await nextTick() // figure out sizes
   scroller.value.scrollToBottom()
 }

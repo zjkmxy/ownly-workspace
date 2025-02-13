@@ -14,6 +14,9 @@ export function makeAvatar(seed: string): string {
     }
 
     const res = createAvatar(funEmoji, { seed });
-    AVATAR_CACHE[seed] = res.toDataUri();
+
+    const { svg } = res.toJson();
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    AVATAR_CACHE[seed] = URL.createObjectURL(blob);
     return AVATAR_CACHE[seed];
 }
