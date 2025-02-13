@@ -28,7 +28,7 @@
           <p class="help">A unique NDN name identifier for the workspace, structured like a path</p>
         </div>
 
-        <div class="field">
+        <div class="field has-text-right">
           <div class="control">
             <button class="button is-primary" @click="create">Create</button>
           </div>

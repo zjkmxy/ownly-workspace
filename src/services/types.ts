@@ -20,3 +20,10 @@ export type IChatMessage = {
     /** Cached time string (too expensive) */
     tsStr?: string;
 };
+
+export type IChatChannel = {
+    /** Channel ID */
+    id: number;
+    /** Channel name */
+    name: string;
+};

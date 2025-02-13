@@ -17,7 +17,7 @@ const router = createRouter({
       component: SpaceFilesView,
     },
     {
-      path: '/:space/discuss',
+      path: '/:space/discuss/:channel',
       name: 'discuss',
       component: SpaceDiscussView,
     },

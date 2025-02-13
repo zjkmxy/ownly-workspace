@@ -8,8 +8,15 @@ import * as Y from 'yjs';
 import { IndexeddbPersistence } from "y-indexeddb";
 import * as utils from "@/utils/index";
 
-import type { IChatMessage, IWorkspace } from "@/services/types";
+import type { IChatChannel, IChatMessage, IWorkspace } from "@/services/types";
 import type TypedEmitter from "typed-emitter";
+
+/**
+ * Global events across workspace boundaries
+ */
+export const GlobalWkspEvents = new EventEmitter() as TypedEmitter<{
+    'chat-channels': (channels: IChatChannel[]) => void;
+}>;
 
 /**
  * We keep an active instance of the open workspace.
@@ -59,16 +66,26 @@ export async function setupOrRedir(): Promise<Workspace | null> {
  */
 export class Workspace {
     public api!: WorkspaceAPI;
+    public readonly slug: string;
 
-    public events = new EventEmitter() as TypedEmitter<{
-        chat: (msg: IChatMessage) => void;
+    public readonly events = new EventEmitter() as TypedEmitter<{
+        chat: (channel: string, message: IChatMessage) => void;
     }>;
 
-    private chatDoc = new Y.Doc();
-    private chatPersistence = new IndexeddbPersistence("chat", this.chatDoc); //TODO: per workspace
-    private chatArray = this.chatDoc.getArray<IChatMessage>("chat");
+    private readonly chatDoc = new Y.Doc();
+    private readonly chatChannels = this.chatDoc.getArray<IChatChannel>("_chan_");
+    private readonly chatMessages = this.chatDoc.getMap<Y.Array<IChatMessage>>("_msg_");
+    private readonly chatPersistence: IndexeddbPersistence;
 
-    constructor(public metadata: IWorkspace) { }
+    constructor(public metadata: IWorkspace) {
+        this.slug = utils.escapeUrlName(metadata.name);
+        this.chatPersistence = new IndexeddbPersistence(this.slug + "-chat", this.chatDoc);
+
+        // Set up global event notifications
+        this.chatChannels.observe(() => {
+            GlobalWkspEvents.emit('chat-channels', this.chatChannels.toArray());
+        });
+    }
 
     /**
      * Start the workspace.
@@ -97,13 +114,15 @@ export class Workspace {
             await this.api.svs_alo.publish_chat(buf);
         });
 
-        // Propagate updates to application
-        this.chatArray.observe((event) => {
+        // Propagate chat message updates to listeners
+        this.chatMessages.observeDeep((events) => {
             if (this.events.listenerCount("chat") === 0) return;
-
-            for (const delta of event.changes.added) {
-                for (const c of delta.content.getContent()) {
-                    this.events.emit("chat", c);
+            for (const event of events) {
+                const channel = String(event.path[0]);
+                for (const delta of event.changes.added) {
+                    for (const message of delta.content.getContent()) {
+                        this.events.emit("chat", channel, message);
+                    }
                 }
             }
         });
@@ -124,20 +143,51 @@ export class Workspace {
     }
 
     /**
-     * Send chat message to SVS ALO
-     * @param pub Chat message
+     * Get chat channels
+     * @returns Array of chat channels
      */
-    async sendChat(pub: IChatMessage) {
-        this.chatArray.push([pub]);
+    async getChatChannels(): Promise<IChatChannel[]> {
+        await this.chatPersistence.whenSynced;
+        return this.chatChannels.toArray();
     }
 
     /**
-     * Get state of chat messages
+     * Create a new chat channel
+     * @param channel Chat channel
+     */
+    async createChatChannel(channel: IChatChannel) {
+        this.chatChannels.push([channel]);
+        this.chatMessages.set(channel.name, new Y.Array<IChatMessage>());
+    }
+
+    /**
+     * Get the messages array for a chat channel
+     *
+     * @param channel Chat channel
+     */
+    private async getChatArray(channel: string): Promise<Y.Array<IChatMessage>> {
+        await this.chatPersistence.whenSynced;
+        const array = this.chatMessages.get(channel);
+        if (!array) throw new Error("Channel does not exist");
+        return array;
+    }
+
+    /**
+     * Get history of chat messages
+     *
      * @returns Array of chat messages
      */
-    async getChatState(): Promise<IChatMessage[]> {
-        await this.chatPersistence.whenSynced;
-        return this.chatArray.toArray();
+    async getChatMessages(channel: string): Promise<IChatMessage[]> {
+        return (await this.getChatArray(channel)).toArray();
+    }
+
+    /**
+     * Send chat message to a channel
+     *
+     * @param message Chat message
+     */
+    async sendChatMessage(channel: string, message: IChatMessage) {
+        (await this.getChatArray(channel)).push([message]);
     }
 }
 

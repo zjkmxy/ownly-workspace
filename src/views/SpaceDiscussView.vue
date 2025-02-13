@@ -15,7 +15,7 @@
         @scroll-end="unreadCount = 0"
       >
         <template #before>
-          <div class="title px-4 py-4">#Discussion</div>
+          <div class="title px-4 py-4">#{{ channelName }}</div>
         </template>
 
         <template #default="{ item, index, active }">
@@ -86,7 +86,10 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+
+import { useRoute } from 'vue-router'
+import { useToast } from 'vue-toast-notification'
 
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -97,6 +100,12 @@ import * as workspace from '@/services/workspace'
 
 import type { IChatMessage } from '@/services/types'
 import Spinner from '@/components/Spinner.vue'
+
+const route = useRoute()
+const toast = useToast()
+
+// Route state
+const channelName = computed(() => route.params.channel as string)
 
 // Element references
 const scroller = ref<InstanceType<typeof DynamicScroller>>()
@@ -110,21 +119,34 @@ const outMessage = ref(String())
 // Show the unread scroll button if the user is not at the bottom
 const unreadCount = ref(0)
 
-onMounted(setup)
+onMounted(async () => {
+  await setup()
+
+  // Subscribe to chat messages
+  wksp.value?.events.addListener('chat', onChatMessage)
+})
+
 onUnmounted(() => {
   wksp.value?.events.removeListener('chat', onChatMessage)
 })
 
+// Setup again when the channel changes
+watch(channelName, setup)
+
 /** Set up the workspace and chat */
 async function setup() {
-  wksp.value = await workspace.setupOrRedir()
-  if (!wksp.value) return
+  try {
+    // Set up the workspace
+    wksp.value = await workspace.setupOrRedir()
+    if (!wksp.value) return
 
-  // Load the chat messages
-  items.value = await wksp.value.getChatState()
-
-  // Subscribe to chat messages
-  wksp.value.events.addListener('chat', onChatMessage)
+    // Load the chat messages
+    items.value = null
+    items.value = await wksp.value.getChatMessages(channelName.value)
+  } catch (e) {
+    toast.error(`Failed to load channel: ${JSON.stringify(e)}`)
+    return
+  }
 
   // Scroll to the end of the chat
   nextTick(() => scroller.value.scrollToBottom())
@@ -169,7 +191,7 @@ async function send(event: Event) {
     ts: Date.now(),
     message: outMessage.value,
   }
-  await wksp.value?.sendChat(message)
+  await wksp.value?.sendChatMessage(channelName.value, message)
 
   // Add the message to the chat and reset
   outMessage.value = String()
@@ -177,7 +199,12 @@ async function send(event: Event) {
 }
 
 /** Trigger for receiving a chat message */
-function onChatMessage(message: IChatMessage) {
+function onChatMessage(channel: string, message: IChatMessage) {
+  if (channel !== channelName.value) return // not for us
+
+  // Add the message to the chat
+  // This is done for both sender and receiver messages, so our
+  // send() function does not actually update the UI
   items.value!.push(message)
 
   // Scroll to the bottom of the chat if the user is within 200px of the bottom
