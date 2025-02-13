@@ -1,5 +1,5 @@
 <template>
-  <aside class="menu has-background-primary">
+  <aside class="menu has-background-primary soft-if-dark">
     <router-link to="/" v-slot="{ navigate }">
       <img alt="logo" class="logo" src="@/assets/logo.svg" @click="navigate" />
     </router-link>

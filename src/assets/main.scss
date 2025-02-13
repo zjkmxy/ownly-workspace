@@ -1,6 +1,7 @@
 @use 'bulma/sass/utilities/derived-variables' with (
   $primary: hsl(261.6, 51.87%, 47.25%)
 );
+@use 'bulma/sass/utilities/css-variables' as cv;
 @use 'bulma/sass';
 
 @use 'animations.scss';
@@ -14,12 +15,6 @@ main.full-h {
   overflow-x: hidden;
 }
 
-/** Thin scrollbars */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(0, 0%, 90%) hsl(0, 0%, 100%);
-}
-
 .modal-content {
   padding: 20px;
 }
@@ -29,4 +24,21 @@ main.full-h {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(0, 0%, 90%) transparent;
+}
+
+/** Override background color to be darker on dark mode */
+@include cv.system-theme($name: 'dark') {
+  .has-background-primary.soft-if-dark,
+  .is-primary.soft-if-dark {
+    background-color: var(--bulma-primary-soft) !important;
+  }
+
+  * {
+    scrollbar-color: hsl(0, 0%, 20%) transparent;
+  }
 }

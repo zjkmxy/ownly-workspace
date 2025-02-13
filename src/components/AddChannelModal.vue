@@ -27,7 +27,7 @@
 
         <div class="field has-text-right">
           <div class="control">
-            <button class="button is-primary" @click="create">Create</button>
+            <button class="button is-primary soft-if-dark" @click="create">Create</button>
           </div>
         </div>
       </div>
