@@ -58,6 +58,7 @@
 
       <div class="chatbox mt-2 px-4">
         <textarea
+          ref="chatbox"
           class="textarea"
           rows="2"
           placeholder="Send a message to start discussing!"
@@ -86,6 +87,7 @@ import type { IChatMessage } from '@/services/types'
 import Spinner from '@/components/Spinner.vue'
 
 const scroller = ref<InstanceType<typeof DynamicScroller>>()
+const chatbox = ref<HTMLTextAreaElement>()
 const wksp = ref(null as workspace.Workspace | null)
 const outMessage = ref(String())
 const items = ref(null as IChatMessage[] | null)
@@ -148,7 +150,8 @@ async function send(event: Event) {
   await wksp.value?.sendChat(message)
 
   // Add the message to the chat and reset
-  outMessage.value = ''
+  outMessage.value = String()
+  chatbox.value?.focus()
 }
 
 /** Trigger for receiving a chat message */
