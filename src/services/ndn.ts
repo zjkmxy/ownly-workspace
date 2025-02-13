@@ -29,8 +29,8 @@ interface NDNAPI {
     /** Create new workspace */
     create_workspace(name: string): Promise<string>;
 
-    /** Make an existing workspace */
-    make_workspace(name: string): Promise<WorkspaceAPI>;
+    /** Get an existing workspace */
+    get_workspace(name: string): Promise<WorkspaceAPI>;
 }
 
 export interface WorkspaceAPI {
@@ -45,20 +45,24 @@ export interface WorkspaceAPI {
     stop(): Promise<void>;
 
     /** SVS ALO instance */
-    svs_alo: SvsAloApi;
+    svs_alo(group: string): Promise<SvsAloApi>;
 };
 
 /** API of the SVS ALO instance */
 export interface SvsAloApi {
+    /** Start the SVS instance */
+    start(): Promise<void>;
+    /** Stop the SVS instance */
+    stop(): Promise<void>;
     /** Set the error callback */
     set_on_error(): Promise<void>;
 
     /** Publish chat message to SVS ALO */
-    publish_chat(message: Uint8Array): Promise<void>;
+    pub_yjs_delta(binary: Uint8Array): Promise<void>;
 
     /** Set SVS ALO subscription callbacks */
     subscribe(params: {
-        on_chat: SvsAloSub<{ message: Uint8Array; }>,
+        on_yjs_delta: SvsAloSub<{ binary: Uint8Array; }>,
     }): Promise<void>;
 };
 

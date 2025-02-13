@@ -2,11 +2,11 @@
 package tlv
 
 type Message struct {
-	//+field:struct:ChatMessage
-	Chat *ChatMessage `tlv:"0xC8"`
+	//+field:struct:YjsDelta
+	YjsDelta *YjsDelta `tlv:"0xC8"`
 }
 
-type ChatMessage struct {
+type YjsDelta struct {
 	//+field:binary
-	Message []byte `tlv:"0x4B0"`
+	Binary []byte `tlv:"0x4B0"`
 }

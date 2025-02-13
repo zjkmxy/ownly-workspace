@@ -51,8 +51,8 @@ func main() {
 			return me.CreateWorkspace(p[0].String())
 		}),
 
-		// make_workspace(name: string): Promise<WorkspaceAPI>;
-		"make_workspace": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		// get_workspace(name: string): Promise<WorkspaceAPI>;
+		"get_workspace": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return me.MakeWorkspace(p[0].String())
 		}),
 	}

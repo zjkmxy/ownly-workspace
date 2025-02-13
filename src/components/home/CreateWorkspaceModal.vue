@@ -82,7 +82,7 @@ async function create() {
     $toast.success('Workspace created')
   } catch (err) {
     console.error(err)
-    $toast.error(`Error creating workspace: ${JSON.stringify(err)}`)
+    $toast.error(`Error creating workspace: ${err}`)
   } finally {
     loading.value = false
   }

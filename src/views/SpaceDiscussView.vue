@@ -123,11 +123,11 @@ onMounted(async () => {
   await setup()
 
   // Subscribe to chat messages
-  wksp.value?.events.addListener('chat', onChatMessage)
+  wksp.value?.chat.events.addListener('chat', onChatMessage)
 })
 
 onUnmounted(() => {
-  wksp.value?.events.removeListener('chat', onChatMessage)
+  wksp.value?.chat.events.removeListener('chat', onChatMessage)
 })
 
 // Setup again when the channel changes
@@ -142,9 +142,10 @@ async function setup() {
 
     // Load the chat messages
     items.value = null
-    items.value = await wksp.value.getChatMessages(channelName.value)
+    items.value = await wksp.value.chat.getMessages(channelName.value)
   } catch (e) {
-    toast.error(`Failed to load channel: ${JSON.stringify(e)}`)
+    console.error(e)
+    toast.error(`Failed to load channel: ${e}`)
     return
   }
 
@@ -191,7 +192,7 @@ async function send(event: Event) {
     ts: Date.now(),
     message: outMessage.value,
   }
-  await wksp.value?.sendChatMessage(channelName.value, message)
+  await wksp.value?.chat.sendMessage(channelName.value, message)
 
   // Add the message to the chat and reset
   outMessage.value = String()

@@ -51,8 +51,8 @@ func (a *App) CreateWorkspace(nameStr string) (nameStrFinal string, err error) {
 	return
 }
 
-func (a *App) MakeWorkspace(nameStr string) (api js.Value, err error) {
-	group, err := enc.NameFromStr(nameStr)
+func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
+	group, err := enc.NameFromStr(groupStr)
 	if err != nil {
 		return
 	}
@@ -69,72 +69,99 @@ func (a *App) MakeWorkspace(nameStr string) (api js.Value, err error) {
 	// Create client object for this workspace
 	client := object.NewClient(a.engine, a.store, nil)
 
-	svsAloGroup := group.
-		Append(enc.NewKeywordComponent("alo"))
-
-	// Create new SVS ALO instance
-	svsAlo := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
-		Name: name,
-		// InitialState: readState(),
-
-		Svs: ndn_sync.SvSyncOpts{
-			Client:      client,
-			GroupPrefix: svsAloGroup,
-		},
-
-		Snapshot: &ndn_sync.SnapshotNodeHistory{
-			Client:    client,
-			Threshold: 10,
-		},
-	})
-
-	routes := []enc.Name{
-		svsAlo.SyncPrefix(),
-		svsAlo.DataPrefix(),
-	}
-
 	apiMap := map[string]any{
-		"name":  js.ValueOf(name.String()),
+		// name: string;
+		"name": js.ValueOf(name.String()),
+
+		// group: string;
 		"group": js.ValueOf(group.String()),
 
+		// start(): Promise<void>;
 		"start": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			for _, route := range routes {
-				if err = a.engine.RegisterRoute(route); err != nil {
-					return nil, err
-				}
-			}
+
 			if err := client.Start(); err != nil {
 				return nil, err
 			}
-			if err := svsAlo.Start(); err != nil {
-				return nil, err
-			}
 			return nil, nil
 		}),
 
+		// stop(): Promise<void>;
 		"stop": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			if err := svsAlo.Stop(); err != nil {
-				return nil, err
-			}
 			if err := client.Stop(); err != nil {
 				return nil, err
 			}
-			for _, route := range routes {
-				if err = a.engine.UnregisterRoute(route); err != nil {
-					return nil, err
-				}
-			}
+
 			return nil, nil
 		}),
 
-		"svs_alo": SvsAloJs(svsAlo),
+		// svs_alo(group: string): Promise<SvsAloApi>;
+		"svs_alo": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			svsAloGroup, err := enc.NameFromStr(p[0].String())
+			if err != nil {
+				return nil, err
+			}
+
+			// Create new SVS ALO instance
+			svsAlo := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+				Name: name,
+				// InitialState: readState(),
+
+				Svs: ndn_sync.SvSyncOpts{
+					Client:      client,
+					GroupPrefix: svsAloGroup,
+				},
+
+				Snapshot: &ndn_sync.SnapshotNodeHistory{
+					Client:    client,
+					Threshold: 10,
+				},
+			})
+
+			// Create JS API for SVS ALO
+			return a.SvsAloJs(svsAlo), nil
+		}),
 	}
 
 	return js.ValueOf(apiMap), nil
 }
 
-func SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
+func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
+	routes := []enc.Name{
+		alo.SyncPrefix(),
+		alo.DataPrefix(),
+	}
+
 	return js.ValueOf(map[string]any{
+		// start(): Promise<void>;
+		"start": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			for _, route := range routes {
+				if err := a.engine.RegisterRoute(route); err != nil {
+					return nil, err
+				}
+			}
+
+			if err := alo.Start(); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		}),
+
+		// stop(): Promise<void>;
+		"stop": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			if err := alo.Stop(); err != nil {
+				return nil, err
+			}
+
+			for _, route := range routes {
+				if err := a.engine.UnregisterRoute(route); err != nil {
+					return nil, err
+				}
+			}
+
+			return nil, nil
+		}),
+
 		// set_on_error(): Promise<void>;
 		"set_on_error": js.FuncOf(func(this js.Value, p []js.Value) any {
 			alo.SetOnError(func(err error) {
@@ -143,11 +170,11 @@ func SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 			return nil
 		}),
 
-		// publish_chat(message: Uint8Array): Promise<void>;
-		"publish_chat": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		// pub_yjs_delta(binary: Uint8Array): Promise<void>;
+		"pub_yjs_delta": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			pub := &tlv.Message{
-				Chat: &tlv.ChatMessage{
-					Message: utils.JsArrayToSlice(p[0]),
+				YjsDelta: &tlv.YjsDelta{
+					Binary: utils.JsArrayToSlice(p[0]),
 				},
 			}
 
@@ -160,7 +187,7 @@ func SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 			return js.ValueOf(name.String()), nil
 		}),
 
-		// subscribe(name: string, on_chat): Promise<void>;
+		// subscribe(name: string, { on_yjs_delta }): Promise<void>;
 		"subscribe": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			// Send a single publication to the subscriber
 			sendPub := func(pub ndn_sync.SvsPub) {
@@ -178,9 +205,9 @@ func SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 
 				// All possible message type conversions listed here
 				switch {
-				case pmsg.Chat != nil:
-					p[0].Get("on_chat").Invoke(info, js.ValueOf(map[string]any{
-						"message": utils.SliceToJsArray(pmsg.Chat.Message),
+				case pmsg.YjsDelta != nil:
+					p[0].Get("on_yjs_delta").Invoke(info, js.ValueOf(map[string]any{
+						"binary": utils.SliceToJsArray(pmsg.YjsDelta.Binary),
 					}))
 				default:
 					log.Error(nil, "Unknown message type", "msg", pmsg)

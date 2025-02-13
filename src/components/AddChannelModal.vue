@@ -70,14 +70,14 @@ async function create() {
     if (!wksp) return
 
     // Check if channel already exists
-    const channels = await wksp.getChatChannels()
+    const channels = await wksp.chat.getChannels()
     if (channels.some((c) => c.name === name.value)) {
       $toast.error('Channel with this name already exists')
       return
     }
 
     // Create channel
-    await wksp.createChatChannel({
+    await wksp.chat.newChannel({
       id: Math.random() * 1e16,
       name: name.value,
     })
@@ -86,7 +86,7 @@ async function create() {
     emit('close')
   } catch (err) {
     console.error(err)
-    $toast.error(`Error creating channel: ${JSON.stringify(err)}`)
+    $toast.error(`Error creating channel: ${err}`)
   }
 }
 </script>

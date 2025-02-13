@@ -10,43 +10,43 @@ import (
 type MessageEncoder struct {
 	length uint
 
-	Chat_encoder ChatMessageEncoder
+	YjsDelta_encoder YjsDeltaEncoder
 }
 
 type MessageParsingContext struct {
-	Chat_context ChatMessageParsingContext
+	YjsDelta_context YjsDeltaParsingContext
 }
 
 func (encoder *MessageEncoder) Init(value *Message) {
-	if value.Chat != nil {
-		encoder.Chat_encoder.Init(value.Chat)
+	if value.YjsDelta != nil {
+		encoder.YjsDelta_encoder.Init(value.YjsDelta)
 	}
 
 	l := uint(0)
-	if value.Chat != nil {
+	if value.YjsDelta != nil {
 		l += 1
-		l += uint(enc.TLNum(encoder.Chat_encoder.length).EncodingLength())
-		l += encoder.Chat_encoder.length
+		l += uint(enc.TLNum(encoder.YjsDelta_encoder.length).EncodingLength())
+		l += encoder.YjsDelta_encoder.length
 	}
 	encoder.length = l
 
 }
 
 func (context *MessageParsingContext) Init() {
-	context.Chat_context.Init()
+	context.YjsDelta_context.Init()
 }
 
 func (encoder *MessageEncoder) EncodeInto(value *Message, buf []byte) {
 
 	pos := uint(0)
 
-	if value.Chat != nil {
+	if value.YjsDelta != nil {
 		buf[pos] = byte(200)
 		pos += 1
-		pos += uint(enc.TLNum(encoder.Chat_encoder.length).EncodeInto(buf[pos:]))
-		if encoder.Chat_encoder.length > 0 {
-			encoder.Chat_encoder.EncodeInto(value.Chat, buf[pos:])
-			pos += encoder.Chat_encoder.length
+		pos += uint(enc.TLNum(encoder.YjsDelta_encoder.length).EncodeInto(buf[pos:]))
+		if encoder.YjsDelta_encoder.length > 0 {
+			encoder.YjsDelta_encoder.EncodeInto(value.YjsDelta, buf[pos:])
+			pos += encoder.YjsDelta_encoder.length
 		}
 	}
 }
@@ -63,7 +63,7 @@ func (encoder *MessageEncoder) Encode(value *Message) enc.Wire {
 
 func (context *MessageParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Message, error) {
 
-	var handled_Chat bool = false
+	var handled_YjsDelta bool = false
 
 	progress := -1
 	_ = progress
@@ -93,8 +93,8 @@ func (context *MessageParsingContext) Parse(reader enc.WireView, ignoreCritical 
 			case 200:
 				if true {
 					handled = true
-					handled_Chat = true
-					value.Chat, err = context.Chat_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+					handled_YjsDelta = true
+					value.YjsDelta, err = context.YjsDelta_context.Parse(reader.Delegate(int(l)), ignoreCritical)
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -114,8 +114,8 @@ func (context *MessageParsingContext) Parse(reader enc.WireView, ignoreCritical 
 	startPos = reader.Pos()
 	err = nil
 
-	if !handled_Chat && err == nil {
-		value.Chat = nil
+	if !handled_YjsDelta && err == nil {
+		value.YjsDelta = nil
 	}
 
 	if err != nil {
@@ -141,44 +141,44 @@ func ParseMessage(reader enc.WireView, ignoreCritical bool) (*Message, error) {
 	return context.Parse(reader, ignoreCritical)
 }
 
-type ChatMessageEncoder struct {
+type YjsDeltaEncoder struct {
 	length uint
 }
 
-type ChatMessageParsingContext struct {
+type YjsDeltaParsingContext struct {
 }
 
-func (encoder *ChatMessageEncoder) Init(value *ChatMessage) {
+func (encoder *YjsDeltaEncoder) Init(value *YjsDelta) {
 
 	l := uint(0)
-	if value.Message != nil {
+	if value.Binary != nil {
 		l += 3
-		l += uint(enc.TLNum(len(value.Message)).EncodingLength())
-		l += uint(len(value.Message))
+		l += uint(enc.TLNum(len(value.Binary)).EncodingLength())
+		l += uint(len(value.Binary))
 	}
 	encoder.length = l
 
 }
 
-func (context *ChatMessageParsingContext) Init() {
+func (context *YjsDeltaParsingContext) Init() {
 
 }
 
-func (encoder *ChatMessageEncoder) EncodeInto(value *ChatMessage, buf []byte) {
+func (encoder *YjsDeltaEncoder) EncodeInto(value *YjsDelta, buf []byte) {
 
 	pos := uint(0)
 
-	if value.Message != nil {
+	if value.Binary != nil {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(1200))
 		pos += 3
-		pos += uint(enc.TLNum(len(value.Message)).EncodeInto(buf[pos:]))
-		copy(buf[pos:], value.Message)
-		pos += uint(len(value.Message))
+		pos += uint(enc.TLNum(len(value.Binary)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], value.Binary)
+		pos += uint(len(value.Binary))
 	}
 }
 
-func (encoder *ChatMessageEncoder) Encode(value *ChatMessage) enc.Wire {
+func (encoder *YjsDeltaEncoder) Encode(value *YjsDelta) enc.Wire {
 
 	wire := make(enc.Wire, 1)
 	wire[0] = make([]byte, encoder.length)
@@ -188,14 +188,14 @@ func (encoder *ChatMessageEncoder) Encode(value *ChatMessage) enc.Wire {
 	return wire
 }
 
-func (context *ChatMessageParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*ChatMessage, error) {
+func (context *YjsDeltaParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*YjsDelta, error) {
 
-	var handled_Message bool = false
+	var handled_Binary bool = false
 
 	progress := -1
 	_ = progress
 
-	value := &ChatMessage{}
+	value := &YjsDelta{}
 	var err error
 	var startPos int
 	for {
@@ -220,9 +220,9 @@ func (context *ChatMessageParsingContext) Parse(reader enc.WireView, ignoreCriti
 			case 1200:
 				if true {
 					handled = true
-					handled_Message = true
-					value.Message = make([]byte, l)
-					_, err = reader.ReadFull(value.Message)
+					handled_Binary = true
+					value.Binary = make([]byte, l)
+					_, err = reader.ReadFull(value.Binary)
 				}
 			default:
 				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
@@ -242,8 +242,8 @@ func (context *ChatMessageParsingContext) Parse(reader enc.WireView, ignoreCriti
 	startPos = reader.Pos()
 	err = nil
 
-	if !handled_Message && err == nil {
-		value.Message = nil
+	if !handled_Binary && err == nil {
+		value.Binary = nil
 	}
 
 	if err != nil {
@@ -253,18 +253,18 @@ func (context *ChatMessageParsingContext) Parse(reader enc.WireView, ignoreCriti
 	return value, nil
 }
 
-func (value *ChatMessage) Encode() enc.Wire {
-	encoder := ChatMessageEncoder{}
+func (value *YjsDelta) Encode() enc.Wire {
+	encoder := YjsDeltaEncoder{}
 	encoder.Init(value)
 	return encoder.Encode(value)
 }
 
-func (value *ChatMessage) Bytes() []byte {
+func (value *YjsDelta) Bytes() []byte {
 	return value.Encode().Join()
 }
 
-func ParseChatMessage(reader enc.WireView, ignoreCritical bool) (*ChatMessage, error) {
-	context := ChatMessageParsingContext{}
+func ParseYjsDelta(reader enc.WireView, ignoreCritical bool) (*YjsDelta, error) {
+	context := YjsDeltaParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }
