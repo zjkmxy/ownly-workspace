@@ -95,6 +95,9 @@ async function setup() {
   // Scroll to the end of the chat
   scroller.value.scrollToBottom()
 
+  // Load the chat messages
+  items.value = await wksp.value.getChatState()
+
   // Subscribe to chat messages
   wksp.value.events.addListener('chat', onChatMessage)
 }
@@ -136,7 +139,6 @@ async function send(event: Event) {
   await wksp.value?.sendChat(message)
 
   // Add the message to the chat and reset
-  onChatMessage(message)
   outMessage.value = ''
 }
 

@@ -3,6 +3,8 @@ import ndn, { type SvsAloPubInfo, type WorkspaceAPI } from "@/services/ndn";
 import storage from "@/services/storage";
 import { useToast } from "vue-toast-notification";
 import { EventEmitter } from "events";
+
+import * as Y from 'yjs';
 import * as utils from "@/utils/index";
 
 import type { IChatMessage, IWorkspace } from "@/services/types";
@@ -57,6 +59,9 @@ export class Workspace {
         chat: (msg: IChatMessage) => void;
     }>;
 
+    private chatDoc = new Y.Doc();
+    private chatArray = this.chatDoc.getArray<IChatMessage>("chat");
+
     constructor(public metadata: IWorkspace) { }
 
     /**
@@ -73,7 +78,28 @@ export class Workspace {
 
         // Setup all subscriptions
         this.api.svs_alo.subscribe({
-            on_chat: (info, pub) => this.onChat(info, utils.unbyteify(pub.message)),
+            // Chat YJS updates
+            on_chat: (info, pub) => {
+                try { Y.applyUpdateV2(this.chatDoc, pub.message); }
+                catch (e) { console.error("Failed to apply chat update", e); }
+            },
+        });
+
+        // Set up YJS publishers
+        this.chatDoc.on("updateV2", async (buf, _1, _2, tx) => {
+            if (!tx.local) return;
+            await this.api.svs_alo.publish_chat(buf);
+        });
+
+        // Propagate updates to application
+        this.chatArray.observe((event) => {
+            if (this.events.listenerCount("chat") === 0) return;
+
+            for (const delta of event.changes.added) {
+                for (const c of delta.content.getContent()) {
+                    this.events.emit("chat", c);
+                }
+            }
         });
 
         // Start SVS instance
@@ -86,6 +112,9 @@ export class Workspace {
      */
     async stop() {
         await this.api.stop();
+
+        // Disconnect all listeners and destroy YJS document
+        this.chatDoc.destroy();
     }
 
     /**
@@ -93,16 +122,15 @@ export class Workspace {
      * @param pub Chat message
      */
     async sendChat(pub: IChatMessage) {
-        await this.api.svs_alo.publish_chat(utils.byteify(pub));
+        this.chatArray.push([pub]);
     }
 
     /**
-     * Process incoming chat message
-     * @param info Publication metadata
-     * @param msg Chat message
+     * Get state of chat messages
+     * @returns Array of chat messages
      */
-    private onChat(info: SvsAloPubInfo, msg: IChatMessage): void {
-        this.events.emit("chat", msg);
+    async getChatState(): Promise<IChatMessage[]> {
+        return this.chatArray.toArray();
     }
 }
 
