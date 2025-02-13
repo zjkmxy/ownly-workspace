@@ -75,7 +75,7 @@
         <div
           class="new-unread tag is-primary"
           v-if="unreadCount > 0"
-          @click="scroller.scrollToBottom()"
+          @click="(scroller.scrollToBottom(), (unreadCount = 0))"
         >
           <span class="mr-2">{{ unreadCount }} Unread Messages</span>
           <FontAwesomeIcon :icon="fas.faArrowDown" />
