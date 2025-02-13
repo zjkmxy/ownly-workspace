@@ -11,6 +11,10 @@ import * as utils from "@/utils/index";
 import type { IChatMessage, IWorkspace } from "@/services/types";
 import type TypedEmitter from "typed-emitter";
 
+/**
+ * We keep an active instance of the open workspace.
+ * This always runs in the background collecting data.
+ */
 let active: Workspace | null = null;
 
 /**
