@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
 import SpaceFilesView from '@/views/SpaceFilesView.vue';
 import SpaceDiscussView from '@/views/SpaceDiscussView.vue';
+import SpaceProjectView from '@/views/SpaceProjectView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,7 +20,7 @@ const router = createRouter({
     {
       path: '/:space/project/:project',
       name: 'project',
-      component: SpaceFilesView,
+      component: SpaceProjectView,
     },
     {
       path: '/:space/discuss/:channel',
