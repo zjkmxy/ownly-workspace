@@ -27,3 +27,10 @@ export type IChatChannel = {
   /** Channel name */
   name: string;
 };
+
+export type IProject = {
+  /** Project ID */
+  id: number;
+  /** Project name */
+  name: string;
+};

@@ -13,7 +13,7 @@ import storage from '@/services/storage';
 import ndn from '@/services/ndn';
 
 import type { SvsAloApi, WorkspaceAPI } from '@/services/ndn';
-import type { IChatChannel, IWorkspace } from '@/services/types';
+import type { IChatChannel, IProject, IWorkspace } from '@/services/types';
 import type TypedEmitter from 'typed-emitter';
 
 /**
@@ -21,6 +21,7 @@ import type TypedEmitter from 'typed-emitter';
  */
 export const GlobalWkspEvents = new EventEmitter() as TypedEmitter<{
   'chat-channels': (channels: IChatChannel[]) => void;
+  'project-list': (projects: IProject[]) => void;
 }>;
 
 /**
@@ -74,6 +75,7 @@ export class Workspace {
    * This will stop the SVS instance and disconnect from the testbed.
    */
   public async stop() {
+    await this.proj.stop();
     await this.genSvDoc?.stop();
     await this.api?.stop();
   }

@@ -13,10 +13,19 @@
     </template>
 
     <template v-if="routeIsWorkspace">
-      <p class="menu-label">General</p>
+      <p class="menu-label">Projects</p>
       <ul class="menu-list">
+        <li v-for="proj in projects" :key="proj.id">
+          <router-link :to="linkProject(proj)" class="chan-name">
+            <FontAwesomeIcon class="mr-1" :icon="fas.faFolder" size="sm" />
+            {{ proj.name }}
+          </router-link>
+        </li>
         <li>
-          <router-link :to="linkFiles"> Files </router-link>
+          <a @click="showProjectModal = true">
+            <FontAwesomeIcon class="mr-1" :icon="fas.faPlus" size="sm" />
+            Add project
+          </a>
         </li>
       </ul>
 
@@ -46,43 +55,59 @@
     <Transition name="fade-2">
       <AddChannelModal v-if="showChannelModal" @close="showChannelModal = false" />
     </Transition>
+
+    <Transition name="fade-2">
+      <AddProjectModal v-if="showProjectModal" @close="showProjectModal = false" />
+    </Transition>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { fas } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { fas } from '@fortawesome/free-solid-svg-icons';
 
-import type { IChatChannel } from '@/services/types'
-import { GlobalWkspEvents } from '@/services/workspace'
-import AddChannelModal from './AddChannelModal.vue'
+import AddChannelModal from './AddChannelModal.vue';
+import AddProjectModal from './AddProjectModal.vue';
 
-const route = useRoute()
-const routeIsDashboard = computed(() => route.name === 'home')
-const routeIsWorkspace = computed(() => ['files', 'discuss'].includes(String(route.name)))
+import type { IChatChannel, IProject } from '@/services/types';
+import { GlobalWkspEvents } from '@/services/workspace';
 
-const channels = ref([] as IChatChannel[])
-const showChannelModal = ref(false)
+const route = useRoute();
+const routeIsDashboard = computed(() => route.name === 'home');
+const routeIsWorkspace = computed(() =>
+  ['files', 'project', 'discuss'].includes(String(route.name)),
+);
 
-const linkFiles = computed(() => ({
-  name: 'files',
-  params: { space: route.params.space },
-}))
+const channels = ref([] as IChatChannel[]);
+const showChannelModal = ref(false);
+
+const projects = ref([] as IProject[]);
+const showProjectModal = ref(false);
+
+const linkProject = (project: IProject) => ({
+  name: 'project',
+  params: {
+    space: route.params.space,
+    project: project.name,
+  },
+});
 const linkDiscuss = (channel: IChatChannel) => ({
   name: 'discuss',
   params: {
     space: route.params.space,
     channel: channel.name,
   },
-})
+});
 
 onMounted(async () => {
+  // Subscribe for projects list
+  GlobalWkspEvents.addListener('project-list', (projs) => (projects.value = projs));
   // Subscribe for chat channels
-  GlobalWkspEvents.addListener('chat-channels', (chans) => (channels.value = chans))
-})
+  GlobalWkspEvents.addListener('chat-channels', (chans) => (channels.value = chans));
+});
 </script>
 
 <style scoped lang="scss">

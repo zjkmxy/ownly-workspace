@@ -3,7 +3,7 @@
     <div class="modal-background"></div>
     <div class="modal-content">
       <div class="box">
-        <div class="title is-5 mb-4">Create a channel</div>
+        <div class="title is-5 mb-4">Create a project</div>
 
         <div class="field">
           <label class="label">Name</label>
@@ -11,16 +11,16 @@
             <input
               class="input"
               type="text"
-              placeholder="e.g. project-updates"
+              placeholder="e.g. vendor-documents"
               v-model="name"
               @keyup.enter="create"
             />
             <span class="icon is-small is-left">
-              <FontAwesomeIcon :icon="fas.faHashtag" />
+              <FontAwesomeIcon :icon="fas.faFolder" />
             </span>
             <p class="help">
-              Channels are intended to separate discussions by topic or team. Use a short,
-              descriptive name that is easy to understand and remember.
+              Projects separate files by purpose or team. Use a short, descriptive name that is easy
+              to understand and remember.
             </p>
           </div>
         </div>
@@ -55,13 +55,13 @@ async function create() {
   try {
     // 1-40 characters
     if (name.value.length < 1 || name.value.length > 40) {
-      $toast.error('Channel name must be between 1 and 40 characters');
+      $toast.error('Project name must be between 1 and 40 characters');
       return;
     }
 
     // Validate characters are only alphanumeric, hyphen, and underscore
     if (!/^[a-zA-Z0-9_-]+$/.test(name.value)) {
-      $toast.error('Channel name can only contain letters, numbers, hyphens, and underscores');
+      $toast.error('Project name can only contain letters, numbers, hyphens, and underscores');
       return;
     }
 
@@ -69,24 +69,24 @@ async function create() {
     const wksp = await Workspace.setupOrRedir();
     if (!wksp) return;
 
-    // Check if channel already exists
-    const channels = await wksp.chat.getChannels();
-    if (channels.some((c) => c.name === name.value)) {
-      $toast.error('Channel with this name already exists');
+    // Check if project already exists
+    const projs = await wksp.proj.getProjects();
+    if (projs.some((c) => c.name === name.value)) {
+      $toast.error('Project with this name already exists');
       return;
     }
 
     // Create channel
-    await wksp.chat.newChannel({
+    await wksp.proj.newProject({
       id: Math.random() * 1e16,
       name: name.value,
     });
 
-    $toast.success(`Channel #${name.value} created`);
+    $toast.success(`Project ${name.value} created`);
     emit('close');
   } catch (err) {
     console.error(err);
-    $toast.error(`Error creating channel: ${err}`);
+    $toast.error(`Error creating project: ${err}`);
   }
 }
 </script>
