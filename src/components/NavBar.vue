@@ -1,5 +1,5 @@
 <template>
-  <aside class="menu has-background-primary soft-if-dark">
+  <aside class="menu main-nav has-background-primary soft-if-dark">
     <router-link to="/" v-slot="{ navigate }">
       <img alt="logo" class="logo" src="@/assets/logo.svg" @click="navigate" />
     </router-link>
@@ -16,9 +16,18 @@
       <p class="menu-label">Projects</p>
       <ul class="menu-list">
         <li v-for="proj in projects" :key="proj.id">
-          <router-link :to="linkProject(proj)" class="chan-name">
-            <FontAwesomeIcon class="mr-1" :icon="fas.faLayerGroup" size="sm" />
-            {{ proj.name }}
+          <router-link :to="linkProject(proj)">
+            <div class="link-inner">
+              <FontAwesomeIcon class="mr-1" :icon="fas.faLayerGroup" size="sm" />
+              {{ proj.name }}
+            </div>
+
+            <button
+              v-if="proj.name === activeProjectName"
+              class="button has-text-black link-button"
+            >
+              <FontAwesomeIcon class="mr-1" :icon="fas.faPlus" size="2xs" />
+            </button>
           </router-link>
         </li>
         <li>
@@ -32,7 +41,7 @@
       <p class="menu-label">Discussion</p>
       <ul class="menu-list">
         <li v-for="chan in channels" :key="chan.id">
-          <router-link :to="linkDiscuss(chan)" class="chan-name">
+          <router-link :to="linkDiscuss(chan)">
             <FontAwesomeIcon class="mr-1" :icon="fas.faHashtag" size="sm" />
             {{ chan.name }}
           </router-link>
@@ -86,6 +95,7 @@ const showChannelModal = ref(false);
 
 const projects = ref([] as IProject[]);
 const showProjectModal = ref(false);
+const activeProjectName = ref(null as string | null);
 
 const linkProject = (project: IProject) => ({
   name: 'project',
@@ -105,45 +115,88 @@ const linkDiscuss = (channel: IChatChannel) => ({
 onMounted(async () => {
   // Subscribe for projects list
   GlobalWkspEvents.addListener('project-list', (projs) => (projects.value = projs));
+  // Subscribe for project files list
+  GlobalWkspEvents.addListener('project-files', (name, files) => {
+    activeProjectName.value = name;
+  });
   // Subscribe for chat channels
   GlobalWkspEvents.addListener('chat-channels', (chans) => (channels.value = chans));
 });
 </script>
 
 <style scoped lang="scss">
-.logo {
-  display: block;
-  height: 35px;
-  margin: 5px;
-  margin-bottom: 15px;
-}
-
-.menu {
+.main-nav {
   padding: 10px;
   min-width: 220px;
 
-  .menu-label {
-    color: silver;
+  .logo {
+    display: block;
+    height: 35px;
+    margin: 5px;
+    margin-bottom: 15px;
   }
-  .menu-list {
-    a,
-    button,
-    .menu-item {
-      background-color: transparent;
-      color: white;
 
-      &.is-active,
-      &.router-link-active {
-        background-color: var(--bulma-body-background-color);
-        color: var(---bulma-text-strong);
+  .menu-label {
+    color: #bbb;
+  }
+
+  li > a {
+    background-color: transparent;
+    color: white;
+
+    &.is-active,
+    &.router-link-active {
+      background-color: var(--bulma-body-background-color);
+      color: var(---bulma-text-strong);
+    }
+  }
+
+  li > a,
+  .link-inner {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Link inner supports a button to the right of the link
+  // The actual content is in div.link-inner
+  li > a:has(div.link-inner) {
+    // Bulma puts the padding on the outer link
+    // element, but that clips the serifs in the text
+    padding-top: 0px;
+    padding-bottom: 0px;
+
+    position: relative;
+    display: flex;
+    flex-direction: row;
+
+    // Put bulma's padding on the inner element
+    div.link-inner {
+      padding-top: 0.5em;
+      padding-bottom: 0.5em;
+      flex: 1;
+    }
+
+    .link-button {
+      margin-right: -6px;
+      margin-top: 0.65em;
+      padding: 0.2em;
+      line-height: 0px;
+      width: 1em;
+      height: 1em;
+      background-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    &:not(.router-link-active) {
+      .link-button {
+        color: white !important;
+      }
+    }
+    &.router-link-active {
+      .link-button {
+        color: var(--bulma-text-strong) !important;
       }
     }
   }
-}
-
-.chan-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 </style>

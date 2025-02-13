@@ -13,7 +13,7 @@ import storage from '@/services/storage';
 import ndn from '@/services/ndn';
 
 import type { SvsAloApi, WorkspaceAPI } from '@/services/ndn';
-import type { IChatChannel, IProject, IWorkspace } from '@/services/types';
+import type { IChatChannel, IProject, IProjectFile, IWorkspace } from '@/services/types';
 import type TypedEmitter from 'typed-emitter';
 
 /**
@@ -22,6 +22,7 @@ import type TypedEmitter from 'typed-emitter';
 export const GlobalWkspEvents = new EventEmitter() as TypedEmitter<{
   'chat-channels': (channels: IChatChannel[]) => void;
   'project-list': (projects: IProject[]) => void;
+  'project-files': (name: string, files: IProjectFile[]) => void;
 }>;
 
 /**
@@ -44,7 +45,7 @@ export class Workspace {
     public readonly genSvDoc: SvsYDoc,
   ) {
     this.chat = new WorkspaceChat(genSvDoc);
-    this.proj = new WorkspaceProjManager(api, genSvDoc);
+    this.proj = new WorkspaceProjManager(metadata, slug, api, genSvDoc);
   }
 
   /**

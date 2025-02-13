@@ -34,3 +34,8 @@ export type IProject = {
   /** Project name */
   name: string;
 };
+
+export type IProjectFile = {
+  /** Full path of file */
+  path: string;
+};
