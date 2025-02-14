@@ -34,6 +34,9 @@ li > a:has(div.link-inner) {
     width: 1em;
     height: 1em;
     background-color: rgba(0, 0, 0, 0.15) !important;
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.25) !important;
+    }
   }
 
   &:not(.router-link-active) {
