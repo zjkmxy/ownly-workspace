@@ -83,4 +83,19 @@ export class WorkspaceProj {
   public async newFile(file: IProjectFile) {
     this.fileList.push([file]);
   }
+
+  public async deleteFile(file: IProjectFile) {
+    let deletedCount = 0;
+    this.svdoc.doc.transact(() => {
+      this.fileList.forEach((f, i) => {
+        const matchFolder = file.path.endsWith('/') && f.path.startsWith(file.path);
+        const matchFile = f.path === file.path;
+        if (matchFolder || matchFile) {
+          deletedCount++;
+          this.fileList.delete(i);
+        }
+      });
+    });
+    if (!deletedCount) throw new Error('File not found');
+  }
 }

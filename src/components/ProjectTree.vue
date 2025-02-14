@@ -13,7 +13,11 @@
             {{ entry.name }}
           </div>
 
-          <ProjectTreeAddButton class="link-button" />
+          <ProjectTreeAddButton
+            class="link-button"
+            @new-file="startNew"
+            @delete="executeDelete(entry.name)"
+          />
         </component>
 
         <project-tree
@@ -135,7 +139,7 @@ const tree = computed<TreeEntry[]>(() => {
     tree.sort((a, b) => {
       if (a.is_folder && !b.is_folder) return -1;
       if (!a.is_folder && b.is_folder) return 1;
-      return a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
     });
     for (const entry of tree) {
       if (entry.children) sortTree(entry.children);
@@ -169,7 +173,7 @@ function openFolder(entry: TreeEntry) {
   }
 }
 
-function newFile() {
+function newFile(folder: string) {
   startNew();
 }
 
@@ -179,6 +183,15 @@ async function startNew() {
   await nextTick();
   newInput.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   newInput.value?.focus();
+}
+
+async function getProject() {
+  const wksp = await Workspace.setupOrRedir();
+  if (!wksp) throw new Error('Workspace not found');
+
+  const proj = await wksp.proj.get(route.params.project as string);
+  if (!proj) throw new Error('Project not found');
+  return proj;
 }
 
 async function executeNew() {
@@ -193,12 +206,7 @@ async function executeNew() {
   }
 
   try {
-    const wksp = await Workspace.setupOrRedir();
-    if (!wksp) return;
-
-    const proj = await wksp.proj.get(route.params.project as string);
-    if (!proj) return;
-
+    const proj = await getProject();
     const path = `${props.path}${newName.value}`; //TODO: add / to end if folder
     await proj.newFile({ path });
   } catch (err) {
@@ -210,6 +218,20 @@ async function executeNew() {
   toast.success(`Created ${newName.value}`);
 
   showNew.value = false;
+}
+
+async function executeDelete(name: string) {
+  const path = `${props.path}${name}`;
+  // TODO: confirmation prompt
+
+  try {
+    const proj = await getProject();
+    await proj.deleteFile({ path });
+  } catch (err) {
+    console.error(err);
+    toast.error(`Error deleting ${name}: ${err}`);
+    return;
+  }
 }
 </script>
 

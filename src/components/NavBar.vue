@@ -25,7 +25,7 @@
             <ProjectTreeAddButton
               v-if="activeProjectName === proj.name"
               class="link-button"
-              @new-file="$refs.projectTree[0]!.newFile()"
+              @new-file="$refs.projectTree[0]!.newFile('')"
             />
           </router-link>
 

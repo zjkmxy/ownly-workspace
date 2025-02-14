@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
@@ -42,6 +42,7 @@ const projName = computed(() => route.params.project as string);
 const proj = ref(null as WorkspaceProj | null);
 
 onMounted(setup);
+watch(projName, setup);
 
 async function setup() {
   try {
