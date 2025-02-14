@@ -270,7 +270,7 @@ async function executeDelete(entry: TreeEntry) {
     margin: 0 0 0 6px !important;
   }
   &.outermost {
-    margin: 6px 4px !important;
+    margin: 4px 4px !important;
   }
 
   li > a,
