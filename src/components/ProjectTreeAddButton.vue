@@ -1,6 +1,6 @@
 <template>
-  <button class="button" @click.stop.prevent="$emit('add')" title="Add a new file or folder">
-    <FontAwesomeIcon class="mr-1" :icon="fas.faPlus" size="2xs" />
+  <button class="button" @click.stop.prevent="$emit('add')" title="Update contents of this node">
+    <FontAwesomeIcon class="mr-1" :icon="fas.faCaretDown" size="2xs" />
   </button>
 </template>
 

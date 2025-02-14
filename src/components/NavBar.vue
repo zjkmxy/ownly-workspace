@@ -16,8 +16,18 @@
       <p class="menu-label">Projects</p>
       <ul class="menu-list">
         <li v-for="proj in projects" :key="proj.id">
-          <ProjectTree :project="proj" :active="proj.name === activeProjectName" />
+          <router-link :to="linkProject(proj)">
+            <div class="link-inner">
+              <FontAwesomeIcon class="mr-1" :icon="fas.faLayerGroup" size="sm" />
+              {{ proj.name }}
+            </div>
+
+            <ProjectTreeAddButton v-if="activeProjectName === proj.name" class="link-button" />
+          </router-link>
+
+          <ProjectTree class="outermost" v-if="activeProjectName == proj.name" :project="proj" />
         </li>
+
         <li>
           <a @click="showProjectModal = true">
             <FontAwesomeIcon class="mr-1" :icon="fas.faPlus" size="sm" />
@@ -66,12 +76,13 @@ import { useRoute } from 'vue-router';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 
+import ProjectTree from './ProjectTree.vue';
+import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
 import AddChannelModal from './AddChannelModal.vue';
 import AddProjectModal from './AddProjectModal.vue';
 
 import type { IChatChannel, IProject } from '@/services/types';
 import { GlobalWkspEvents } from '@/services/workspace';
-import ProjectTree from './ProjectTree.vue';
 
 const route = useRoute();
 const routeIsDashboard = computed(() => route.name === 'home');
@@ -85,6 +96,14 @@ const showChannelModal = ref(false);
 const projects = ref([] as IProject[]);
 const showProjectModal = ref(false);
 const activeProjectName = ref(null as string | null);
+
+const linkProject = (project: IProject) => ({
+  name: 'project',
+  params: {
+    space: route.params.space,
+    project: project.name,
+  },
+});
 
 const linkDiscuss = (channel: IChatChannel) => ({
   name: 'discuss',
@@ -107,9 +126,12 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
+@use '@/components/navbar-item.scss';
+
 .main-nav {
   padding: 10px;
-  min-width: 220px;
+  width: 230px;
+  min-width: 230px;
 
   .logo {
     display: block;
@@ -122,7 +144,7 @@ onMounted(async () => {
     color: #bbb;
   }
 
-  li > a {
+  :deep(li > a) {
     background-color: transparent;
     color: white;
 
@@ -130,54 +152,6 @@ onMounted(async () => {
     &.router-link-active {
       background-color: var(--bulma-body-background-color);
       color: var(---bulma-text-strong);
-    }
-  }
-
-  li > a,
-  .link-inner {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  // Link inner supports a button to the right of the link
-  // The actual content is in div.link-inner
-  li > a:has(div.link-inner) {
-    // Bulma puts the padding on the outer link
-    // element, but that clips the serifs in the text
-    padding-top: 0px;
-    padding-bottom: 0px;
-
-    position: relative;
-    display: flex;
-    flex-direction: row;
-
-    // Put bulma's padding on the inner element
-    :deep(div.link-inner) {
-      padding-top: 0.5em;
-      padding-bottom: 0.5em;
-      flex: 1;
-    }
-
-    :deep(.link-button) {
-      margin-right: -6px;
-      margin-top: 0.65em;
-      padding: 0.2em;
-      line-height: 0px;
-      width: 1em;
-      height: 1em;
-      background-color: rgba(0, 0, 0, 0.15) !important;
-    }
-
-    &:not(.router-link-active) {
-      :deep(.link-button) {
-        color: white !important;
-      }
-    }
-    &.router-link-active {
-      :deep(.link-button) {
-        color: var(--bulma-text-strong) !important;
-      }
     }
   }
 }
