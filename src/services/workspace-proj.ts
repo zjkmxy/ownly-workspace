@@ -72,6 +72,7 @@ export class WorkspaceProjManager {
 
 export class WorkspaceProj {
   private readonly fileList: Y.Array<IProjectFile>;
+  private readonly contentMap: Y.Map<Y.Text>;
 
   constructor(
     public readonly name: string,
@@ -79,6 +80,7 @@ export class WorkspaceProj {
   ) {
     this.fileList = svdoc.doc.getArray<IProjectFile>('_file_');
     this.fileList.observe(() => this.onListChange());
+    this.contentMap = svdoc.doc.getMap<Y.Text>('_ctn_');
   }
 
   public async activate(): Promise<void> {
@@ -98,7 +100,11 @@ export class WorkspaceProj {
         throw new Error('File or folder already exists');
       }
     });
-    this.fileList.push([file]);
+
+    this.svdoc.doc.transact(() => {
+      this.fileList.push([file]);
+      this.contentMap.set(file.path, new Y.Text());
+    });
   }
 
   public async deleteFile(file: IProjectFile) {
@@ -109,10 +115,17 @@ export class WorkspaceProj {
         const matchFile = f.path === file.path;
         if (matchFolder || matchFile) {
           this.fileList.delete(i - deletedCount);
+          this.contentMap.delete(f.path);
           deletedCount++;
         }
       });
     });
     if (!deletedCount) throw new Error('File not found');
+  }
+
+  public async getContent(path: string): Promise<Y.Text> {
+    const file = this.contentMap.get(path);
+    if (!file) throw new Error('File not found');
+    return file;
   }
 }

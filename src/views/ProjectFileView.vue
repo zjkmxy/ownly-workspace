@@ -3,15 +3,17 @@
     <Spinner />
     Loading your messages ...
   </div>
-  <div v-else>
-    <CodeEditor />
+  <div v-else-if="contentText">
+    <CodeEditor :ytext="contentText" :key="filepath" :basename="basename" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, shallowRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
+
+import * as Y from 'yjs';
 
 import Spinner from '@/components/Spinner.vue';
 import CodeEditor from '@/components/files/CodeEditor.vue';
@@ -25,9 +27,11 @@ const toast = useToast();
 const loading = ref(true);
 const projName = computed(() => route.params.project as string);
 const filename = computed(() => route.params.filename as string[]);
-const filepath = computed(() => filename.value.join('/'));
+const filepath = computed(() => '/' + filename.value.join('/'));
+const basename = computed(() => filename.value[filename.value.length - 1]);
 
 const proj = ref(null as WorkspaceProj | null);
+const contentText = shallowRef<Y.Text | null>(null);
 
 onMounted(setup);
 watch(filename, setup);
@@ -35,6 +39,9 @@ watch(projName, setup);
 
 async function setup() {
   try {
+    loading.value = true;
+    contentText.value = null;
+
     const wksp = await Workspace.setupOrRedir();
     if (!wksp) return;
 
@@ -42,6 +49,8 @@ async function setup() {
     if (!proj.value) return;
 
     await proj.value.activate();
+
+    contentText.value = await proj.value.getContent(filepath.value);
   } catch (err) {
     console.error(err);
     toast.error(`Failed to load project: ${err}`);
