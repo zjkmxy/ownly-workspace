@@ -36,6 +36,7 @@
             v-if="activeProjectName == proj.name"
             class="outermost"
             ref="projectTree"
+            :project="proj"
             :files="projectFiles"
           />
         </li>
@@ -101,7 +102,7 @@ import { GlobalWkspEvents } from '@/services/workspace';
 const route = useRoute();
 const routeIsDashboard = computed(() => route.name === 'home');
 const routeIsWorkspace = computed(() =>
-  ['files', 'project', 'discuss'].includes(String(route.name)),
+  ['files', 'project', 'discuss', 'project-file'].includes(String(route.name)),
 );
 
 const channels = ref([] as IChatChannel[]);

@@ -4,7 +4,7 @@
       <li>
         <component
           :is="entry.is_folder ? 'a' : 'router-link'"
-          :to="entry.is_folder ? null : '/'"
+          :to="entry.is_folder ? null : linkToFile(entry)"
           @click="openFolder(entry)"
           class="one-entry"
         >
@@ -26,6 +26,7 @@
         <project-tree
           ref="subtrees"
           v-if="isFolderOpen(entry)"
+          :project="props.project"
           :files="[]"
           :rtree="entry.children ?? []"
           :path="`${path}${entry.name}/`"
@@ -68,7 +69,7 @@ import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
 
 import { Workspace } from '@/services/workspace';
 
-import type { IProjectFile } from '@/services/types';
+import type { IProject, IProjectFile } from '@/services/types';
 
 const subtrees = ref<InstanceType<any>>();
 
@@ -79,6 +80,10 @@ type TreeEntry = {
 };
 
 const props = defineProps({
+  project: {
+    type: Object as PropType<IProject>,
+    required: true,
+  },
   files: {
     type: Array as PropType<IProjectFile[]>,
     required: true,
@@ -160,6 +165,17 @@ const tree = computed<TreeEntry[]>(() => {
 
   return tree;
 });
+
+/** Link to a file */
+function linkToFile(entry: TreeEntry) {
+  return {
+    name: 'project-file',
+    params: {
+      project: props.project.name,
+      filename: props.path.split('/').filter(Boolean).concat(entry.name),
+    },
+  };
+}
 
 /** Choose an icon for a given entry */
 function chooseIcon(entry: TreeEntry) {
