@@ -275,10 +275,10 @@ async function executeDelete(entry: TreeEntry) {
 
   li > a,
   .field input {
-    height: 1.8em;
-    font-size: 0.85em;
+    height: 1.9em;
+    font-size: 0.88em;
     padding: 0.4em 0.5em;
-    line-height: 1em;
+    line-height: 1.05em;
   }
 
   .field {
@@ -309,7 +309,7 @@ async function executeDelete(entry: TreeEntry) {
     // This is truly horrible, but it's the only way to reuse
     // the styles between navbar and project tree for the link
     // button with a bunch of !importants everywhere :'(
-    transform: translateY(-0.25em);
+    transform: translateY(-0.2em);
   }
   .one-entry:hover > .link-button {
     display: inline-block;
