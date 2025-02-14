@@ -15,6 +15,8 @@
             <div class="control has-icons-left has-icons-right mt-3">
               <input
                 :class="{ input: true, 'is-danger': emailError }"
+                inputmode="email"
+                autocomplete="email"
                 type="email"
                 placeholder="name@email.com"
                 v-model="emailAddress"
@@ -47,11 +49,15 @@
             <div class="control has-icons-left mt-3">
               <input
                 :class="{ input: true, 'is-danger': codeError }"
+                inputmode="numeric"
+                pattern="[0-9]{6}"
+                autocomplete="off"
                 type="text"
                 placeholder="123456"
                 maxlength="6"
                 minlength="6"
                 v-model="codeInput"
+                @keypress="disallowNonNumeric"
                 @keyup="codeSubmit"
               />
               <span class="icon is-small is-left">
@@ -73,132 +79,138 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useToast } from 'vue-toast-notification'
+import { onMounted, ref } from 'vue';
+import { useToast } from 'vue-toast-notification';
 
-import Spinner from '@/components/Spinner.vue'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { fas } from '@fortawesome/free-solid-svg-icons'
+import Spinner from '@/components/Spinner.vue';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { fas } from '@fortawesome/free-solid-svg-icons';
 
-import * as utils from '@/utils/index'
-import ndn from '@/services/ndn'
+import * as utils from '@/utils/index';
+import ndn from '@/services/ndn';
 
-const emit = defineEmits(['login'])
-const $toast = useToast()
+const emit = defineEmits(['login']);
+const $toast = useToast();
 
-const showLoading = ref(true)
-const showEmail = ref(false)
-const showCode = ref(false)
-const showSuccess = ref(false)
+const showLoading = ref(true);
+const showEmail = ref(false);
+const showCode = ref(false);
+const showSuccess = ref(false);
 
-const loadStatus = ref('')
+const loadStatus = ref('');
 
-const emailAddress = ref('varunpatil@ucla.edu')
-const emailError = ref('')
+const emailAddress = ref('varunpatil@ucla.edu');
+const emailError = ref('');
 
-const codeInput = ref('')
-const codeError = ref('')
-const codeSubmit = ref(() => {})
+const codeInput = ref('');
+const codeError = ref('');
+const codeSubmit = ref(() => {});
 
 /** Validate email and move to step 2 */
 function emailSubmit() {
-  if (!showEmail.value) return
+  if (!showEmail.value) return;
 
   if (!emailAddress.value) {
-    emailError.value = 'Email address is required'
-    return
+    emailError.value = 'Email address is required';
+    return;
   }
 
   if (!utils.validateEmail(emailAddress.value)) {
-    emailError.value = 'Invalid email address'
-    return
+    emailError.value = 'Invalid email address';
+    return;
   }
 
-  showEmail.value = false
-  startChallenge()
+  showEmail.value = false;
+  startChallenge();
 }
 
 /** Cancel code verification and go back to email step */
 function codeCancel() {
-  showCode.value = false
-  showEmail.value = true
+  showCode.value = false;
+  showEmail.value = true;
 }
 
 async function startChallenge() {
-  showLoading.value = true
+  showLoading.value = true;
 
   try {
     // Connect to testbed
-    loadStatus.value = 'Connecting to NDN testbed ...'
-    await ndn.api.connect_testbed()
+    loadStatus.value = 'Connecting to NDN testbed ...';
+    await ndn.api.connect_testbed();
 
     // Start NDN challenge
-    loadStatus.value = 'Starting NDNCERT challenge ...'
+    loadStatus.value = 'Starting NDNCERT challenge ...';
     await ndn.api.ndncert_email(emailAddress.value, (status) => {
-      codeError.value = ''
-      codeInput.value = ''
+      codeError.value = '';
+      codeInput.value = '';
 
       switch (status) {
         case 'need-code':
-          break
+          break;
         case 'wrong-code':
-          codeError.value = 'Invalid verification code'
-          break
+          codeError.value = 'Invalid verification code';
+          break;
         default:
-          codeError.value = 'Verfication error: ' + status
-          break
+          codeError.value = 'Verfication error: ' + status;
+          break;
       }
 
-      showLoading.value = false
-      showCode.value = true
+      showLoading.value = false;
+      showCode.value = true;
 
       return new Promise((resolve) => {
         codeSubmit.value = () => {
-          if (codeInput.value.length !== 6) return
+          if (codeInput.value.length !== 6) return;
 
-          showCode.value = false
-          showLoading.value = true
-          loadStatus.value = 'Completing challenge ...'
-          resolve(codeInput.value)
-        }
-      })
-    })
+          showCode.value = false;
+          showLoading.value = true;
+          loadStatus.value = 'Completing challenge ...';
+          resolve(codeInput.value);
+        };
+      });
+    });
 
     // We are certified!
-    loadStatus.value = 'Certified!'
-    showLoading.value = false
-    showSuccess.value = true
-    setTimeout(() => emit('login'), 1500)
+    loadStatus.value = 'Certified!';
+    showLoading.value = false;
+    showSuccess.value = true;
+    setTimeout(() => emit('login'), 1500);
   } catch (err) {
-    $toast.error('Failed to complete challenge')
-    console.error(err)
-    showLoading.value = false
-    showEmail.value = true
+    $toast.error('Failed to complete challenge');
+    console.error(err);
+    showLoading.value = false;
+    showEmail.value = true;
   }
 }
 
 async function setup() {
   try {
     // Entrypoint - make sure service is loaded
-    loadStatus.value = 'Setting up NDN service ...'
-    await ndn.setup()
+    loadStatus.value = 'Setting up NDN service ...';
+    await ndn.setup();
 
     // Check if we are already certified
     if (await ndn.api.has_testbed_key()) {
-      showLoading.value = false
-      showSuccess.value = true
-      setTimeout(() => emit('login'), 250)
-      return
+      showLoading.value = false;
+      showSuccess.value = true;
+      setTimeout(() => emit('login'), 250);
+      return;
     }
 
-    showLoading.value = false
-    showEmail.value = true
+    showLoading.value = false;
+    showEmail.value = true;
   } catch (err) {
-    console.error(err)
+    console.error(err);
   }
 }
 
-setup()
+onMounted(setup);
+
+function disallowNonNumeric(event: KeyboardEvent) {
+  if (!/^\d+$/.test(event.key) && !['Backspace', 'Delete'].includes(event.key)) {
+    event.preventDefault();
+  }
+}
 </script>
 
 <style scoped lang="scss">
