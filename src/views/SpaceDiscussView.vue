@@ -86,86 +86,86 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
-import { useRoute } from 'vue-router'
-import { useToast } from 'vue-toast-notification'
+import { useRoute } from 'vue-router';
+import { useToast } from 'vue-toast-notification';
 
-import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { fas } from '@fortawesome/free-solid-svg-icons'
+import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { fas } from '@fortawesome/free-solid-svg-icons';
 
-import * as utils from '@/utils'
-import { Workspace } from '@/services/workspace'
+import * as utils from '@/utils';
+import { Workspace } from '@/services/workspace';
 
-import type { IChatMessage } from '@/services/types'
-import Spinner from '@/components/Spinner.vue'
+import type { IChatMessage } from '@/services/types';
+import Spinner from '@/components/Spinner.vue';
 
-const route = useRoute()
-const toast = useToast()
+const route = useRoute();
+const toast = useToast();
 
 // Route state
-const channelName = computed(() => route.params.channel as string)
+const channelName = computed(() => route.params.channel as string);
 
 // Element references
-const scroller = ref<InstanceType<typeof DynamicScroller>>()
-const chatbox = ref<HTMLTextAreaElement>()
+const scroller = ref<InstanceType<typeof DynamicScroller>>();
+const chatbox = ref<HTMLTextAreaElement>();
 
 // Data state
-const wksp = ref(null as Workspace | null)
-const items = ref(null as IChatMessage[] | null)
-const outMessage = ref(String())
+const wksp = ref(null as Workspace | null);
+const items = ref(null as IChatMessage[] | null);
+const outMessage = ref(String());
 
 // Show the unread scroll button if the user is not at the bottom
-const unreadCount = ref(0)
+const unreadCount = ref(0);
 
 onMounted(async () => {
-  await setup()
+  await setup();
 
   // Subscribe to chat messages
-  wksp.value?.chat.events.addListener('chat', onChatMessage)
-})
+  wksp.value?.chat.events.addListener('chat', onChatMessage);
+});
 
 onUnmounted(() => {
-  wksp.value?.chat.events.removeListener('chat', onChatMessage)
-})
+  wksp.value?.chat.events.removeListener('chat', onChatMessage);
+});
 
 // Setup again when the channel changes
-watch(channelName, setup)
+watch(channelName, setup);
 
 /** Set up the workspace and chat */
 async function setup() {
   try {
     // Set up the workspace
-    wksp.value = await Workspace.setupOrRedir()
-    if (!wksp.value) return
+    wksp.value = await Workspace.setupOrRedir();
+    if (!wksp.value) return;
 
     // Load the chat messages
-    items.value = null
-    items.value = await wksp.value.chat.getMessages(channelName.value)
+    items.value = null;
+    items.value = await wksp.value.chat.getMessages(channelName.value);
   } catch (e) {
-    console.error(e)
-    toast.error(`Failed to load channel: ${e}`)
-    return
+    console.error(e);
+    toast.error(`Failed to load channel: ${e}`);
+    return;
   }
 
   // Scroll to the end of the chat
-  nextTick(() => scroller.value.scrollToBottom())
-  window.setTimeout(() => scroller.value.scrollToBottom(), 100) // why
-  window.setTimeout(() => scroller.value.scrollToBottom(), 500) // uhh
+  nextTick(() => scroller.value.scrollToBottom());
+  window.setTimeout(() => scroller.value.scrollToBottom(), 100); // why
+  window.setTimeout(() => scroller.value.scrollToBottom(), 500); // uhh
 }
 
 /** Skip the header if the user is the same and the message is within a minute */
 function skipHeader(item: IChatMessage, index: number) {
-  if (index === 0) return false
-  const prev = items.value![index - 1]
-  return prev.user === item.user && item.ts - prev.ts < 1000 * 60
+  if (index === 0) return false;
+  const prev = items.value![index - 1];
+  return prev.user === item.user && item.ts - prev.ts < 1000 * 60;
 }
 
 /** Format the time of a chat message */
 function formatTime(item: IChatMessage) {
-  if (item.tsStr) return item.tsStr
-  if (!item.ts) return 'Unknown Time'
+  if (item.tsStr) return item.tsStr;
+  if (!item.ts) return 'Unknown Time';
 
   const formatter = new Intl.DateTimeFormat(undefined, {
     year: 'numeric',
@@ -173,17 +173,17 @@ function formatTime(item: IChatMessage) {
     day: 'numeric',
     hour: 'numeric',
     minute: 'numeric',
-  })
-  return (item.tsStr = formatter.format(new Date(item.ts)))
+  });
+  return (item.tsStr = formatter.format(new Date(item.ts)));
 }
 
 /** Send a message to the workspace */
 async function send(event: Event) {
   if (event instanceof KeyboardEvent) {
-    if (event.shiftKey) return
-    event.preventDefault()
+    if (event.shiftKey) return;
+    event.preventDefault();
   }
-  if (!outMessage.value.trim()) return
+  if (!outMessage.value.trim()) return;
 
   // Send the message to the workspace
   const message = {
@@ -191,29 +191,29 @@ async function send(event: Event) {
     user: wksp.value!.api.name,
     ts: Date.now(),
     message: outMessage.value,
-  }
-  await wksp.value?.chat.sendMessage(channelName.value, message)
+  };
+  await wksp.value?.chat.sendMessage(channelName.value, message);
 
   // Add the message to the chat and reset
-  outMessage.value = String()
-  chatbox.value?.focus()
+  outMessage.value = String();
+  chatbox.value?.focus();
 }
 
 /** Trigger for receiving a chat message */
 function onChatMessage(channel: string, message: IChatMessage) {
-  if (channel !== channelName.value) return // not for us
+  if (channel !== channelName.value) return; // not for us
 
   // Add the message to the chat
   // This is done for both sender and receiver messages, so our
   // send() function does not actually update the UI
-  items.value!.push(message)
+  items.value!.push(message);
 
   // Scroll to the bottom of the chat if the user is within 200px of the bottom
-  const wrapper = scroller.value.$el
+  const wrapper = scroller.value.$el;
   if (wrapper.scrollTop + wrapper.clientHeight + 200 >= wrapper.scrollHeight) {
-    scroller.value.scrollToBottom()
+    scroller.value.scrollToBottom();
   } else if (message.user !== wksp.value!.api.name) {
-    unreadCount.value++
+    unreadCount.value++;
   }
 }
 </script>

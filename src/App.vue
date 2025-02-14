@@ -18,12 +18,12 @@
 </template>
 
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
-import { ref } from 'vue'
-import LandingView from '@/views/LandingView.vue'
-import NavBar from './components/NavBar.vue'
+import { RouterView } from 'vue-router';
+import { ref } from 'vue';
+import LandingView from '@/views/LandingView.vue';
+import NavBar from './components/NavBar.vue';
 
-const showLogin = ref(true)
+const showLogin = ref(true);
 </script>
 
 <style scoped lang="scss">

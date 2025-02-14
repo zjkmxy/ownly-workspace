@@ -19,7 +19,7 @@
 defineProps({
   name: String,
   subtitle: String,
-})
+});
 </script>
 
 <style scoped lang="scss">

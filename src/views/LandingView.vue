@@ -6,10 +6,10 @@
 </template>
 
 <script setup lang="ts">
-import LandingLeft from '@/components/landing/LandingLeft.vue'
-import LandingLogin from '@/components/landing/LandingLogin.vue'
+import LandingLeft from '@/components/landing/LandingLeft.vue';
+import LandingLogin from '@/components/landing/LandingLogin.vue';
 
-const emit = defineEmits(['login'])
+const emit = defineEmits(['login']);
 </script>
 
 <style scoped lang="scss">

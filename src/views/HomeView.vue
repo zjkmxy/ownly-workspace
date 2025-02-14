@@ -33,24 +33,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 
-import CreateWorkspaceModal from '@/components/home/CreateWorkspaceModal.vue'
-import Workspace from '@/components/home/Workspace.vue'
+import CreateWorkspaceModal from '@/components/home/CreateWorkspaceModal.vue';
+import Workspace from '@/components/home/Workspace.vue';
 
-import router from '@/router'
-import storage from '@/services/storage'
-import * as utils from '@/utils/index'
+import router from '@/router';
+import storage from '@/services/storage';
+import * as utils from '@/utils/index';
 
-import type * as types from '@/services/types'
+import type * as types from '@/services/types';
 
-const showCreate = ref(false)
-const workspaces = ref([] as types.IWorkspace[])
+const showCreate = ref(false);
+const workspaces = ref([] as types.IWorkspace[]);
 
 async function refreshList() {
-  workspaces.value = await storage.db.workspaces.toArray()
+  workspaces.value = await storage.db.workspaces.toArray();
 }
-refreshList()
+refreshList();
 
 function open(ws: types.IWorkspace) {
   router.push({
@@ -58,7 +58,7 @@ function open(ws: types.IWorkspace) {
     params: {
       space: utils.escapeUrlName(ws.name),
     },
-  })
+  });
 }
 </script>
 

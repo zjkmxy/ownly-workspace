@@ -46,45 +46,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useToast } from 'vue-toast-notification'
+import { ref } from 'vue';
+import { useToast } from 'vue-toast-notification';
 
-import Spinner from '../Spinner.vue'
+import Spinner from '../Spinner.vue';
 
-import storage from '@/services/storage'
-import ndn from '@/services/ndn'
+import storage from '@/services/storage';
+import ndn from '@/services/ndn';
 
-const emit = defineEmits(['close', 'create'])
-const $toast = useToast()
+const emit = defineEmits(['close', 'create']);
+const $toast = useToast();
 
-const loading = ref(false)
+const loading = ref(false);
 
 const opts = ref({
   label: String(),
   name: String(),
-})
+});
 
 async function create() {
   try {
-    loading.value = true
+    loading.value = true;
 
-    const name = await ndn.api.create_workspace(opts.value.name)
+    const name = await ndn.api.create_workspace(opts.value.name);
 
     await storage.db.workspaces.put({
       label: opts.value.label,
       name: name,
       owner: true,
-    })
+    });
 
-    emit('create')
-    emit('close')
+    emit('create');
+    emit('close');
 
-    $toast.success('Workspace created')
+    $toast.success('Workspace created');
   } catch (err) {
-    console.error(err)
-    $toast.error(`Error creating workspace: ${err}`)
+    console.error(err);
+    $toast.error(`Error creating workspace: ${err}`);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 </script>
