@@ -17,9 +17,9 @@
         </component>
 
         <project-tree
-          v-if="entry.children && isFolderOpen(entry)"
-          :project="project"
-          :ptree="entry.children"
+          v-if="entry.children?.length && isFolderOpen(entry)"
+          :files="[]"
+          :rtree="entry.children"
         />
       </li>
     </template>
@@ -35,7 +35,7 @@ import { fas } from '@fortawesome/free-solid-svg-icons';
 
 import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
 
-import type { IProject } from '@/services/types';
+import type { IProjectFile } from '@/services/types';
 
 type TreeEntry = {
   name: string;
@@ -44,51 +44,72 @@ type TreeEntry = {
 };
 
 const route = useRoute();
-
 const props = defineProps({
-  project: {
-    type: Object as PropType<IProject>,
+  files: {
+    type: Array as PropType<IProjectFile[]>,
     required: true,
   },
-  ptree: {
+  rtree: {
     type: Array as PropType<TreeEntry[]>,
     required: false,
   },
 });
 
-// List of open folders
-const foldersOpen = ref<Record<string, boolean>>({});
-
+/**
+ * Tree computes the tree structure from the flat files list.
+ * If this component is recursive, then rtree should be passed and is used instead.
+ */
 const tree = computed<TreeEntry[]>(() => {
-  if (props.ptree) {
-    return props.ptree;
+  if (props.rtree) return props.rtree;
+
+  // Computed tree structure
+  const tree: TreeEntry[] = [];
+
+  // DFS to fill the tree for the given path
+  const fillPrefix = (path: string) => {
+    const parts = path.split('/');
+    let current = tree;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (!part) continue;
+
+      const existing = current.find((e) => e.name === part);
+      if (existing) {
+        current = existing.children!;
+      } else {
+        const newEntry: TreeEntry = {
+          name: part,
+          is_folder: i !== parts.length - 1,
+          children: [],
+        };
+        current.push(newEntry);
+        current = newEntry.children!;
+      }
+    }
+  };
+
+  // Fill the tree for all files
+  for (const file of props.files) {
+    fillPrefix(file.path);
   }
 
-  return [
-    {
-      name: 'Project Status',
-      is_folder: true,
-      children: [
-        {
-          name: 'Vendor Documents',
-          is_folder: true,
-          children: [
-            {
-              name: 'stylesheet.tex',
-            },
-            {
-              name: 'nxp_imx8_radio_sensitivity.pdf',
-            },
-          ],
-        },
-        {
-          name: 'passwords.txt',
-        },
-      ],
-    },
-  ];
+  // Sort the tree by folder -> name
+  const sortTree = (tree: TreeEntry[]) => {
+    tree.sort((a, b) => {
+      if (a.is_folder && !b.is_folder) return -1;
+      if (!a.is_folder && b.is_folder) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    for (const entry of tree) {
+      if (entry.children) sortTree(entry.children);
+    }
+  };
+  sortTree(tree);
+
+  return tree;
 });
 
+/** Choose an icon for a given entry */
 function chooseIcon(entry: TreeEntry) {
   if (entry.is_folder) {
     return foldersOpen.value[entry.name] ? fas.faFolderOpen : fas.faFolder;
@@ -96,10 +117,15 @@ function chooseIcon(entry: TreeEntry) {
   return fas.faFile;
 }
 
+/** Map of open folders for O(1) lookup */
+const foldersOpen = ref<Record<string, boolean>>({});
+
+/** Check if folder is open (show contents inside) */
 function isFolderOpen(entry: TreeEntry) {
   return entry.is_folder && foldersOpen.value[entry.name];
 }
 
+/** Mark folder as open */
 function openFolder(entry: TreeEntry) {
   if (entry.is_folder) {
     foldersOpen.value[entry.name] = !foldersOpen.value[entry.name];

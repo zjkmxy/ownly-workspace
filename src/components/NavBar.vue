@@ -25,7 +25,11 @@
             <ProjectTreeAddButton v-if="activeProjectName === proj.name" class="link-button" />
           </router-link>
 
-          <ProjectTree class="outermost" v-if="activeProjectName == proj.name" :project="proj" />
+          <ProjectTree
+            class="outermost"
+            v-if="activeProjectName == proj.name"
+            :files="projectFiles"
+          />
         </li>
 
         <li>
@@ -81,7 +85,7 @@ import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
 import AddChannelModal from './AddChannelModal.vue';
 import AddProjectModal from './AddProjectModal.vue';
 
-import type { IChatChannel, IProject } from '@/services/types';
+import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
 import { GlobalWkspEvents } from '@/services/workspace';
 
 const route = useRoute();
@@ -96,6 +100,7 @@ const showChannelModal = ref(false);
 const projects = ref([] as IProject[]);
 const showProjectModal = ref(false);
 const activeProjectName = ref(null as string | null);
+const projectFiles = ref([] as IProjectFile[]);
 
 const linkProject = (project: IProject) => ({
   name: 'project',
@@ -119,6 +124,7 @@ onMounted(async () => {
   // Subscribe for project files list
   GlobalWkspEvents.addListener('project-files', (name, files) => {
     activeProjectName.value = name;
+    projectFiles.value = files;
   });
   // Subscribe for chat channels
   GlobalWkspEvents.addListener('chat-channels', (chans) => (channels.value = chans));
@@ -130,8 +136,11 @@ onMounted(async () => {
 
 .main-nav {
   padding: 10px;
+
   width: 230px;
   min-width: 230px;
+  height: 100vh;
+  overflow-y: auto;
 
   .logo {
     display: block;
