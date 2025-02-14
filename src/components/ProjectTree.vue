@@ -59,7 +59,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, type PropType } from 'vue';
+import { computed, nextTick, onMounted, ref, watch, type PropType } from 'vue';
+import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -70,8 +71,6 @@ import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
 import { Workspace } from '@/services/workspace';
 
 import type { IProject, IProjectFile } from '@/services/types';
-
-const subtrees = ref<InstanceType<any>>();
 
 type TreeEntry = {
   name: string;
@@ -104,13 +103,19 @@ const props = defineProps({
   },
 });
 
+const route = useRoute();
 const toast = useToast();
 
+const subtrees = ref<InstanceType<any>>();
 const newInput = ref<HTMLInputElement | null>(null);
+
 const showNew = ref(false);
 const newName = ref(String());
 const newType = ref<'file' | 'folder'>('file');
+
 defineExpose({ newInHere, parent: props.parent });
+onMounted(checkRoute);
+watch(() => route.params.filename, checkRoute);
 
 /**
  * Tree computes the tree structure from the flat files list.
@@ -166,7 +171,25 @@ const tree = computed<TreeEntry[]>(() => {
   return tree;
 });
 
-/** Link to a file */
+// Watch if the route changes to a file that includes this node's child
+// In that case make sure that the child folder is open
+function checkRoute() {
+  if (!route.params.filename) return;
+  const parts = route.params.filename as string[];
+  if (parts.length <= 1) return;
+
+  // Check if the route is a child of this folder
+  const myparts = props.path.split('/').filter(Boolean);
+  if (parts.length <= myparts.length) return;
+  if (parts.slice(0, myparts.length).every((p, i) => p === myparts[i])) {
+    // Check if the route is a direct child of this folder
+    const folder = parts[myparts.length];
+    const entry = tree.value.find((e) => e.name === folder);
+    if (entry) openFolder(entry, true);
+  }
+}
+
+/** Get router link to a file */
 function linkToFile(entry: TreeEntry) {
   return {
     name: 'project-file',
