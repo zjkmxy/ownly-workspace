@@ -21,13 +21,13 @@ li > a:has(div.link-inner) {
 
   // Put bulma's padding on the inner element
   div.link-inner {
-    padding-top: 0.5em;
-    padding-bottom: 0.5em;
+    padding-top: 0.35em;
+    padding-bottom: 0.65em;
     flex: 1;
   }
 
   .link-button {
-    margin-right: -6px;
+    margin-right: -4px;
     margin-top: 0.65em;
     padding: 0em 0.3em;
     line-height: 0px;

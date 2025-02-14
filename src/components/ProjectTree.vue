@@ -306,6 +306,10 @@ async function executeDelete(entry: TreeEntry) {
 
   .one-entry > .link-button {
     display: none;
+    // This is truly horrible, but it's the only way to reuse
+    // the styles between navbar and project tree for the link
+    // button with a bunch of !importants everywhere :'(
+    transform: translateY(-0.25em);
   }
   .one-entry:hover > .link-button {
     display: inline-block;

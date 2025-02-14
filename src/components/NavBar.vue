@@ -167,6 +167,10 @@ onMounted(async () => {
     background-color: transparent;
     color: white;
 
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
     &.is-active,
     &.router-link-active {
       background-color: var(--bulma-body-background-color);
