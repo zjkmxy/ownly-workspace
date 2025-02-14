@@ -42,6 +42,7 @@ export class WorkspaceProjManager {
   }
 
   public async get(name: string): Promise<WorkspaceProj> {
+    // TODO: add a lock on this
     let proj = this.projectMap.get(name);
     if (proj) return proj;
 
@@ -53,7 +54,7 @@ export class WorkspaceProjManager {
     proj = new WorkspaceProj(name, svdoc);
     this.projectMap.set(name, proj);
 
-    await svs.start();
+    await svdoc.start();
     return proj;
   }
 }
@@ -66,7 +67,7 @@ export class WorkspaceProj {
     public readonly svdoc: SvsYDoc,
   ) {
     this.fileList = svdoc.doc.getArray<IProjectFile>('_file_');
-    this.fileList.observe(this.onListChange);
+    this.fileList.observe(() => this.onListChange());
   }
 
   public async activate(): Promise<void> {
@@ -75,7 +76,11 @@ export class WorkspaceProj {
   }
 
   public onListChange() {
-    if (active !== this) return;
+    if (!this.fileList || active?.name !== this.name) return;
     GlobalWkspEvents.emit('project-files', this.name, this.fileList.toArray());
+  }
+
+  public async newFile(file: IProjectFile) {
+    this.fileList.push([file]);
   }
 }

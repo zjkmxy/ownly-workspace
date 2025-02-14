@@ -22,12 +22,17 @@
               {{ proj.name }}
             </div>
 
-            <ProjectTreeAddButton v-if="activeProjectName === proj.name" class="link-button" />
+            <ProjectTreeAddButton
+              v-if="activeProjectName === proj.name"
+              class="link-button"
+              @new-file="$refs.projectTree[0]!.newFile()"
+            />
           </router-link>
 
           <ProjectTree
-            class="outermost"
             v-if="activeProjectName == proj.name"
+            class="outermost"
+            ref="projectTree"
             :files="projectFiles"
           />
         </li>
@@ -63,13 +68,15 @@
       <li><a>Connectivity</a></li>
     </ul>
 
-    <Transition name="fade-2">
-      <AddChannelModal v-if="showChannelModal" @close="showChannelModal = false" />
-    </Transition>
+    <Teleport to="body">
+      <Transition name="fade-2">
+        <AddChannelModal v-if="showChannelModal" @close="showChannelModal = false" />
+      </Transition>
 
-    <Transition name="fade-2">
-      <AddProjectModal v-if="showProjectModal" @close="showProjectModal = false" />
-    </Transition>
+      <Transition name="fade-2">
+        <AddProjectModal v-if="showProjectModal" @close="showProjectModal = false" />
+      </Transition>
+    </Teleport>
   </aside>
 </template>
 

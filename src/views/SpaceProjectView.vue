@@ -60,6 +60,9 @@ async function setup() {
 </script>
 
 <style scoped lang="scss">
+.outer {
+  user-select: none;
+}
 .project-ready .subtitle {
   line-height: 1.8em;
 }

@@ -20,20 +20,45 @@
           v-if="entry.children?.length && isFolderOpen(entry)"
           :files="[]"
           :rtree="entry.children"
+          :path="`${path}${entry.name}/`"
         />
       </li>
     </template>
+
+    <div class="field" v-if="showNew">
+      <div class="control">
+        <input
+          ref="newInput"
+          class="input"
+          type="text"
+          placeholder="..."
+          v-model="newName"
+          @keyup.enter="executeNew"
+        />
+        <div class="buttons">
+          <button class="button is-small" @click="showNew = false">
+            <FontAwesomeIcon :icon="fas.faTimes" size="sm" />
+          </button>
+          <button class="button is-small" @click="executeNew">
+            <FontAwesomeIcon :icon="fas.faCheck" size="sm" />
+          </button>
+        </div>
+      </div>
+    </div>
   </ul>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, type PropType } from 'vue';
+import { computed, nextTick, ref, type PropType } from 'vue';
 import { useRoute } from 'vue-router';
+import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 
 import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
+
+import { Workspace } from '@/services/workspace';
 
 import type { IProjectFile } from '@/services/types';
 
@@ -43,7 +68,6 @@ type TreeEntry = {
   is_folder?: boolean;
 };
 
-const route = useRoute();
 const props = defineProps({
   files: {
     type: Array as PropType<IProjectFile[]>,
@@ -53,7 +77,20 @@ const props = defineProps({
     type: Array as PropType<TreeEntry[]>,
     required: false,
   },
+  path: {
+    type: String,
+    required: false,
+    default: '/',
+  },
 });
+
+const toast = useToast();
+const route = useRoute();
+
+const newInput = ref<HTMLInputElement | null>(null);
+const showNew = ref(false);
+const newName = ref(String());
+defineExpose({ newFile });
 
 /**
  * Tree computes the tree structure from the flat files list.
@@ -131,6 +168,49 @@ function openFolder(entry: TreeEntry) {
     foldersOpen.value[entry.name] = !foldersOpen.value[entry.name];
   }
 }
+
+function newFile() {
+  startNew();
+}
+
+async function startNew() {
+  showNew.value = true;
+  newName.value = String();
+  await nextTick();
+  newInput.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  newInput.value?.focus();
+}
+
+async function executeNew() {
+  if (newName.value.length < 1 || newName.value.length > 40) {
+    toast.error('File and folder name must be between 1 and 40 characters');
+    return;
+  }
+
+  if (newName.value.includes('/')) {
+    toast.error('File and folder name cannot contain slashes');
+    return;
+  }
+
+  try {
+    const wksp = await Workspace.setupOrRedir();
+    if (!wksp) return;
+
+    const proj = await wksp.proj.get(route.params.project as string);
+    if (!proj) return;
+
+    const path = `${props.path}${newName.value}`; //TODO: add / to end if folder
+    await proj.newFile({ path });
+  } catch (err) {
+    console.error(err);
+    toast.error(`Error creating ${newName.value}: ${err}`);
+    return;
+  }
+
+  toast.success(`Created ${newName.value}`);
+
+  showNew.value = false;
+}
 </script>
 
 <style lang="scss" scoped>
@@ -154,7 +234,21 @@ function openFolder(entry: TreeEntry) {
   }
 
   .field {
-    margin-bottom: 3px;
+    position: relative;
+
+    .buttons {
+      position: absolute;
+      right: 0;
+      top: 0;
+      gap: 2px;
+
+      button {
+        padding: 0;
+        width: 20px;
+        background-color: transparent;
+        box-shadow: none;
+      }
+    }
   }
 
   .one-entry > .link-button {
