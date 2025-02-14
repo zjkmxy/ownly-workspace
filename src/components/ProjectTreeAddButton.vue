@@ -7,10 +7,10 @@
     <FontAwesomeIcon class="mr-1" :icon="fas.faCaretDown" size="2xs" />
 
     <Dropdown ref="dd">
-      <a class="dropdown-item" @click="emit('new-folder')"> New folder </a>
-      <a class="dropdown-item" @click="emit('new-file')"> New blank file </a>
-      <hr class="dropdown-divider" />
-      <a class="dropdown-item" @click="emit('delete')"> Delete </a>
+      <a class="dropdown-item" v-if="allowNew" @click="emit('new-folder')"> New folder </a>
+      <a class="dropdown-item" v-if="allowNew" @click="emit('new-file')"> New blank file </a>
+      <hr class="dropdown-divider" v-if="allowNew && allowDelete" />
+      <a class="dropdown-item" v-if="allowDelete" @click="emit('delete')"> Delete </a>
     </Dropdown>
   </button>
 </template>
@@ -19,6 +19,11 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import Dropdown from './Dropdown.vue';
+
+defineProps({
+  allowNew: Boolean,
+  allowDelete: Boolean,
+});
 
 const emit = defineEmits(['new-folder', 'new-file', 'delete']);
 </script>

@@ -15,16 +15,21 @@
 
           <ProjectTreeAddButton
             class="link-button"
-            @new-file="startNew"
-            @delete="executeDelete(entry.name)"
+            :allow-new="entry.is_folder"
+            :allow-delete="true"
+            @new-file="newInSub(entry, 'file')"
+            @new-folder="newInSub(entry, 'folder')"
+            @delete="executeDelete(entry)"
           />
         </component>
 
         <project-tree
-          v-if="entry.children?.length && isFolderOpen(entry)"
+          ref="subtrees"
+          v-if="isFolderOpen(entry)"
           :files="[]"
-          :rtree="entry.children"
+          :rtree="entry.children ?? []"
           :path="`${path}${entry.name}/`"
+          :parent="entry.name"
         />
       </li>
     </template>
@@ -54,7 +59,6 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, type PropType } from 'vue';
-import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -65,6 +69,8 @@ import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
 import { Workspace } from '@/services/workspace';
 
 import type { IProjectFile } from '@/services/types';
+
+const subtrees = ref<InstanceType<any>>();
 
 type TreeEntry = {
   name: string;
@@ -86,15 +92,20 @@ const props = defineProps({
     required: false,
     default: '/',
   },
+  parent: {
+    type: String,
+    required: false,
+    default: '',
+  },
 });
 
 const toast = useToast();
-const route = useRoute();
 
 const newInput = ref<HTMLInputElement | null>(null);
 const showNew = ref(false);
 const newName = ref(String());
-defineExpose({ newFile });
+const newType = ref<'file' | 'folder'>('file');
+defineExpose({ newInHere, parent: props.parent });
 
 /**
  * Tree computes the tree structure from the flat files list.
@@ -167,17 +178,25 @@ function isFolderOpen(entry: TreeEntry) {
 }
 
 /** Mark folder as open */
-function openFolder(entry: TreeEntry) {
+function openFolder(entry: TreeEntry, val?: boolean) {
   if (entry.is_folder) {
-    foldersOpen.value[entry.name] = !foldersOpen.value[entry.name];
+    foldersOpen.value[entry.name] = val !== undefined ? val : !foldersOpen.value[entry.name];
   }
 }
 
-function newFile(folder: string) {
-  startNew();
+/** Create a new file in a subfolder */
+async function newInSub(subfolder: TreeEntry, type: 'file' | 'folder') {
+  if (!subfolder.is_folder) return;
+  openFolder(subfolder, true);
+  await nextTick();
+
+  const stree = subtrees.value?.find((t: any) => t?.parent === subfolder.name);
+  stree?.newInHere(type);
 }
 
-async function startNew() {
+/** Create a new file in the current folder */
+async function newInHere(type: 'file' | 'folder') {
+  newType.value = type;
   showNew.value = true;
   newName.value = String();
   await nextTick();
@@ -185,15 +204,17 @@ async function startNew() {
   newInput.value?.focus();
 }
 
+/** Get the current project */
 async function getProject() {
   const wksp = await Workspace.setupOrRedir();
   if (!wksp) throw new Error('Workspace not found');
 
-  const proj = await wksp.proj.get(route.params.project as string);
+  const proj = wksp.proj.getActive();
   if (!proj) throw new Error('Project not found');
   return proj;
 }
 
+/** Create a new file or folder */
 async function executeNew() {
   if (newName.value.length < 1 || newName.value.length > 40) {
     toast.error('File and folder name must be between 1 and 40 characters');
@@ -205,9 +226,11 @@ async function executeNew() {
     return;
   }
 
+  let path = `${props.path}${newName.value}`;
+  if (newType.value === 'folder') path += '/';
+
   try {
     const proj = await getProject();
-    const path = `${props.path}${newName.value}`; //TODO: add / to end if folder
     await proj.newFile({ path });
   } catch (err) {
     console.error(err);
@@ -220,8 +243,11 @@ async function executeNew() {
   showNew.value = false;
 }
 
-async function executeDelete(name: string) {
-  const path = `${props.path}${name}`;
+/** Delete a file or folder */
+async function executeDelete(entry: TreeEntry) {
+  let path = `${props.path}${entry.name}`;
+  if (entry.is_folder) path += '/';
+
   // TODO: confirmation prompt
 
   try {
@@ -229,7 +255,7 @@ async function executeDelete(name: string) {
     await proj.deleteFile({ path });
   } catch (err) {
     console.error(err);
-    toast.error(`Error deleting ${name}: ${err}`);
+    toast.error(`Error deleting ${path}: ${err}`);
     return;
   }
 }
@@ -257,6 +283,10 @@ async function executeDelete(name: string) {
 
   .field {
     position: relative;
+
+    input {
+      padding-right: 44px; // hack for buttons
+    }
 
     .buttons {
       position: absolute;

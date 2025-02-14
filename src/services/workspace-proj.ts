@@ -57,6 +57,11 @@ export class WorkspaceProjManager {
     await svdoc.start();
     return proj;
   }
+
+  public getActive(): WorkspaceProj {
+    if (!active) throw new Error('No active project');
+    return active;
+  }
 }
 
 export class WorkspaceProj {
@@ -81,6 +86,12 @@ export class WorkspaceProj {
   }
 
   public async newFile(file: IProjectFile) {
+    if (!file.path) throw new Error('Path is required');
+    this.fileList.forEach((f) => {
+      if (f.path === file.path || f.path === `${file.path}/`) {
+        throw new Error('File or folder already exists');
+      }
+    });
     this.fileList.push([file]);
   }
 
@@ -91,8 +102,8 @@ export class WorkspaceProj {
         const matchFolder = file.path.endsWith('/') && f.path.startsWith(file.path);
         const matchFile = f.path === file.path;
         if (matchFolder || matchFile) {
+          this.fileList.delete(i - deletedCount);
           deletedCount++;
-          this.fileList.delete(i);
         }
       });
     });

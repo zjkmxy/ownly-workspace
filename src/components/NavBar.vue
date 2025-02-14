@@ -25,7 +25,10 @@
             <ProjectTreeAddButton
               v-if="activeProjectName === proj.name"
               class="link-button"
-              @new-file="$refs.projectTree[0]!.newFile('')"
+              :allow-new="true"
+              :allow-delete="false"
+              @new-file="$refs.projectTree.find(() => true)?.newInHere('file')"
+              @new-folder="$refs.projectTree.find(() => true)?.newInHere('folder')"
             />
           </router-link>
 
