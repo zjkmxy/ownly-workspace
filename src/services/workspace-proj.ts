@@ -46,11 +46,17 @@ export class WorkspaceProjManager {
     let proj = this.projectMap.get(name);
     if (proj) return proj;
 
+    // Get metadata from project list
+    await this.svdoc.pers.whenSynced; // TODO: also need SVS to sync first
+    const projMeta = this.projectList.toArray().find((p) => p.name === name);
+    if (!projMeta) throw new Error('Project not found');
+
     // Start SVS for project
     const slug = `${this.slug}-${name}`;
     const svs = await this.api.svs_alo(`${this.metadata.name}/p-${name}`);
     const svdoc = new SvsYDoc(svs, slug);
 
+    // Create project object
     proj = new WorkspaceProj(name, svdoc);
     this.projectMap.set(name, proj);
 

@@ -1,7 +1,13 @@
 <template>
-  <div>
-    Hello World
-    {{ filename }}
+  <div class="outer py-4">
+    <div class="fixed-center" v-if="loading">
+      <Spinner />
+      Loading your messages ...
+    </div>
+    <div v-else>
+      Hello World
+      {{ filename }}
+    </div>
   </div>
 </template>
 
@@ -10,12 +16,15 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
+import Spinner from '@/components/Spinner.vue';
+
 import { Workspace } from '@/services/workspace';
 import type { WorkspaceProj } from '@/services/workspace-proj';
 
 const route = useRoute();
 const toast = useToast();
 
+const loading = ref(true);
 const projName = computed(() => route.params.project as string);
 const filename = computed(() => route.params.filename as string[]);
 
@@ -37,6 +46,8 @@ async function setup() {
   } catch (err) {
     console.error(err);
     toast.error(`Failed to load project: ${err}`);
+  } finally {
+    loading.value = false;
   }
 }
 </script>
