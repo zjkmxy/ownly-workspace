@@ -293,9 +293,9 @@ function onChatMessage(channel: string, message: IChatMessage) {
       }
 
       .time {
-        color: rgba(0, 0, 0, 0.5);
         font-size: 12px;
         margin-left: 7px;
+        color: var(--bulma-text-weak);
       }
 
       .content {
