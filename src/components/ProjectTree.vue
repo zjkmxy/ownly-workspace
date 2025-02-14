@@ -285,6 +285,7 @@ async function executeDelete(entry: TreeEntry) {
     position: relative;
 
     input {
+      border-radius: 3px;
       padding-right: 44px; // hack for buttons
     }
 
