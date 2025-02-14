@@ -116,6 +116,7 @@ const newType = ref<'file' | 'folder'>('file');
 defineExpose({ newInHere, parent: props.parent });
 onMounted(checkRoute);
 watch(() => route.params.filename, checkRoute);
+const splitPath = computed(() => props.path.split('/').filter(Boolean));
 
 /**
  * Tree computes the tree structure from the flat files list.
@@ -179,7 +180,7 @@ function checkRoute() {
   if (parts.length <= 1) return;
 
   // Check if the route is a child of this folder
-  const myparts = props.path.split('/').filter(Boolean);
+  const myparts = splitPath.value;
   if (parts.length <= myparts.length) return;
   if (parts.slice(0, myparts.length).every((p, i) => p === myparts[i])) {
     // Check if the route is a direct child of this folder
@@ -195,7 +196,7 @@ function linkToFile(entry: TreeEntry) {
     name: 'project-file',
     params: {
       project: props.project.name,
-      filename: props.path.split('/').filter(Boolean).concat(entry.name),
+      filename: splitPath.value.concat(entry.name),
     },
   };
 }

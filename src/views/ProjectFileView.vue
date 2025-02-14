@@ -1,13 +1,10 @@
 <template>
-  <div class="outer py-4">
-    <div class="fixed-center" v-if="loading">
-      <Spinner />
-      Loading your messages ...
-    </div>
-    <div v-else>
-      Hello World
-      {{ filename }}
-    </div>
+  <div class="fixed-center" v-if="loading">
+    <Spinner />
+    Loading your messages ...
+  </div>
+  <div v-else>
+    <CodeEditor />
   </div>
 </template>
 
@@ -17,6 +14,7 @@ import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import Spinner from '@/components/Spinner.vue';
+import CodeEditor from '@/components/files/CodeEditor.vue';
 
 import { Workspace } from '@/services/workspace';
 import type { WorkspaceProj } from '@/services/workspace-proj';
@@ -27,6 +25,7 @@ const toast = useToast();
 const loading = ref(true);
 const projName = computed(() => route.params.project as string);
 const filename = computed(() => route.params.filename as string[]);
+const filepath = computed(() => filename.value.join('/'));
 
 const proj = ref(null as WorkspaceProj | null);
 
