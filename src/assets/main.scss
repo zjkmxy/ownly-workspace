@@ -29,7 +29,7 @@ main.full-h {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(0, 0%, 90%) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
 
 /** Override background color to be darker on dark mode */
@@ -40,6 +40,6 @@ main.full-h {
   }
 
   * {
-    scrollbar-color: hsl(0, 0%, 20%) transparent;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   }
 }
