@@ -27,6 +27,7 @@
 
         <div class="field has-text-right">
           <div class="control">
+            <button class="button is-light mr-2" @click="emit('close')">Cancel</button>
             <button class="button is-primary soft-if-dark" @click="create">Create</button>
           </div>
         </div>
