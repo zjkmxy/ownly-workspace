@@ -377,6 +377,7 @@ async function executeDelete(entry: TreeEntry) {
 
   .field {
     position: relative;
+    margin-top: 2px;
 
     input {
       border-radius: 3px;

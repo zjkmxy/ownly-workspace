@@ -24,10 +24,9 @@ const opened = ref(false);
 function open(event: MouseEvent) {
   event.stopPropagation();
   event.preventDefault();
-  coords.value = {
-    x: event.clientX,
-    y: event.clientY,
-  };
+  let x = Math.max(event.clientX, 200);
+  let y = event.clientY;
+  coords.value = { x, y };
   opened.value = true;
 }
 
