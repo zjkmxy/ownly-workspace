@@ -14,6 +14,7 @@ import { MonacoBinding } from 'y-monaco';
 import type { Awareness } from 'y-protocols/awareness.js';
 
 import * as utils from '@/utils';
+import { monacoRegister } from '@/utils/monaco';
 
 // @ts-ignore
 self.MonacoEnvironment = {
@@ -44,7 +45,7 @@ let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 let ybinding: MonacoBinding | null = null;
 
 onMounted(() => {
-  utils.monacoRegister();
+  monacoRegister();
 
   const ext = props.basename.split('.').pop()?.toLocaleLowerCase();
   let language = 'plaintext';

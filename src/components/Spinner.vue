@@ -1,5 +1,5 @@
 <template>
-  <div class="has-text-centered is-fullwidth">
+  <div class="has-text-centered is-fullwidth spinner">
     <div class="lds-dual-ring"></div>
   </div>
 </template>

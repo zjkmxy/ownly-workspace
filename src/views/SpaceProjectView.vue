@@ -1,6 +1,6 @@
 <template>
   <div class="outer py-4">
-    <div class="fixed-center" v-if="!proj">
+    <div class="absolute-center" v-if="!proj">
       <Spinner />
       Loading your project ...
     </div>

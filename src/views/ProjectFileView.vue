@@ -1,9 +1,9 @@
 <template>
-  <div class="fixed-center" v-if="loading">
+  <div class="absolute-center" v-if="loading">
     <Spinner />
     Loading your messages ...
   </div>
-  <div v-else-if="contentText">
+  <div v-else-if="contentText" class="center-spinner">
     <CodeEditor
       :ytext="contentText"
       :key="filepath"
@@ -11,21 +11,27 @@
       :awareness="proj!.awareness"
     />
   </div>
-  <div v-else-if="contentXml">
+  <div v-else-if="contentXml" class="center-spinner">
     <MilkdownEditor :yxml="contentXml" :awareness="proj!.awareness" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref, shallowRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import * as Y from 'yjs';
 
 import Spinner from '@/components/Spinner.vue';
-import CodeEditor from '@/components/files/CodeEditor.vue';
-import MilkdownEditor from '@/components/files/MilkdownEditor.vue';
+const CodeEditor = defineAsyncComponent({
+  loader: () => import('@/components/files/CodeEditor.vue'),
+  loadingComponent: Spinner,
+});
+const MilkdownEditor = defineAsyncComponent({
+  loader: () => import('@/components/files/MilkdownEditor.vue'),
+  loadingComponent: Spinner,
+});
 
 import { Workspace } from '@/services/workspace';
 import type { WorkspaceProj } from '@/services/workspace-proj';
