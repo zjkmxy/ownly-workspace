@@ -206,7 +206,61 @@ function chooseIcon(entry: TreeEntry) {
   if (entry.is_folder) {
     return foldersOpen.value[entry.name] ? fas.faFolderOpen : fas.faFolder;
   }
-  return fas.faFile;
+
+  const extension = entry.name.split('.').pop()?.toLocaleLowerCase();
+  switch (extension) {
+    case 'md':
+    case 'json':
+    case 'tex':
+    case 'bib':
+    case 'sty':
+    case 'cls':
+
+    case 'js':
+    case 'ts':
+    case 'jsx':
+    case 'tsx':
+    case 'vue':
+    case 'html':
+    case 'css':
+    case 'scss':
+    case 'go':
+    case 'py':
+    case 'sh':
+    case 'yaml':
+    case 'yml':
+    case 'toml':
+      return fas.faFileCode;
+    case 'mdoc':
+    case 'docx':
+    case 'doc':
+      return fas.faFileWord;
+    case 'pptx':
+    case 'ppt':
+      return fas.faFilePowerpoint;
+    case 'xlsx':
+    case 'xls':
+      return fas.faFileExcel;
+    case 'pdf':
+      return fas.faFilePdf;
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif':
+    case 'svg':
+    case 'ico':
+    case 'webp':
+    case 'bmp':
+    case 'tiff':
+    case 'tif':
+    case 'heic':
+    case 'heif':
+    case 'avif':
+    case 'apng':
+      return fas.faFileImage;
+    default:
+      return fas.faFile;
+  }
 }
 
 /** Map of open folders for O(1) lookup */
