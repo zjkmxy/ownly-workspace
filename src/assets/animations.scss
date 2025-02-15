@@ -27,3 +27,19 @@
     transform: translateX(-10px);
   }
 }
+
+@keyframes fade90 {
+  0% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  99% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+    display: none;
+  }
+}

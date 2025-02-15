@@ -120,24 +120,8 @@ onBeforeUnmount(() => {
   transform: translateY(-100%) translateX(-2px);
   border-radius: 3px;
   padding: 0 3px;
-  font-size: 0.9em;
+  font-size: 10pt;
   color: var(--bulma-text-strong);
-
   animation: fade90 2s forwards;
-  @keyframes fade90 {
-    0% {
-      opacity: 1;
-    }
-    90% {
-      opacity: 1;
-    }
-    99% {
-      opacity: 0;
-    }
-    100% {
-      opacity: 0;
-      display: none;
-    }
-  }
 }
 </style>

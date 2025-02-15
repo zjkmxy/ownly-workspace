@@ -94,7 +94,7 @@ milkdown-toolbar {
   position: absolute;
   top: -1em;
   left: -2px;
-  font-size: 0.8em;
+  font-size: 10pt;
   background-color: orange;
   border-radius: 2px;
   border-radius: 3px;
@@ -105,5 +105,6 @@ milkdown-toolbar {
   user-select: none;
   color: black;
   white-space: nowrap;
+  animation: fade90 2s forwards;
 }
 </style>
