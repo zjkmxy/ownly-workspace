@@ -92,18 +92,18 @@ milkdown-toolbar {
 
 .ProseMirror-yjs-cursor > div {
   position: absolute;
-  top: -0.9em;
+  top: -1em;
   left: -2px;
-  font-size: 13px;
+  font-size: 0.8em;
   background-color: orange;
-  font-family: serif;
+  border-radius: 2px;
+  border-radius: 3px;
+  padding: 1px 3px;
   font-style: normal;
   font-weight: normal;
   line-height: normal;
   user-select: none;
   color: black;
-  padding-left: 2px;
-  padding-right: 2px;
   white-space: nowrap;
 }
 </style>
