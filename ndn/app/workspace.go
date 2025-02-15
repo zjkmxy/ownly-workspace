@@ -119,6 +119,48 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 			// Create JS API for SVS ALO
 			return a.SvsAloJs(svsAlo), nil
 		}),
+
+		// awareness(group: string): Promise<AwarenessApi>;
+		"awareness": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			awarenessGroup, err := enc.NameFromStr(p[0].String())
+			if err != nil {
+				return nil, err
+			}
+
+			// Create new Awareness instance
+			awareness := &Awareness{
+				Name:   awarenessGroup,
+				Client: client,
+			}
+
+			// Create JS API for Awareness
+			return js.ValueOf(map[string]any{
+				// start(): Promise<void>;
+				"start": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+					awareness.Start()
+					return nil, nil
+				}),
+
+				// stop(): Promise<void>;
+				"stop": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+					awareness.Stop()
+					return nil, nil
+				}),
+
+				// publish(data: Uint8Array): Promise<void>;
+				"publish": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+					return nil, awareness.Publish(enc.Wire{utils.JsArrayToSlice(p[0])})
+				}),
+
+				// subscribe(cb: (pub: Uint8Array) => void): Promise<void>;
+				"subscribe": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+					awareness.OnData = func(wire enc.Wire) {
+						p[0].Invoke(utils.SliceToJsArray(wire.Join()))
+					}
+					return nil, nil
+				}),
+			}), nil
+		}),
 	}
 
 	return js.ValueOf(apiMap), nil

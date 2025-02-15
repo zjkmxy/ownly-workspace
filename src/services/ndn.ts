@@ -46,6 +46,8 @@ export interface WorkspaceAPI {
 
   /** SVS ALO instance */
   svs_alo(group: string): Promise<SvsAloApi>;
+  /** Awareness instance */
+  awareness(group: string): Promise<AwarenessApi>;
 }
 
 /** API of the SVS ALO instance */
@@ -73,6 +75,18 @@ export type SvsAloPubInfo = {
   boot_time: number;
   seq_num: number;
 };
+
+/** API for Awareness */
+export interface AwarenessApi {
+  /** Start the awareness */
+  start(): Promise<void>;
+  /** Stop the awareness */
+  stop(): Promise<void>;
+  /** Publish new data */
+  publish(data: Uint8Array): Promise<void>;
+  /** Subscribe to data */
+  subscribe(cb: (pub: Uint8Array) => void): Promise<void>;
+}
 
 /**
  * Named Data Networking Service

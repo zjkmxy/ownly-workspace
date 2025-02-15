@@ -1,9 +1,12 @@
 import * as Y from 'yjs';
+import * as aware from 'y-protocols/awareness.js';
 
-import { GlobalWkspEvents, SvsYDoc } from './workspace';
+import { GlobalWkspEvents, SvsYDoc, ActiveWorkspace } from './workspace';
 
-import type { WorkspaceAPI } from './ndn';
+import type { AwarenessApi, WorkspaceAPI } from './ndn';
 import type { IProject, IProjectFile, IWorkspace } from './types';
+
+import * as utils from '@/utils';
 
 /** Currently active project in the workspace */
 let active: WorkspaceProj | null = null;
@@ -28,6 +31,7 @@ export class WorkspaceProjManager {
   public async stop() {
     for (const proj of this.projectMap.values()) {
       await proj.svdoc.stop();
+      await proj.ndnAware.stop();
       active = null;
     }
   }
@@ -56,11 +60,15 @@ export class WorkspaceProjManager {
     const svs = await this.api.svs_alo(`${this.metadata.name}/p-${name}`);
     const svdoc = new SvsYDoc(svs, slug);
 
+    // Start awareness for project
+    const ndnAware = await this.api.awareness(`${this.metadata.name}/p-${name}/32=aware`);
+
     // Create project object
-    proj = new WorkspaceProj(name, svdoc);
+    proj = new WorkspaceProj(name, svdoc, ndnAware);
     this.projectMap.set(name, proj);
 
     await svdoc.start();
+    await ndnAware.start();
     return proj;
   }
 
@@ -74,13 +82,25 @@ export class WorkspaceProj {
   private readonly fileList: Y.Array<IProjectFile>;
   private readonly contentMap: Y.Map<Y.Text | Y.XmlFragment>;
 
+  public readonly awareness: aware.Awareness;
+  private awareThrottle: number = 0;
+  private readonly awareThrottleSet: Set<number> = new Set();
+
   constructor(
     public readonly name: string,
     public readonly svdoc: SvsYDoc,
+    public readonly ndnAware: AwarenessApi,
   ) {
+    // Set up file list
     this.fileList = svdoc.doc.getArray('_file_');
     this.fileList.observe(() => this.onListChange());
+
+    // Set up content map
     this.contentMap = svdoc.doc.getMap('_ctn_');
+
+    // Setup awareness for entire project
+    this.awareness = new aware.Awareness(svdoc.doc);
+    this.setupAwareness();
   }
 
   public async activate(): Promise<void> {
@@ -131,4 +151,77 @@ export class WorkspaceProj {
     if (!file) throw new Error('File not found');
     return file;
   }
+
+  private setupAwareness() {
+    this.awareness.setLocalStateField('user', ActiveWorkspace?.api.name ?? 'Unknown');
+
+    this.awareness.on('update', ({ added, updated, removed }: any, source: 'local' | 'remote') => {
+      if (source !== 'local') {
+        for (const client of added) {
+          this.injectAwarenessStyles(client, this.awareness.getStates().get(client)?.user);
+        }
+        return;
+      }
+
+      for (const client of added.concat(updated).concat(removed)) {
+        this.awareThrottleSet.add(client);
+      }
+      if (!this.awareThrottle) {
+        this.awareThrottle = window.setTimeout(() => {
+          const updateBinary = aware.encodeAwarenessUpdate(
+            this.awareness,
+            Array.from(this.awareThrottleSet),
+          );
+          this.awareThrottle = 0;
+          this.awareThrottleSet.clear();
+          this.ndnAware.publish(updateBinary);
+        }, 250);
+      }
+    });
+
+    this.ndnAware.subscribe((pub) => {
+      try {
+        aware.applyAwarenessUpdate(this.awareness, pub, 'remote');
+      } catch (e) {
+        console.error(e);
+      }
+    });
+  }
+
+  private injectAwarenessStyles(client: number, user: string) {
+    if (!user) return;
+
+    // Generate color based on user name
+    const hash = utils.cyrb64(user);
+
+    // Generate RGB color
+    let r = (hash[0] % 128) + 110;
+    let g = ((hash[0] >> 7) % 128) + 110;
+    let b = (hash[1] % 128) + 110;
+    if (utils.themeIsDark()) {
+      r = 255 - r;
+      g = 255 - g;
+      b = 255 - b;
+    }
+
+    // Generate CSS color string
+    const rgb = `${r}, ${g}, ${b}`;
+
+    // Monaco editor colors (see CodeEditor.vue)
+    awarenessStyles.textContent += `
+      .yRemoteSelection-${client} {
+        background-color: rgba(${rgb}, 0.5);
+      }
+      .yRemoteSelectionHead-${client} {
+        border-left: rgb(${rgb}) solid 2px;
+      }
+      .yRemoteSelectionHead-${client}::after {
+        content: "${user}";
+        background-color: rgb(${rgb});
+      }
+    `;
+  }
 }
+
+const awarenessStyles = document.createElement('style');
+document.head.appendChild(awarenessStyles);

@@ -11,6 +11,7 @@ import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 
 import * as Y from 'yjs';
 import { MonacoBinding } from 'y-monaco';
+import type { Awareness } from 'y-protocols/awareness.js';
 
 import * as utils from '@/utils';
 
@@ -25,7 +26,11 @@ self.MonacoEnvironment = {
 const props = defineProps({
   ytext: {
     type: Object as PropType<Y.Text>,
-    required: false,
+    required: true,
+  },
+  awareness: {
+    type: Object as PropType<Awareness>,
+    required: true,
   },
   basename: {
     type: String,
@@ -73,9 +78,12 @@ onMounted(() => {
     padding: { top: 10, bottom: 10 },
   });
 
-  if (props.ytext) {
-    ybinding = new MonacoBinding(props.ytext, editor!.getModel()!);
-  }
+  ybinding = new MonacoBinding(
+    props.ytext,
+    editor!.getModel()!,
+    new Set([editor]),
+    props.awareness,
+  );
 });
 
 onBeforeUnmount(() => {
@@ -88,5 +96,45 @@ onBeforeUnmount(() => {
 <style scoped lang="scss">
 .container {
   height: 100vh;
+}
+</style>
+
+<style lang="scss">
+:root {
+  --default-y-selection-color: 255, 165, 0;
+}
+.yRemoteSelection {
+  background-color: rgba(var(--default-y-selection-color), 0.4);
+}
+.yRemoteSelectionHead {
+  position: absolute;
+  border-left: rgb(var(--default-y-selection-color)) solid 2px;
+  height: 100%;
+  transition: opacity 0.1s ease;
+}
+.yRemoteSelectionHead::after {
+  position: absolute;
+  content: 'Hello';
+  background-color: rgb(var(--default-y-selection-color));
+  transform: translateY(-100%) translateX(-2px);
+  border-radius: 3px;
+  padding: 0 3px;
+
+  animation: fade90 2s forwards;
+  @keyframes fade90 {
+    0% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    99% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 0;
+      display: none;
+    }
+  }
 }
 </style>

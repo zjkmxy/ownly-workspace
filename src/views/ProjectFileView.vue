@@ -4,7 +4,12 @@
     Loading your messages ...
   </div>
   <div v-else-if="contentText">
-    <CodeEditor :ytext="contentText" :key="filepath" :basename="basename" />
+    <CodeEditor
+      :ytext="contentText"
+      :key="filepath"
+      :basename="basename"
+      :awareness="proj!.awareness"
+    />
   </div>
   <div v-else-if="contentXml">
     <MilkdownEditor :yxml="contentXml" />

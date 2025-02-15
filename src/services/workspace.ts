@@ -29,7 +29,7 @@ export const GlobalWkspEvents = new EventEmitter() as TypedEmitter<{
  * We keep an active instance of the open workspace.
  * This always runs in the background collecting data.
  */
-let active: Workspace | null = null;
+export let ActiveWorkspace: Workspace | null = null;
 
 /**
  * Workspace service
@@ -103,10 +103,10 @@ export class Workspace {
     }
 
     // Start workspace if not already active
-    if (active?.metadata.name !== metadata.name) {
+    if (ActiveWorkspace?.metadata.name !== metadata.name) {
       try {
-        await active?.stop();
-        active = await Workspace.start(metadata);
+        await ActiveWorkspace?.stop();
+        ActiveWorkspace = await Workspace.start(metadata);
       } catch (e) {
         console.error(e);
         useToast().error(`Failed to start workspace: ${e}`);
@@ -114,7 +114,7 @@ export class Workspace {
       }
     }
 
-    return active;
+    return ActiveWorkspace;
   }
 }
 
