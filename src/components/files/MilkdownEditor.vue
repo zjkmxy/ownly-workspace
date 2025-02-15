@@ -10,7 +10,8 @@ import * as Y from 'yjs';
 import { Crepe } from '@milkdown/crepe';
 import { collab, CollabService, collabServiceCtx } from '@milkdown/plugin-collab';
 import '@milkdown/crepe/theme/common/style.css';
-import '@milkdown/crepe/theme/nord.css';
+
+import * as utils from '@/utils';
 
 const props = defineProps({
   yxml: {
@@ -25,6 +26,12 @@ let crepe: Crepe | null = null;
 let collabService: CollabService | null = null;
 
 onMounted(async () => {
+  if (utils.themeIsDark()) {
+    await import('@milkdown/crepe/theme/frame-dark.css');
+  } else {
+    await import('@milkdown/crepe/theme/frame.css');
+  }
+
   crepe = new Crepe({
     root: container.value!,
   });
