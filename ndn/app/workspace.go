@@ -78,7 +78,6 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 
 		// start(): Promise<void>;
 		"start": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-
 			if err := client.Start(); err != nil {
 				return nil, err
 			}

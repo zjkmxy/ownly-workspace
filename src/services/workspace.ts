@@ -105,7 +105,7 @@ export class Workspace {
     // Start workspace if not already active
     if (active?.metadata.name !== metadata.name) {
       try {
-        active?.stop();
+        await active?.stop();
         active = await Workspace.start(metadata);
       } catch (e) {
         console.error(e);
