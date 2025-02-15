@@ -70,6 +70,7 @@ onMounted(() => {
     minimap: { enabled: false },
     suggest: { showWords: false },
     wordWrap: 'on',
+    padding: { top: 10, bottom: 10 },
   });
 
   if (props.ytext) {
