@@ -12,7 +12,7 @@
     />
   </div>
   <div v-else-if="contentXml">
-    <MilkdownEditor :yxml="contentXml" />
+    <MilkdownEditor :yxml="contentXml" :awareness="proj!.awareness" />
   </div>
 </template>
 

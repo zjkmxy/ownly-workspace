@@ -153,7 +153,18 @@ export class WorkspaceProj {
   }
 
   private setupAwareness() {
-    this.awareness.setLocalStateField('user', ActiveWorkspace?.api.name ?? 'Unknown');
+    // Make our own color here based on username
+    const username = ActiveWorkspace?.api.name ?? 'Unknown';
+    const hash = utils.cyrb64(username);
+    const r = (hash[0] % 128) + 110;
+    const g = ((hash[0] >> 7) % 128) + 110;
+    const b = (hash[1] % 128) + 110;
+
+    this.awareness.setLocalStateField('user', {
+      name: username,
+      color: `rgb(${r},${g},${b})`,
+      rgb: [r, g, b],
+    });
 
     this.awareness.on('update', ({ added, updated, removed }: any, source: 'local' | 'remote') => {
       if (source !== 'local') {
@@ -188,35 +199,24 @@ export class WorkspaceProj {
     });
   }
 
-  private injectAwarenessStyles(client: number, user: string) {
-    if (!user) return;
+  private injectAwarenessStyles(client: number, user: any) {
+    if (!user.color) return;
 
-    // Generate color based on user name
-    const hash = utils.cyrb64(user);
-
-    // Generate RGB color
-    let r = (hash[0] % 128) + 110;
-    let g = ((hash[0] >> 7) % 128) + 110;
-    let b = (hash[1] % 128) + 110;
+    let rgb = `${user.rgb[0]},${user.rgb[1]},${user.rgb[2]}`;
     if (utils.themeIsDark()) {
-      r = 255 - r;
-      g = 255 - g;
-      b = 255 - b;
+      rgb = `${255 - user.rgb[0]},${255 - user.rgb[1]},${255 - user.rgb[2]}`;
     }
-
-    // Generate CSS color string
-    const rgb = `${r}, ${g}, ${b}`;
 
     // Monaco editor colors (see CodeEditor.vue)
     awarenessStyles.textContent += `
       .yRemoteSelection-${client} {
         background-color: rgba(${rgb}, 0.5);
       }
-      .yRemoteSelectionHead-${client} {
-        border-left: rgb(${rgb}) solid 2px;
+      .yRemoteSelectionHead-${client}, .ProseMirror-yjs-cursor {
+        border-color: rgb(${rgb});
       }
       .yRemoteSelectionHead-${client}::after {
-        content: "${user}";
+        content: "${user.name}";
         background-color: rgb(${rgb});
       }
     `;

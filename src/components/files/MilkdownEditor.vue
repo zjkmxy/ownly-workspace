@@ -6,6 +6,7 @@
 import { onBeforeUnmount, onMounted, ref, type PropType } from 'vue';
 
 import * as Y from 'yjs';
+import type { Awareness } from 'y-protocols/awareness.js';
 
 import { Crepe } from '@milkdown/crepe';
 import { collab, CollabService, collabServiceCtx } from '@milkdown/plugin-collab';
@@ -16,6 +17,10 @@ import * as utils from '@/utils';
 const props = defineProps({
   yxml: {
     type: Object as PropType<Y.XmlFragment>,
+    required: true,
+  },
+  awareness: {
+    type: Object as PropType<Awareness>,
     required: true,
   },
 });
@@ -40,7 +45,7 @@ onMounted(async () => {
 
   crepe.editor.action((ctx) => {
     collabService = ctx.get(collabServiceCtx);
-    collabService.bindXmlFragment(props.yxml).connect();
+    collabService.bindXmlFragment(props.yxml).setAwareness(props.awareness).connect();
   });
 });
 
@@ -61,5 +66,44 @@ onBeforeUnmount(() => {
 // Fix overlap with side panel
 milkdown-toolbar {
   z-index: 1000;
+}
+
+// Taken from the example at https://milkdown.dev/docs/guide/collaborative-editing
+.ProseMirror > .ProseMirror-yjs-cursor:first-child {
+  margin-top: 16px;
+}
+.ProseMirror p:first-child,
+.ProseMirror h1:first-child,
+.ProseMirror h2:first-child,
+.ProseMirror h3:first-child,
+.ProseMirror h4:first-child,
+.ProseMirror h5:first-child,
+.ProseMirror h6:first-child {
+  margin-top: 16px;
+}
+
+.ProseMirror-yjs-cursor {
+  position: absolute;
+  border-left: 2px solid black;
+  border-color: orange;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.ProseMirror-yjs-cursor > div {
+  position: absolute;
+  top: -0.9em;
+  left: -2px;
+  font-size: 13px;
+  background-color: orange;
+  font-family: serif;
+  font-style: normal;
+  font-weight: normal;
+  line-height: normal;
+  user-select: none;
+  color: black;
+  padding-left: 2px;
+  padding-right: 2px;
+  white-space: nowrap;
 }
 </style>

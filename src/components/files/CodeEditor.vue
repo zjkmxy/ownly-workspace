@@ -108,7 +108,8 @@ onBeforeUnmount(() => {
 }
 .yRemoteSelectionHead {
   position: absolute;
-  border-left: rgb(var(--default-y-selection-color)) solid 2px;
+  border-left: 2px solid black;
+  border-color: rgb(var(--default-y-selection-color));
   height: 100%;
   transition: opacity 0.1s ease;
 }
