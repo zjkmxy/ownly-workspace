@@ -6,6 +6,9 @@
   <div v-else-if="contentText">
     <CodeEditor :ytext="contentText" :key="filepath" :basename="basename" />
   </div>
+  <div v-else-if="contentXml">
+    <MilkdownEditor :yxml="contentXml" />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -17,6 +20,7 @@ import * as Y from 'yjs';
 
 import Spinner from '@/components/Spinner.vue';
 import CodeEditor from '@/components/files/CodeEditor.vue';
+import MilkdownEditor from '@/components/files/MilkdownEditor.vue';
 
 import { Workspace } from '@/services/workspace';
 import type { WorkspaceProj } from '@/services/workspace-proj';
@@ -30,8 +34,9 @@ const filename = computed(() => route.params.filename as string[]);
 const filepath = computed(() => '/' + filename.value.join('/'));
 const basename = computed(() => filename.value[filename.value.length - 1]);
 
-const proj = ref(null as WorkspaceProj | null);
+const proj = shallowRef(null as WorkspaceProj | null);
 const contentText = shallowRef<Y.Text | null>(null);
+const contentXml = shallowRef<Y.XmlFragment | null>(null);
 
 onMounted(setup);
 watch(filename, setup);
@@ -41,16 +46,26 @@ async function setup() {
   try {
     loading.value = true;
     contentText.value = null;
+    contentXml.value = null;
 
+    // Load workspace
     const wksp = await Workspace.setupOrRedir();
     if (!wksp) return;
 
+    // Load project
     proj.value = await wksp.proj.get(projName.value);
     if (!proj.value) return;
-
     await proj.value.activate();
 
-    contentText.value = await proj.value.getContent(filepath.value);
+    // Load file content
+    const content = await proj.value.getContent(filepath.value);
+    if (content instanceof Y.Text) {
+      contentText.value = content;
+    } else if (content instanceof Y.XmlFragment) {
+      contentXml.value = content;
+    } else {
+      throw new Error(`Unsupported content type: ${content}`);
+    }
   } catch (err) {
     console.error(err);
     toast.error(`Failed to load project: ${err}`);

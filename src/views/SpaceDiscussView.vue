@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
 
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
@@ -112,7 +112,7 @@ const scroller = ref<InstanceType<typeof DynamicScroller>>();
 const chatbox = ref<HTMLTextAreaElement>();
 
 // Data state
-const wksp = ref(null as Workspace | null);
+const wksp = shallowRef(null as Workspace | null);
 const items = ref(null as IChatMessage[] | null);
 const outMessage = ref(String());
 

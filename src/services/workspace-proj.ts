@@ -72,15 +72,15 @@ export class WorkspaceProjManager {
 
 export class WorkspaceProj {
   private readonly fileList: Y.Array<IProjectFile>;
-  private readonly contentMap: Y.Map<Y.Text>;
+  private readonly contentMap: Y.Map<Y.Text | Y.XmlFragment>;
 
   constructor(
     public readonly name: string,
     public readonly svdoc: SvsYDoc,
   ) {
-    this.fileList = svdoc.doc.getArray<IProjectFile>('_file_');
+    this.fileList = svdoc.doc.getArray('_file_');
     this.fileList.observe(() => this.onListChange());
-    this.contentMap = svdoc.doc.getMap<Y.Text>('_ctn_');
+    this.contentMap = svdoc.doc.getMap('_ctn_');
   }
 
   public async activate(): Promise<void> {
@@ -103,7 +103,10 @@ export class WorkspaceProj {
 
     this.svdoc.doc.transact(() => {
       this.fileList.push([file]);
-      this.contentMap.set(file.path, new Y.Text());
+      this.contentMap.set(
+        file.path,
+        file.path.endsWith('.mdoc') ? new Y.XmlFragment() : new Y.Text(),
+      );
     });
   }
 
@@ -123,7 +126,7 @@ export class WorkspaceProj {
     if (!deletedCount) throw new Error('File not found');
   }
 
-  public async getContent(path: string): Promise<Y.Text> {
+  public async getContent(path: string): Promise<Y.Text | Y.XmlFragment> {
     const file = this.contentMap.get(path);
     if (!file) throw new Error('File not found');
     return file;

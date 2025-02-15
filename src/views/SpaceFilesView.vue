@@ -4,9 +4,9 @@
 
 <script setup lang="ts">
 import { Workspace } from '@/services/workspace';
-import { ref } from 'vue';
+import { shallowRef } from 'vue';
 
-const wksp = ref(null as Workspace | null);
+const wksp = shallowRef(null as Workspace | null);
 
 async function setup() {
   wksp.value = await Workspace.setupOrRedir();
