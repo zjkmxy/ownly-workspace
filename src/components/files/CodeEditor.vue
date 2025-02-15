@@ -12,7 +12,7 @@ import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import * as Y from 'yjs';
 import { MonacoBinding } from 'y-monaco';
 
-import { monacoRegister } from '@/utils';
+import * as utils from '@/utils';
 
 // @ts-ignore
 self.MonacoEnvironment = {
@@ -39,7 +39,7 @@ let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 let ybinding: MonacoBinding | null = null;
 
 onMounted(() => {
-  monacoRegister();
+  utils.monacoRegister();
 
   const ext = props.basename.split('.').pop()?.toLocaleLowerCase();
   let language = 'plaintext';
@@ -64,6 +64,7 @@ onMounted(() => {
   editor = monaco.editor.create(container.value!, {
     value: String(),
     language: language,
+    theme: utils.themeIsDark() ? 'vs-dark' : 'vs',
     automaticLayout: true,
     scrollBeyondLastLine: false,
     minimap: { enabled: false },

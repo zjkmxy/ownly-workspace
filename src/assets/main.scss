@@ -34,6 +34,8 @@ main.full-h {
 
 /** Override background color to be darker on dark mode */
 @include cv.system-theme($name: 'dark') {
+  --theme-is-dark: 1;
+
   .has-background-primary.soft-if-dark,
   .is-primary.soft-if-dark {
     background-color: var(--bulma-primary-soft) !important;
