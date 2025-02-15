@@ -16,7 +16,7 @@
               @keyup.enter="create"
             />
             <span class="icon is-small is-left">
-              <FontAwesomeIcon :icon="fas.faLayerGroup" />
+              <FontAwesomeIcon :icon="faLayerGroup" />
             </span>
             <p class="help">
               Projects separate files by purpose or team. Use a short, descriptive name that is easy
@@ -43,7 +43,7 @@ import { ref } from 'vue';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { fas } from '@fortawesome/free-solid-svg-icons';
+import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 
 import { Workspace } from '@/services/workspace';
 

@@ -9,7 +9,7 @@
       <section class="hero project-ready">
         <div class="hero-body">
           <p class="title">
-            <FontAwesomeIcon class="mr-1" :icon="fas.faLayerGroup" size="sm" />
+            <FontAwesomeIcon class="mr-1" :icon="faLayerGroup" size="sm" />
             {{ projName }}
           </p>
           <p class="subtitle mt-4">
@@ -28,7 +28,7 @@ import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { fas } from '@fortawesome/free-solid-svg-icons';
+import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 
 import Spinner from '@/components/Spinner.vue';
 

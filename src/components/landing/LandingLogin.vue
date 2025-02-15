@@ -23,11 +23,11 @@
                 @keyup.enter="emailSubmit"
               />
               <span class="icon is-small is-left">
-                <FontAwesomeIcon :icon="fas.faEnvelope" />
+                <FontAwesomeIcon :icon="faEnvelope" />
               </span>
 
               <span class="icon is-small is-right" v-if="emailError">
-                <FontAwesomeIcon :icon="fas.faExclamationTriangle" />
+                <FontAwesomeIcon :icon="faExclamationTriangle" />
               </span>
             </div>
             <p v-if="emailError" class="help is-danger">{{ emailError }}</p>
@@ -61,7 +61,7 @@
                 @keyup="codeSubmit"
               />
               <span class="icon is-small is-left">
-                <FontAwesomeIcon :icon="fas.faKey" />
+                <FontAwesomeIcon :icon="faKey" />
               </span>
               <p v-if="codeError" class="help is-danger">{{ codeError }}</p>
             </div>
@@ -72,7 +72,7 @@
       </div>
 
       <div class="anim-rtl-fade p-4 has-text-centered" v-else-if="showSuccess">
-        <FontAwesomeIcon class="success" :icon="fas.faCircleCheck" />
+        <FontAwesomeIcon class="success" :icon="faCircleCheck" />
       </div>
     </Transition>
   </div>
@@ -84,7 +84,12 @@ import { useToast } from 'vue-toast-notification';
 
 import Spinner from '@/components/Spinner.vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { fas } from '@fortawesome/free-solid-svg-icons';
+import {
+  faEnvelope,
+  faExclamationTriangle,
+  faKey,
+  faCircleCheck,
+} from '@fortawesome/free-solid-svg-icons';
 
 import * as utils from '@/utils/index';
 import ndn from '@/services/ndn';

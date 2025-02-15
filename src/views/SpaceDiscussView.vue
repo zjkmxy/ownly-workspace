@@ -67,7 +67,7 @@
           @keydown.enter="send"
         ></textarea>
         <button class="button mt-2 send" @click="send">
-          <FontAwesomeIcon :icon="fas.faPaperPlane" />
+          <FontAwesomeIcon :icon="faPaperPlane" />
         </button>
       </div>
 
@@ -78,7 +78,7 @@
           @click="(scroller.scrollToBottom(), (unreadCount = 0))"
         >
           <span class="mr-2">{{ unreadCount }} Unread Messages</span>
-          <FontAwesomeIcon :icon="fas.faArrowDown" />
+          <FontAwesomeIcon :icon="faArrowDown" />
         </div>
       </Transition>
     </template>
@@ -93,7 +93,7 @@ import { useToast } from 'vue-toast-notification';
 
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { fas } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 
 import * as utils from '@/utils';
 import { Workspace } from '@/services/workspace';

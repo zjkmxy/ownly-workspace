@@ -16,7 +16,7 @@
               @keyup.enter="create"
             />
             <span class="icon is-small is-left">
-              <FontAwesomeIcon :icon="fas.faHashtag" />
+              <FontAwesomeIcon :icon="faHashtag" />
             </span>
             <p class="help">
               Channels are intended to separate discussions by topic or team. Use a short,
@@ -43,7 +43,7 @@ import { ref } from 'vue';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { fas } from '@fortawesome/free-solid-svg-icons';
+import { faHashtag } from '@fortawesome/free-solid-svg-icons';
 
 import { Workspace } from '@/services/workspace';
 

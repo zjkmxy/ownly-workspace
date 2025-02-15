@@ -18,7 +18,7 @@
         <li v-for="proj in projects" :key="proj.id">
           <router-link :to="linkProject(proj)">
             <div class="link-inner">
-              <FontAwesomeIcon class="mr-1" :icon="fas.faLayerGroup" size="sm" />
+              <FontAwesomeIcon class="mr-1" :icon="faLayerGroup" size="sm" />
               {{ proj.name }}
             </div>
 
@@ -43,7 +43,7 @@
 
         <li>
           <a @click="showProjectModal = true">
-            <FontAwesomeIcon class="mr-1" :icon="fas.faPlus" size="sm" />
+            <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
             Add project
           </a>
         </li>
@@ -53,13 +53,13 @@
       <ul class="menu-list">
         <li v-for="chan in channels" :key="chan.id">
           <router-link :to="linkDiscuss(chan)">
-            <FontAwesomeIcon class="mr-1" :icon="fas.faHashtag" size="sm" />
+            <FontAwesomeIcon class="mr-1" :icon="faHashtag" size="sm" />
             {{ chan.name }}
           </router-link>
         </li>
         <li>
           <a @click="showChannelModal = true">
-            <FontAwesomeIcon class="mr-1" :icon="fas.faPlus" size="sm" />
+            <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
             Add channel
           </a>
         </li>
@@ -89,7 +89,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { fas } from '@fortawesome/free-solid-svg-icons';
+import { faLayerGroup, faPlus, faHashtag } from '@fortawesome/free-solid-svg-icons';
 
 import ProjectTree from './ProjectTree.vue';
 import ProjectTreeAddButton from './ProjectTreeAddButton.vue';

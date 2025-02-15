@@ -47,10 +47,10 @@
         />
         <div class="buttons">
           <button class="button is-small" @click="showNew = false">
-            <FontAwesomeIcon :icon="fas.faTimes" size="sm" />
+            <FontAwesomeIcon :icon="faTimes" size="sm" />
           </button>
           <button class="button is-small" @click="executeNew">
-            <FontAwesomeIcon :icon="fas.faCheck" size="sm" />
+            <FontAwesomeIcon :icon="faCheck" size="sm" />
           </button>
         </div>
       </div>
@@ -64,7 +64,19 @@ import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { fas } from '@fortawesome/free-solid-svg-icons';
+import {
+  faTimes,
+  faCheck,
+  faFolder,
+  faFolderOpen,
+  faFile,
+  faFileCode,
+  faFileWord,
+  faFilePowerpoint,
+  faFileExcel,
+  faFilePdf,
+  faFileImage,
+} from '@fortawesome/free-solid-svg-icons';
 
 import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
 
@@ -204,7 +216,7 @@ function linkToFile(entry: TreeEntry) {
 /** Choose an icon for a given entry */
 function chooseIcon(entry: TreeEntry) {
   if (entry.is_folder) {
-    return foldersOpen.value[entry.name] ? fas.faFolderOpen : fas.faFolder;
+    return foldersOpen.value[entry.name] ? faFolderOpen : faFolder;
   }
 
   const extension = entry.name.split('.').pop()?.toLocaleLowerCase();
@@ -230,19 +242,19 @@ function chooseIcon(entry: TreeEntry) {
     case 'yaml':
     case 'yml':
     case 'toml':
-      return fas.faFileCode;
+      return faFileCode;
     case 'mdoc':
     case 'docx':
     case 'doc':
-      return fas.faFileWord;
+      return faFileWord;
     case 'pptx':
     case 'ppt':
-      return fas.faFilePowerpoint;
+      return faFilePowerpoint;
     case 'xlsx':
     case 'xls':
-      return fas.faFileExcel;
+      return faFileExcel;
     case 'pdf':
-      return fas.faFilePdf;
+      return faFilePdf;
     case 'png':
     case 'jpg':
     case 'jpeg':
@@ -257,9 +269,9 @@ function chooseIcon(entry: TreeEntry) {
     case 'heif':
     case 'avif':
     case 'apng':
-      return fas.faFileImage;
+      return faFileImage;
     default:
-      return fas.faFile;
+      return faFile;
   }
 }
 

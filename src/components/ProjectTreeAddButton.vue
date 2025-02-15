@@ -5,7 +5,7 @@
     @click.stop.prevent="$refs.dropdown!.open($event)"
     title="Update contents of this node"
   >
-    <FontAwesomeIcon class="mr-1" :icon="fas.faCaretDown" size="2xs" />
+    <FontAwesomeIcon class="mr-1" :icon="faCaretDown" size="2xs" />
 
     <Dropdown ref="dropdown">
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-folder')"> New folder </a>
@@ -20,7 +20,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { fas } from '@fortawesome/free-solid-svg-icons';
+import { faCaretDown } from '@fortawesome/free-solid-svg-icons';
 import Dropdown from './Dropdown.vue';
 
 defineProps({
