@@ -116,7 +116,7 @@ onBeforeUnmount(() => {
 }
 .yRemoteSelectionHead::after {
   position: absolute;
-  content: 'Hello';
+  content: '';
   background-color: rgb(var(--default-y-selection-color));
   transform: translateY(-100%) translateX(-2px);
   border-radius: 3px;
