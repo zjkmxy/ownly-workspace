@@ -12,8 +12,8 @@ import * as utils from '@/utils';
 let active: WorkspaceProj | null = null;
 
 export class WorkspaceProjManager {
-  private readonly projectList: Y.Array<IProject>;
-  private readonly projectMap: Map<string, WorkspaceProj> = new Map();
+  private readonly projectList: Y.Map<IProject>;
+  private readonly projectInstances: Map<string, WorkspaceProj> = new Map();
 
   constructor(
     private readonly metadata: IWorkspace,
@@ -21,15 +21,16 @@ export class WorkspaceProjManager {
     private readonly api: WorkspaceAPI,
     private readonly svdoc: SvsYDoc,
   ) {
-    this.projectList = svdoc.doc.getArray<IProject>('_proj_');
+    this.projectList = svdoc.doc.getMap<IProject>('_proj_');
 
-    const listObserver = () => GlobalWkspEvents.emit('project-list', this.projectList.toArray());
+    const listObserver = async () =>
+      GlobalWkspEvents.emit('project-list', await this.getProjects());
     this.projectList.observe(listObserver);
     listObserver();
   }
 
   public async stop() {
-    for (const proj of this.projectMap.values()) {
+    for (const proj of this.projectInstances.values()) {
       await proj.svdoc.stop();
       await proj.ndnAware.stop();
       active = null;
@@ -38,22 +39,23 @@ export class WorkspaceProjManager {
 
   public async getProjects(): Promise<IProject[]> {
     await this.svdoc.pers.whenSynced;
-    return this.projectList.toArray();
+    return Array.from(this.projectList.values());
   }
 
-  public async newProject(project: IProject) {
-    this.projectList.push([project]);
+  public async newProject(name: string) {
+    if (!name) throw new Error('Project name is required');
+    if (this.projectList.has(name)) throw new Error('Project already exists');
+    this.projectList.set(name, { name });
   }
 
   public async get(name: string): Promise<WorkspaceProj> {
     // TODO: add a lock on this
-    let proj = this.projectMap.get(name);
+    let proj = this.projectInstances.get(name);
     if (proj) return proj;
 
     // Get metadata from project list
     await this.svdoc.pers.whenSynced; // TODO: also need SVS to sync first
-    const projMeta = this.projectList.toArray().find((p) => p.name === name);
-    if (!projMeta) throw new Error('Project not found');
+    if (!this.projectList.has(name)) throw new Error('Project not found');
 
     // Start SVS for project
     const slug = `${this.slug}-${name}`;
@@ -65,7 +67,7 @@ export class WorkspaceProjManager {
 
     // Create project object
     proj = new WorkspaceProj(name, svdoc, ndnAware);
-    this.projectMap.set(name, proj);
+    this.projectInstances.set(name, proj);
 
     await svdoc.start();
     await ndnAware.start();
@@ -79,7 +81,7 @@ export class WorkspaceProjManager {
 }
 
 export class WorkspaceProj {
-  private readonly fileList: Y.Array<IProjectFile>;
+  private readonly fileMap: Y.Map<IProjectFile>;
   private readonly contentMap: Y.Map<Y.Text | Y.XmlFragment>;
 
   public readonly awareness: aware.Awareness;
@@ -92,8 +94,8 @@ export class WorkspaceProj {
     public readonly ndnAware: AwarenessApi,
   ) {
     // Set up file list
-    this.fileList = svdoc.doc.getArray('_file_');
-    this.fileList.observe(() => this.onListChange());
+    this.fileMap = svdoc.doc.getMap('_file_');
+    this.fileMap.observe(() => this.onListChange());
 
     // Set up content map
     this.contentMap = svdoc.doc.getMap('_ctn_');
@@ -109,47 +111,54 @@ export class WorkspaceProj {
   }
 
   public onListChange() {
-    if (!this.fileList || active?.name !== this.name) return;
-    GlobalWkspEvents.emit('project-files', this.name, this.fileList.toArray());
+    if (!this.fileMap || active?.name !== this.name) return;
+    GlobalWkspEvents.emit('project-files', this.name, Array.from(this.fileMap.values()));
   }
 
-  public async newFile(file: IProjectFile) {
-    if (!file.path) throw new Error('Path is required');
-    this.fileList.forEach((f) => {
-      if (f.path === file.path || f.path === `${file.path}/`) {
-        throw new Error('File or folder already exists');
-      }
-    });
+  public async newFile(path: string) {
+    if (!path) throw new Error('File path is required');
+    if (this.fileMap.has(path) || this.fileMap.has(path + '/'))
+      throw new Error('File or folder already exists');
 
     this.svdoc.doc.transact(() => {
-      this.fileList.push([file]);
-      this.contentMap.set(
-        file.path,
-        file.path.endsWith('.mdoc') ? new Y.XmlFragment() : new Y.Text(),
-      );
+      const uuid = window.crypto.randomUUID();
+      this.fileMap.set(path, { uuid, path });
+
+      const content = path.endsWith('.mdoc') ? new Y.XmlFragment() : new Y.Text();
+      this.contentMap.set(uuid, content);
     });
   }
 
-  public async deleteFile(file: IProjectFile) {
+  public async deleteFile(delpath: string) {
+    const isFolder = delpath.endsWith('/');
+
     let deletedCount = 0;
     this.svdoc.doc.transact(() => {
-      this.fileList.forEach((f, i) => {
-        const matchFolder = file.path.endsWith('/') && f.path.startsWith(file.path);
-        const matchFile = f.path === file.path;
+      this.fileMap.forEach((_, path) => {
+        const matchFolder = isFolder && path.startsWith(delpath);
+        const matchFile = path === delpath;
         if (matchFolder || matchFile) {
-          this.fileList.delete(i - deletedCount);
-          this.contentMap.delete(f.path);
+          this.fileMap.delete(path);
           deletedCount++;
         }
       });
     });
-    if (!deletedCount) throw new Error('File not found');
+    if (!deletedCount) {
+      throw new Error('File not found');
+    }
   }
 
   public async getContent(path: string): Promise<Y.Text | Y.XmlFragment> {
-    const file = this.contentMap.get(path);
-    if (!file) throw new Error('File not found');
-    return file;
+    const uuid = this.fileMap.get(path)?.uuid;
+    if (!uuid) {
+      throw new Error('File not found');
+    }
+
+    const content = this.contentMap.get(uuid);
+    if (!content) {
+      throw new Error('Content not found');
+    }
+    return content;
   }
 
   private setupAwareness() {

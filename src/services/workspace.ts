@@ -22,7 +22,7 @@ import type TypedEmitter from 'typed-emitter';
 export const GlobalWkspEvents = new EventEmitter() as TypedEmitter<{
   'chat-channels': (channels: IChatChannel[]) => void;
   'project-list': (projects: IProject[]) => void;
-  'project-files': (name: string, files: IProjectFile[]) => void;
+  'project-files': (project: string, files: IProjectFile[]) => void;
 }>;
 
 /**

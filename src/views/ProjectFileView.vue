@@ -79,7 +79,7 @@ async function setup() {
     }
   } catch (err) {
     console.error(err);
-    toast.error(`Failed to load project: ${err}`);
+    toast.error(`Failed to load file: ${err}`);
   } finally {
     loading.value = false;
   }

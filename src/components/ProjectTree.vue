@@ -337,7 +337,7 @@ async function executeNew() {
 
   try {
     const proj = await getProject();
-    await proj.newFile({ path });
+    await proj.newFile(path);
   } catch (err) {
     console.error(err);
     toast.error(`Error creating ${newName.value}: ${err}`);
@@ -358,7 +358,7 @@ async function executeDelete(entry: TreeEntry) {
 
   try {
     const proj = await getProject();
-    await proj.deleteFile({ path });
+    await proj.deleteFile(path);
   } catch (err) {
     console.error(err);
     toast.error(`Error deleting ${path}: ${err}`);

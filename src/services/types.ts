@@ -29,13 +29,13 @@ export type IChatChannel = {
 };
 
 export type IProject = {
-  /** Project ID */
-  id: number;
   /** Project name */
   name: string;
 };
 
 export type IProjectFile = {
+  /** UUID of file */
+  uuid: string;
   /** Full path of file */
   path: string;
 };
