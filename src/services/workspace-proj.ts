@@ -171,7 +171,7 @@ export class WorkspaceProj {
 
     this.awareness.setLocalStateField('user', {
       name: username,
-      color: `rgb(${r},${g},${b})`,
+      color: `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`,
       rgb: [r, g, b],
     });
 
