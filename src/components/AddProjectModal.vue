@@ -12,6 +12,7 @@
               class="input"
               type="text"
               placeholder="e.g. vendor-documents"
+              autofocus
               v-model="name"
               @keyup.enter="create"
             />
@@ -78,10 +79,7 @@ async function create() {
     }
 
     // Create channel
-    await wksp.proj.newProject({
-      id: Math.random() * 1e16,
-      name: name.value,
-    });
+    await wksp.proj.newProject(name.value);
 
     $toast.success(`Project ${name.value} created`);
     emit('close');
