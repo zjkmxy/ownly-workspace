@@ -210,14 +210,14 @@ export class WorkspaceProj {
     // Monaco editor colors (see CodeEditor.vue)
     awarenessStyles.textContent += `
       .yRemoteSelection-${client} {
-        background-color: rgba(${rgb}, 0.5);
+        background-color: rgba(${rgb}, 0.5) !important;
       }
       .yRemoteSelectionHead-${client}, .ProseMirror-yjs-cursor {
-        border-color: rgb(${rgb});
+        border-color: rgb(${rgb}) !important;
       }
       .yRemoteSelectionHead-${client}::after {
-        content: "${user.name}";
-        background-color: rgb(${rgb});
+        content: "${user.name}" !important;
+        background-color: rgb(${rgb}) !important;
       }
     `;
   }
