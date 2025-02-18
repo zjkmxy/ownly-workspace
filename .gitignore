@@ -30,5 +30,5 @@ coverage
 *.tsbuildinfo
 
 # WebAssembly
-*.wasm
-wasm_exec.js
+/ndn/**/*.wasm
+/ndn/**/wasm_exec.js
