@@ -30,9 +30,9 @@ export class SvsProvider {
     private readonly wksp: WorkspaceAPI,
     private readonly project: string,
     private readonly svs: SvsAloApi,
-    readonly db_name: string,
   ) {
-    this.db = new Dexie(db_name) as typeof this.db;
+    const slug = utils.escapeUrlName(wksp.group);
+    this.db = new Dexie(`${slug}-${project}`) as typeof this.db;
     this.db.version(1).stores({
       updates: '++id, uuid',
     });
@@ -41,8 +41,7 @@ export class SvsProvider {
   public static async create(wksp: WorkspaceAPI, project: string): Promise<SvsProvider> {
     const svs = await wksp.svs_alo(`${wksp.group}/${project}`);
 
-    const slug = utils.escapeUrlName(wksp.group);
-    const provider = new SvsProvider(wksp, project, svs, `${slug}-${project}`);
+    const provider = new SvsProvider(wksp, project, svs);
     await provider.start();
 
     return provider;
