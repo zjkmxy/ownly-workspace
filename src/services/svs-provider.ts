@@ -22,8 +22,12 @@ export class SvsProvider {
   private readonly docs = new Map<string, Y.Doc>();
   private readonly aware = new Map<string, awareProto.Awareness>();
 
+  private persistDirty = new Set<string>();
+  private lastCompaction = 0;
+  private isCompacting = false;
+
   private db: Dexie & {
-    updates: Dexie.Table<UpdateEntry, string>;
+    updates: Dexie.Table<UpdateEntry, number>;
   };
 
   private constructor(
@@ -91,6 +95,7 @@ export class SvsProvider {
 
     // Subscribe to updates
     doc.on('updateV2', async (update, origin) => {
+      // Ignore updates from self
       if (origin === this) return;
 
       // Publish the update to SVS
@@ -123,7 +128,62 @@ export class SvsProvider {
   }
 
   private async persist(uuid: string, update: Uint8Array) {
-    await this.db.updates.put({ uuid, update });
+    const id = await this.db.updates.put({ uuid, update });
+
+    // Mark the document as dirty
+    this.persistDirty.add(uuid);
+
+    // Compact the database every few updates
+    if (id - this.lastCompaction < 100) return;
+    if (this.isCompacting) return;
+
+    // Compact the database
+    try {
+      this.isCompacting = true;
+
+      // For the first compaction, check all documents
+      if (this.lastCompaction === 0) {
+        await this.db.updates
+          .orderBy('uuid')
+          .eachUniqueKey((uuid) => this.persistDirty.add(String(uuid)));
+      }
+
+      // Check all dirty documents
+      for (const uuid of this.persistDirty) {
+        this.persistDirty.delete(uuid);
+
+        // Check if we need to compact this document
+        const count = await this.db.updates.where('uuid').equals(uuid).count();
+        if (count > 100) {
+          let maxId = 0; // last update id we merged
+          const temp = new Y.Doc(); // temporary document to merge updates
+          await this.db.updates
+            .where('uuid')
+            .equals(uuid)
+            .each((update) => {
+              Y.applyUpdateV2(temp, update.update, this);
+              maxId = Math.max(maxId, update.id!);
+            });
+
+          // Merge updates and delete old ones in a transaction
+          const merged = Y.encodeStateAsUpdateV2(temp);
+          await this.db.transaction('rw', this.db.updates, async () => {
+            await this.db.updates.put({ uuid, update: merged });
+            await this.db.updates
+              .where('uuid')
+              .equals(uuid)
+              .and((update) => update.id! <= maxId)
+              .delete();
+          });
+        }
+      }
+
+      this.lastCompaction = id;
+    } catch (err) {
+      console.error('Failed to compact database', err);
+    } finally {
+      this.isCompacting = false;
+    }
   }
 }
 
