@@ -13,12 +13,20 @@ export async function compile(project: WorkspaceProj): Promise<Uint8Array | stri
     activeProject = project.name;
   }
 
-  const file = '/main.tex';
-  const content = await project.readFile(file);
-  if (content) {
-    activeEngine.writeMemFSFile(file, content);
+  const fileList = project.fileList();
+  if (!fileList.some((file) => file.path === '/main.tex')) {
+    throw new Error('main.tex not found at root of project');
   }
 
+  // TODO: show progress
+  for (const file of fileList) {
+    const content = await project.readFile(file.path);
+    if (content) {
+      activeEngine.writeMemFSFile(file.path, content);
+    }
+  }
+
+  // TODO: show progress
   const res = await activeEngine.compileLaTeX();
   if (res.status == EngineStatus.Error) {
     throw new Error('Engine Error');
