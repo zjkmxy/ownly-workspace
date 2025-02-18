@@ -165,8 +165,11 @@ export class SvsProvider {
               maxId = Math.max(maxId, update.id!);
             });
 
-          // Merge updates and delete old ones in a transaction
+          // Encode the merged state
           const merged = Y.encodeStateAsUpdateV2(temp);
+          temp.destroy();
+
+          // Merge updates and delete old ones in a transaction
           await this.db.transaction('rw', this.db.updates, async () => {
             await this.db.updates.put({ uuid, update: merged });
             await this.db.updates
