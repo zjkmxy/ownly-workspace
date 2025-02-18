@@ -176,7 +176,7 @@ export class WorkspaceProj {
   /** Read a file's contents directly */
   public async readFile(path: string): Promise<Uint8Array | string | null> {
     const uuid = this.fileMap.get(path)?.uuid;
-    if (!uuid) throw new Error('File not found');
+    if (!uuid) throw new Error('File not found: ' + path);
 
     const doc = new Y.Doc();
     await this.provider.readInto(doc, uuid);
