@@ -97,7 +97,6 @@ export class SvsProvider {
     // Cleanup on document destroy
     doc.on('destroy', () => {
       this.docs.delete(uuid);
-      this.aware.get(uuid)?.destroy();
       this.aware.delete(uuid);
     });
 
