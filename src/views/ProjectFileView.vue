@@ -22,6 +22,7 @@
           :pdf="resultPdf"
           @compile="compileLatex"
           :compiling="isPdfCompiling"
+          :error="resultError"
         />
       </div>
 
@@ -92,6 +93,7 @@ const contentMilk = shallowRef<Y.XmlFragment | null>(null);
 const isLatex = computed(() => utils.isExtensionType(basename.value, 'latex'));
 const resultPdf = shallowRef<Uint8Array | string | null>(null);
 const isPdfCompiling = ref(false);
+const resultError = ref(String());
 
 onMounted(create);
 watch(filename, create);
@@ -146,9 +148,9 @@ async function compileLatex() {
   try {
     isPdfCompiling.value = true;
     resultPdf.value = await latex.compile(proj.value!);
+    resultError.value = String();
   } catch (err) {
-    console.error(err);
-    toast.error(`Failed to compile LaTeX: ${err}`);
+    resultError.value = `Failed to compile LaTeX\n\n ${err}`;
   } finally {
     isPdfCompiling.value = false;
   }

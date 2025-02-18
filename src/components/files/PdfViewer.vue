@@ -35,6 +35,7 @@
         :width="width"
         @loaded="loaded = true"
       />
+      <div v-if="error" class="error">{{ error }}</div>
     </div>
   </div>
 </template>
@@ -65,6 +66,11 @@ const props = defineProps({
     type: Boolean,
     required: false,
     default: false,
+  },
+  error: {
+    type: String,
+    required: false,
+    default: String(),
   },
 });
 
@@ -132,6 +138,21 @@ onMounted(() => {
       .vue-pdf-embed__page {
         margin-bottom: 10px;
       }
+    }
+
+    > .error {
+      text-align: left;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-color: rgba(100, 0, 0, 0.85);
+      width: 100%;
+      font-family: monospace;
+      white-space: pre;
+      padding: 10px;
+      max-height: 80%;
+      overflow: auto;
+      color: white;
     }
   }
 }
