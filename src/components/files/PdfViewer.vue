@@ -25,9 +25,10 @@
       </div>
     </div>
 
-    <div class="pdf-content center-spinner" v-if="pdf && width">
-      <Spinner v-if="!loaded" />
+    <div class="pdf-content center-spinner">
+      <Spinner v-if="(!loaded && pdf) || compiling" />
       <VuePdfEmbed
+        v-if="pdf && width"
         annotation-layer
         text-layer
         :source="pdf"
@@ -59,6 +60,11 @@ const props = defineProps({
   pdf: {
     type: [Uint8Array, String, null],
     required: false,
+  },
+  compiling: {
+    type: Boolean,
+    required: false,
+    default: false,
   },
 });
 

@@ -3,6 +3,7 @@ import * as awareProto from 'y-protocols/awareness.js';
 
 import { GlobalWkspEvents } from './workspace';
 import { SvsProvider } from './svs-provider';
+import * as utils from '@/utils';
 
 import type { WorkspaceAPI } from './ndn';
 import type { IProject, IProjectFile } from './types';
@@ -160,19 +161,31 @@ export class WorkspaceProj {
   /** Get the content document for a file */
   public async getFile(path: string): Promise<Y.Doc> {
     const uuid = this.fileMap.get(path)?.uuid;
-    if (!uuid) {
-      throw new Error('File not found');
-    }
+    if (!uuid) throw new Error('File not found');
     return await this.provider.getDoc(uuid);
   }
 
   /** Get an awareness instance for a file */
   public async getAwareness(path: string): Promise<awareProto.Awareness> {
     const uuid = this.fileMap.get(path)?.uuid;
-    if (!uuid) {
-      throw new Error('File not found');
-    }
+    if (!uuid) throw new Error('File not found');
+
     return await this.provider.getAwareness(uuid);
+  }
+
+  /** Read a file's contents directly */
+  public async readFile(path: string): Promise<Uint8Array | string | null> {
+    const uuid = this.fileMap.get(path)?.uuid;
+    if (!uuid) throw new Error('File not found');
+
+    const doc = new Y.Doc();
+    await this.provider.readInto(doc, uuid);
+    if (utils.isExtensionType(path, 'code')) {
+      return doc.getText('text').toString();
+    }
+    doc.destroy();
+
+    return null;
   }
 
   /** Callback when the list of files changes */

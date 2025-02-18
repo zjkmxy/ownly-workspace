@@ -16,7 +16,13 @@
           :basename="basename"
           :awareness="awareness!"
         />
-        <PdfViewer class="result" v-if="isLatex" :pdf="resultPdf" @compile="compile" />
+        <PdfViewer
+          class="result"
+          v-if="isLatex"
+          :pdf="resultPdf"
+          @compile="compileLatex"
+          :compiling="isPdfCompiling"
+        />
       </div>
 
       <template #fallback>
@@ -64,11 +70,7 @@ import PdfViewer from '@/components/files/PdfViewer.vue';
 import { Workspace } from '@/services/workspace';
 import type { WorkspaceProj } from '@/services/workspace-proj';
 import * as latex from '@/services/latex/index';
-
-import EXT_CODE from './extensions_code.json';
-
-const EXT_MILKDOWN = ['mdoc'];
-const EXT_LATEX = ['tex', 'sty', 'bib', 'cls', 'bst'];
+import * as utils from '@/utils';
 
 const route = useRoute();
 const toast = useToast();
@@ -78,7 +80,6 @@ const projName = computed(() => route.params.project as string);
 const filename = computed(() => route.params.filename as string[]);
 const filepath = computed(() => '/' + filename.value.join('/'));
 const basename = computed(() => filename.value[filename.value.length - 1]);
-const extension = computed(() => basename.value.toLowerCase().split('.').pop() ?? '');
 
 const proj = shallowRef(null as WorkspaceProj | null);
 
@@ -88,8 +89,9 @@ const awareness = shallowRef<awareProto.Awareness | null>(null);
 const contentCode = shallowRef<Y.Text | null>(null);
 const contentMilk = shallowRef<Y.XmlFragment | null>(null);
 
-const isLatex = computed(() => EXT_LATEX.includes(extension.value));
-const resultPdf = shallowRef<Uint8Array | null>(null);
+const isLatex = computed(() => utils.isExtensionType(basename.value, 'latex'));
+const resultPdf = shallowRef<Uint8Array | string | null>(null);
+const isPdfCompiling = ref(false);
 
 onMounted(create);
 watch(filename, create);
@@ -113,14 +115,14 @@ async function create() {
     // Load file content
     contentDoc.value = await proj.value.getFile(filepath.value);
 
-    if (EXT_CODE.includes(extension.value)) {
+    if (utils.isExtensionType(basename.value, 'code')) {
       awareness.value = await proj.value.getAwareness(filepath.value);
       contentCode.value = contentDoc.value.getText('text');
-    } else if (EXT_MILKDOWN.includes(extension.value)) {
+    } else if (utils.isExtensionType(basename.value, 'milkdown')) {
       awareness.value = await proj.value.getAwareness(filepath.value);
       contentMilk.value = contentDoc.value.getXmlFragment('milkdown');
     } else {
-      throw new Error(`Unsupported content extension: ${extension}`);
+      throw new Error(`Unsupported content extension: ${basename.value}`);
     }
   } catch (err) {
     console.error(err);
@@ -139,20 +141,16 @@ async function destroy() {
   contentDoc.value = null;
 }
 
-async function compile() {
-  resultPdf.value = '/test.pdf' as any;
-  if (1) return;
-  if (!contentCode.value) return;
-
-  const engine = new latex.PdfTeXEngine();
-  await engine.loadEngine();
-
-  engine.writeMemFSFile('/main.tex', contentCode.value.toString());
-  const res = await engine.compileLaTeX();
-  console.log(res);
-
-  if (res.pdf) {
-    resultPdf.value = res.pdf;
+async function compileLatex() {
+  if (isPdfCompiling.value) return;
+  try {
+    isPdfCompiling.value = true;
+    resultPdf.value = await latex.compile(proj.value!);
+  } catch (err) {
+    console.error(err);
+    toast.error(`Failed to compile LaTeX: ${err}`);
+  } finally {
+    isPdfCompiling.value = false;
   }
 }
 </script>

@@ -1,0 +1,24 @@
+{
+  "code": [
+    "txt",
+    "md",
+    "json",
+    "js",
+    "ts",
+    "html",
+    "css",
+    "scss",
+    "vue",
+    "yml",
+    "yaml",
+    "xml",
+    "csv",
+    "log",
+    "tex",
+    "bib",
+    "sty",
+    "cls"
+  ],
+  "milkdown": ["mdoc"],
+  "latex": ["tex", "bib", "sty", "cls"]
+}

@@ -86,12 +86,7 @@ export class SvsProvider {
     this.docs.set(uuid, doc);
 
     // Load updates from IndexedDB
-    await this.db.updates
-      .where('uuid')
-      .equals(uuid)
-      .each((update) => {
-        Y.applyUpdateV2(doc, update.update, this);
-      });
+    await this.readInto(doc, uuid);
 
     // Subscribe to updates
     doc.on('updateV2', async (update, origin) => {
@@ -112,6 +107,16 @@ export class SvsProvider {
     });
 
     return doc;
+  }
+
+  /** Load updates from persistence into a document */
+  public async readInto(doc: Y.Doc, uuid: string): Promise<void> {
+    await this.db.updates
+      .where('uuid')
+      .equals(uuid)
+      .each((update) => {
+        Y.applyUpdateV2(doc, update.update, this);
+      });
   }
 
   public async getAwareness(uuid: string): Promise<awareProto.Awareness> {
