@@ -114,13 +114,12 @@ onMounted(() => {
 
   > .pdf-content {
     position: relative;
-    overflow-y: hidden;
+    overflow-y: scroll;
     overflow-x: auto;
     flex: 1;
     text-align: center;
 
     :deep(.vue-pdf-embed) {
-      overflow-y: scroll;
       display: inline-block;
       height: 100%;
 
