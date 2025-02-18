@@ -23,9 +23,7 @@ export async function compile(project: WorkspaceProj): Promise<Uint8Array | stri
   if (res.status == EngineStatus.Error) {
     throw new Error('Engine Error');
   } else if (res.pdf === undefined) {
-    if (res.log) {
-      throw new Error(res.log);
-    }
+    if (res.log) throw new Error(res.log);
     throw new Error('Engine produced no PDF');
   }
 

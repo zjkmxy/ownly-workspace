@@ -188,9 +188,14 @@ export class WorkspaceProj {
     return null;
   }
 
+  /** Get the list of files */
+  public fileList(): IProjectFile[] {
+    return Array.from(this.fileMap.values());
+  }
+
   /** Callback when the list of files changes */
   private onListChange() {
     if (!this.fileMap || active?.root.guid !== this.root.guid) return;
-    GlobalWkspEvents.emit('project-files', this.name, Array.from(this.fileMap.values()));
+    GlobalWkspEvents.emit('project-files', this.name, this.fileList());
   }
 }
