@@ -141,6 +141,10 @@ async function destroy() {
 
   contentDoc.value?.destroy();
   contentDoc.value = null;
+
+  isPdfCompiling.value = false;
+  resultPdf.value = null;
+  resultError.value = String();
 }
 
 async function compileLatex() {
