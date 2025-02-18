@@ -7,6 +7,8 @@ type Message struct {
 }
 
 type YjsDelta struct {
+	//+field:string
+	UUID string `tlv:"0x478"`
 	//+field:binary
 	Binary []byte `tlv:"0x4B0"`
 }

@@ -215,7 +215,8 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 		"pub_yjs_delta": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			pub := &tlv.Message{
 				YjsDelta: &tlv.YjsDelta{
-					Binary: utils.JsArrayToSlice(p[0]),
+					UUID:   p[0].String(),
+					Binary: utils.JsArrayToSlice(p[1]),
 				},
 			}
 
@@ -248,6 +249,7 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 				switch {
 				case pmsg.YjsDelta != nil:
 					p[0].Get("on_yjs_delta").Invoke(info, js.ValueOf(map[string]any{
+						"uuid":   js.ValueOf(pmsg.YjsDelta.UUID),
 						"binary": utils.SliceToJsArray(pmsg.YjsDelta.Binary),
 					}))
 				default:

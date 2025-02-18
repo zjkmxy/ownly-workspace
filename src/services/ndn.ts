@@ -60,10 +60,12 @@ export interface SvsAloApi {
   set_on_error(): Promise<void>;
 
   /** Publish chat message to SVS ALO */
-  pub_yjs_delta(binary: Uint8Array): Promise<void>;
+  pub_yjs_delta(uuid: string, binary: Uint8Array): Promise<void>;
 
   /** Set SVS ALO subscription callbacks */
-  subscribe(params: { on_yjs_delta: SvsAloSub<{ binary: Uint8Array }> }): Promise<void>;
+  subscribe(params: {
+    on_yjs_delta: SvsAloSub<{ uuid: string; binary: Uint8Array }>;
+  }): Promise<void>;
 }
 
 /** Subscription to SVS ALO */

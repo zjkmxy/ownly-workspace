@@ -1,139 +1,147 @@
 import * as Y from 'yjs';
-import * as aware from 'y-protocols/awareness.js';
+import * as awareProto from 'y-protocols/awareness.js';
 
-import { GlobalWkspEvents, SvsYDoc, ActiveWorkspace } from './workspace';
+import { GlobalWkspEvents } from './workspace';
+import { SvsProvider } from './svs-provider';
 
-import type { AwarenessApi, WorkspaceAPI } from './ndn';
-import type { IProject, IProjectFile, IWorkspace } from './types';
-
-import * as utils from '@/utils';
+import type { WorkspaceAPI } from './ndn';
+import type { IProject, IProjectFile } from './types';
 
 /** Currently active project in the workspace */
 let active: WorkspaceProj | null = null;
 
+/**
+ * Project manager for the workspace.
+ * Keeps track of the list of projects and their instances.
+ * Each project has its own SVS sync group / provider.
+ */
 export class WorkspaceProjManager {
-  private readonly projectList: Y.Map<IProject>;
-  private readonly projectInstances: Map<string, WorkspaceProj> = new Map();
+  private readonly list: Y.Map<IProject>;
+  private readonly instances: Map<string, WorkspaceProj> = new Map();
 
-  constructor(
-    private readonly metadata: IWorkspace,
-    private readonly slug: string,
-    private readonly api: WorkspaceAPI,
-    private readonly svdoc: SvsYDoc,
+  private constructor(
+    private readonly wksp: WorkspaceAPI,
+    private readonly root: Y.Doc,
   ) {
-    this.projectList = svdoc.doc.getMap<IProject>('_proj_');
+    this.list = this.root.getMap<IProject>('list');
 
     const listObserver = async () =>
       GlobalWkspEvents.emit('project-list', await this.getProjects());
-    this.projectList.observe(listObserver);
+    this.list.observe(listObserver);
     listObserver();
   }
 
-  public async stop() {
-    for (const proj of this.projectInstances.values()) {
-      await proj.svdoc.stop();
-      await proj.ndnAware.stop();
-      active = null;
-    }
+  /** Create the project manager instance */
+  public static async create(
+    wksp: WorkspaceAPI,
+    provider: SvsProvider,
+  ): Promise<WorkspaceProjManager> {
+    const doc = await provider.getDoc('proj');
+    return new WorkspaceProjManager(wksp, doc);
   }
 
+  /** Destroy the project manager instance */
+  public async destroy() {
+    await Promise.all(Array.from(this.instances.values()).map((proj) => proj.destroy()));
+    this.instances.clear();
+    this.root.destroy();
+    active = null;
+  }
+
+  /** Get the list of projects */
   public async getProjects(): Promise<IProject[]> {
-    await this.svdoc.pers.whenSynced;
-    return Array.from(this.projectList.values());
+    return Array.from(this.list.values());
   }
 
+  /** Create a new project */
   public async newProject(name: string) {
     if (!name) throw new Error('Project name is required');
-    if (this.projectList.has(name)) throw new Error('Project already exists');
-    this.projectList.set(name, { name });
+    if (this.list.has(name)) throw new Error('Project already exists');
+    this.list.set(name, { name });
   }
 
+  /** Get a project instance */
   public async get(name: string): Promise<WorkspaceProj> {
-    // TODO: add a lock on this
-    let proj = this.projectInstances.get(name);
+    let proj = this.instances.get(name);
     if (proj) return proj;
 
     // Get metadata from project list
-    await this.svdoc.pers.whenSynced; // TODO: also need SVS to sync first
-    if (!this.projectList.has(name)) throw new Error('Project not found');
+    if (!this.list.has(name)) throw new Error('Project not found');
 
-    // Start SVS for project
-    const slug = `${this.slug}-${name}`;
-    const svs = await this.api.svs_alo(`${this.metadata.name}/p-${name}`);
-    const svdoc = new SvsYDoc(svs, slug);
-
-    // Start awareness for project
-    const ndnAware = await this.api.awareness(`${this.metadata.name}/p-${name}/32=aware`);
-
-    // Create project object
-    proj = new WorkspaceProj(name, svdoc, ndnAware);
-    this.projectInstances.set(name, proj);
-
-    await svdoc.start();
-    await ndnAware.start();
+    // Create project instance
+    proj = await WorkspaceProj.create(name, this.wksp);
+    this.instances.set(name, proj);
     return proj;
   }
 
+  /** Get the active project */
   public getActive(): WorkspaceProj {
     if (!active) throw new Error('No active project');
     return active;
   }
 }
 
+/**
+ * Project instance for the workspace.
+ * Each project has its own SVS sync group / provider.
+ */
 export class WorkspaceProj {
   private readonly fileMap: Y.Map<IProjectFile>;
-  private readonly contentMap: Y.Map<Y.Text | Y.XmlFragment>;
 
-  public readonly awareness: aware.Awareness;
-  private awareThrottle: number = 0;
-  private readonly awareThrottleSet: Set<number> = new Set();
-
-  constructor(
+  private constructor(
     public readonly name: string,
-    public readonly svdoc: SvsYDoc,
-    public readonly ndnAware: AwarenessApi,
+    private readonly root: Y.Doc,
+    private readonly provider: SvsProvider,
   ) {
     // Set up file list
-    this.fileMap = svdoc.doc.getMap('_file_');
+    this.fileMap = root.getMap('file_list');
     this.fileMap.observe(() => this.onListChange());
-
-    // Set up content map
-    this.contentMap = svdoc.doc.getMap('_ctn_');
-
-    // Setup awareness for entire project
-    this.awareness = new aware.Awareness(svdoc.doc);
-    this.setupAwareness();
   }
 
+  /**
+   * Create a new project instance
+   *
+   * @param wksp Workspace API
+   */
+  public static async create(name: string, wksp: WorkspaceAPI): Promise<WorkspaceProj> {
+    // Start SVS for project
+    const provider = await SvsProvider.create(wksp, name);
+
+    // Create root document
+    const root = await provider.getDoc('root');
+
+    // Create project object
+    return new WorkspaceProj(name, root, provider);
+  }
+
+  /** Destroy the project instance */
+  public async destroy() {
+    this.root.destroy();
+    await this.provider.destroy();
+  }
+
+  /** Make this the active project */
   public async activate(): Promise<void> {
     active = this;
     this.onListChange();
   }
 
-  public onListChange() {
-    if (!this.fileMap || active?.name !== this.name) return;
-    GlobalWkspEvents.emit('project-files', this.name, Array.from(this.fileMap.values()));
-  }
-
+  /** Create a new file or folder in the project */
   public async newFile(path: string) {
     if (!path) throw new Error('File path is required');
     if (this.fileMap.has(path) || this.fileMap.has(path + '/'))
       throw new Error('File or folder already exists');
 
-    this.svdoc.doc.transact(() => {
-      const uuid = window.crypto.randomUUID();
-      this.fileMap.set(path, { uuid, path });
-
-      const content = path.endsWith('.mdoc') ? new Y.XmlFragment() : new Y.Text();
-      this.contentMap.set(uuid, content);
-    });
+    const uuid = window.crypto.randomUUID();
+    this.fileMap.set(path, { uuid, path });
   }
 
+  /** Delete a file or folder in the project */
   public async deleteFile(delpath: string) {
     const isFolder = delpath.endsWith('/');
 
     let deletedCount = 0;
-    this.svdoc.doc.transact(() => {
+    this.root.transact(() => {
       this.fileMap.forEach((_, path) => {
         const matchFolder = isFolder && path.startsWith(delpath);
         const matchFile = path === delpath;
@@ -143,94 +151,33 @@ export class WorkspaceProj {
         }
       });
     });
+
     if (!deletedCount) {
       throw new Error('File not found');
     }
   }
 
-  public async getContent(path: string): Promise<Y.Text | Y.XmlFragment> {
+  /** Get the content document for a file */
+  public async getFile(path: string): Promise<Y.Doc> {
     const uuid = this.fileMap.get(path)?.uuid;
     if (!uuid) {
       throw new Error('File not found');
     }
-
-    const content = this.contentMap.get(uuid);
-    if (!content) {
-      throw new Error('Content not found');
-    }
-    return content;
+    return await this.provider.getDoc(uuid);
   }
 
-  private setupAwareness() {
-    // Make our own color here based on username
-    const username = ActiveWorkspace?.api.name ?? 'Unknown';
-    const hash = utils.cyrb64(username);
-    const r = (hash[0] % 128) + 110;
-    const g = ((hash[0] >> 7) % 128) + 110;
-    const b = (hash[1] % 128) + 110;
-
-    this.awareness.setLocalStateField('user', {
-      name: username,
-      color: `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`,
-      rgb: [r, g, b],
-    });
-
-    this.awareness.on('update', ({ added, updated, removed }: any, source: 'local' | 'remote') => {
-      if (source !== 'local') {
-        for (const client of added) {
-          this.injectAwarenessStyles(client, this.awareness.getStates().get(client)?.user);
-        }
-        return;
-      }
-
-      for (const client of added.concat(updated).concat(removed)) {
-        this.awareThrottleSet.add(client);
-      }
-      if (!this.awareThrottle) {
-        this.awareThrottle = window.setTimeout(() => {
-          const updateBinary = aware.encodeAwarenessUpdate(
-            this.awareness,
-            Array.from(this.awareThrottleSet),
-          );
-          this.awareThrottle = 0;
-          this.awareThrottleSet.clear();
-          this.ndnAware.publish(updateBinary);
-        }, 250);
-      }
-    });
-
-    this.ndnAware.subscribe((pub) => {
-      try {
-        aware.applyAwarenessUpdate(this.awareness, pub, 'remote');
-      } catch (e) {
-        console.error(e);
-      }
-    });
+  /** Get an awareness instance for a file */
+  public async getAwareness(path: string): Promise<awareProto.Awareness> {
+    const uuid = this.fileMap.get(path)?.uuid;
+    if (!uuid) {
+      throw new Error('File not found');
+    }
+    return await this.provider.getAwareness(uuid);
   }
 
-  private injectAwarenessStyles(client: number, user: any) {
-    if (!user.color) return;
-
-    let rgb = `${user.rgb[0]},${user.rgb[1]},${user.rgb[2]}`;
-    if (utils.themeIsDark()) {
-      rgb = `${255 - user.rgb[0]},${255 - user.rgb[1]},${255 - user.rgb[2]}`;
-    }
-
-    // Monaco editor colors (see CodeEditor.vue)
-    awarenessStyles.textContent += `
-      .yRemoteSelection-${client} {
-        background-color: rgba(${rgb}, 0.5) !important;
-      }
-      .yRemoteSelectionHead-${client}, .ProseMirror-yjs-cursor {
-        border-color: rgb(${rgb}) !important;
-      }
-      .yRemoteSelectionHead-${client}::after {
-        content: "${user.name}" !important;
-        background-color: rgb(${rgb}) !important;
-      }
-    `;
+  /** Callback when the list of files changes */
+  private onListChange() {
+    if (!this.fileMap || active?.root.guid !== this.root.guid) return;
+    GlobalWkspEvents.emit('project-files', this.name, Array.from(this.fileMap.values()));
   }
 }
-
-const awarenessStyles = document.createElement('style');
-document.head.appendChild(awarenessStyles);

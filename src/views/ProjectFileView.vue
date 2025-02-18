@@ -3,25 +3,29 @@
     <Spinner />
     Loading your messages ...
   </div>
-  <div v-else-if="contentText" class="center-spinner">
-    <CodeEditor
-      :ytext="contentText"
-      :key="filepath"
-      :basename="basename"
-      :awareness="proj!.awareness"
-    />
+  <div v-else-if="contentCode" class="center-spinner">
+    <CodeEditor :ytext="contentCode" :key="filepath" :basename="basename" :awareness="awareness!" />
   </div>
-  <div v-else-if="contentXml" class="center-spinner">
-    <MilkdownEditor :yxml="contentXml" :awareness="proj!.awareness" />
+  <div v-else-if="contentMilk" class="center-spinner">
+    <MilkdownEditor :yxml="contentMilk" :awareness="awareness!" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref, shallowRef, watch } from 'vue';
+import {
+  computed,
+  defineAsyncComponent,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue';
 import { useRoute } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import * as Y from 'yjs';
+import * as awareProto from 'y-protocols/awareness.js';
 
 import Spinner from '@/components/Spinner.vue';
 const CodeEditor = defineAsyncComponent({
@@ -36,6 +40,9 @@ const MilkdownEditor = defineAsyncComponent({
 import { Workspace } from '@/services/workspace';
 import type { WorkspaceProj } from '@/services/workspace-proj';
 
+import EXT_CODE from './extensions_code.json';
+const EXT_MILKDOWN = ['mdoc'];
+
 const route = useRoute();
 const toast = useToast();
 
@@ -46,18 +53,22 @@ const filepath = computed(() => '/' + filename.value.join('/'));
 const basename = computed(() => filename.value[filename.value.length - 1]);
 
 const proj = shallowRef(null as WorkspaceProj | null);
-const contentText = shallowRef<Y.Text | null>(null);
-const contentXml = shallowRef<Y.XmlFragment | null>(null);
 
-onMounted(setup);
-watch(filename, setup);
-watch(projName, setup);
+const contentDoc = shallowRef<Y.Doc | null>(null);
+const awareness = shallowRef<awareProto.Awareness | null>(null);
 
-async function setup() {
+const contentCode = shallowRef<Y.Text | null>(null);
+const contentMilk = shallowRef<Y.XmlFragment | null>(null);
+
+onMounted(create);
+watch(filename, create);
+watch(projName, create);
+onBeforeUnmount(destroy);
+
+async function create() {
   try {
     loading.value = true;
-    contentText.value = null;
-    contentXml.value = null;
+    await destroy();
 
     // Load workspace
     const wksp = await Workspace.setupOrRedir();
@@ -69,13 +80,17 @@ async function setup() {
     await proj.value.activate();
 
     // Load file content
-    const content = await proj.value.getContent(filepath.value);
-    if (content instanceof Y.Text) {
-      contentText.value = content;
-    } else if (content instanceof Y.XmlFragment) {
-      contentXml.value = content;
+    contentDoc.value = await proj.value.getFile(filepath.value);
+    const extension = basename.value.split('.').pop() ?? '';
+
+    if (EXT_CODE.includes(extension)) {
+      awareness.value = await proj.value.getAwareness(filepath.value);
+      contentCode.value = contentDoc.value.getText('text');
+    } else if (EXT_MILKDOWN.includes(extension)) {
+      awareness.value = await proj.value.getAwareness(filepath.value);
+      contentMilk.value = contentDoc.value.getXmlFragment('milkdown');
     } else {
-      throw new Error(`Unsupported content type: ${content}`);
+      throw new Error(`Unsupported content extension: ${extension}`);
     }
   } catch (err) {
     console.error(err);
@@ -83,6 +98,15 @@ async function setup() {
   } finally {
     loading.value = false;
   }
+}
+
+async function destroy() {
+  contentCode.value = null;
+  contentMilk.value = null;
+  awareness.value = null;
+
+  contentDoc.value?.destroy();
+  contentDoc.value = null;
 }
 </script>
 

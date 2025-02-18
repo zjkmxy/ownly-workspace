@@ -3,6 +3,7 @@ package tlv
 
 import (
 	"encoding/binary"
+	"strings"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 )
@@ -151,6 +152,9 @@ type YjsDeltaParsingContext struct {
 func (encoder *YjsDeltaEncoder) Init(value *YjsDelta) {
 
 	l := uint(0)
+	l += 3
+	l += uint(enc.TLNum(len(value.UUID)).EncodingLength())
+	l += uint(len(value.UUID))
 	if value.Binary != nil {
 		l += 3
 		l += uint(enc.TLNum(len(value.Binary)).EncodingLength())
@@ -168,6 +172,12 @@ func (encoder *YjsDeltaEncoder) EncodeInto(value *YjsDelta, buf []byte) {
 
 	pos := uint(0)
 
+	buf[pos] = 253
+	binary.BigEndian.PutUint16(buf[pos+1:], uint16(1144))
+	pos += 3
+	pos += uint(enc.TLNum(len(value.UUID)).EncodeInto(buf[pos:]))
+	copy(buf[pos:], value.UUID)
+	pos += uint(len(value.UUID))
 	if value.Binary != nil {
 		buf[pos] = 253
 		binary.BigEndian.PutUint16(buf[pos+1:], uint16(1200))
@@ -190,6 +200,7 @@ func (encoder *YjsDeltaEncoder) Encode(value *YjsDelta) enc.Wire {
 
 func (context *YjsDeltaParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*YjsDelta, error) {
 
+	var handled_UUID bool = false
 	var handled_Binary bool = false
 
 	progress := -1
@@ -217,6 +228,18 @@ func (context *YjsDeltaParsingContext) Parse(reader enc.WireView, ignoreCritical
 		err = nil
 		if handled := false; true {
 			switch typ {
+			case 1144:
+				if true {
+					handled = true
+					handled_UUID = true
+					{
+						var builder strings.Builder
+						_, err = reader.CopyN(&builder, int(l))
+						if err == nil {
+							value.UUID = builder.String()
+						}
+					}
+				}
 			case 1200:
 				if true {
 					handled = true
@@ -242,6 +265,9 @@ func (context *YjsDeltaParsingContext) Parse(reader enc.WireView, ignoreCritical
 	startPos = reader.Pos()
 	err = nil
 
+	if !handled_UUID && err == nil {
+		err = enc.ErrSkipRequired{Name: "UUID", TypeNum: 1144}
+	}
 	if !handled_Binary && err == nil {
 		value.Binary = nil
 	}

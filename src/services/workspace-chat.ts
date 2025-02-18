@@ -2,20 +2,27 @@ import { EventEmitter } from 'events';
 import * as Y from 'yjs';
 
 import type { IChatChannel, IChatMessage } from './types';
-import { GlobalWkspEvents, SvsYDoc } from './workspace';
+import { GlobalWkspEvents } from './workspace';
+import { SvsProvider } from './svs-provider';
 
 import type TypedEmitter from 'typed-emitter';
 
 export class WorkspaceChat {
   private readonly chatChannels: Y.Array<IChatChannel>;
   private readonly chatMessages: Y.Map<Y.Array<IChatMessage>>;
+
   public readonly events = new EventEmitter() as TypedEmitter<{
     chat: (channel: string, message: IChatMessage) => void;
   }>;
 
-  constructor(private readonly svdoc: SvsYDoc) {
-    this.chatChannels = svdoc.doc.getArray<IChatChannel>('_chan_');
-    this.chatMessages = svdoc.doc.getMap<Y.Array<IChatMessage>>('_msg_');
+  /**
+   * Private constructor for the chat module
+   *
+   * @param doc Y.Doc instance
+   */
+  private constructor(private readonly doc: Y.Doc) {
+    this.chatChannels = doc.getArray<IChatChannel>('_chan_');
+    this.chatMessages = doc.getMap<Y.Array<IChatMessage>>('_msg_');
 
     const chanObserver = () => GlobalWkspEvents.emit('chat-channels', this.chatChannels.toArray());
     this.chatChannels.observe(chanObserver);
@@ -35,19 +42,35 @@ export class WorkspaceChat {
   }
 
   /**
+   * Create the chat module
+   */
+  public static async create(provider: SvsProvider): Promise<WorkspaceChat> {
+    const doc = await provider.getDoc('chat');
+    return new WorkspaceChat(doc);
+  }
+
+  /**
+   * Destroy the chat module
+   */
+  public async destroy() {
+    this.doc.destroy();
+  }
+
+  /**
    * Get chat channels
+   *
    * @returns Array of chat channels
    */
-  async getChannels(): Promise<IChatChannel[]> {
-    await this.svdoc.pers.whenSynced;
+  public async getChannels(): Promise<IChatChannel[]> {
     return this.chatChannels.toArray();
   }
 
   /**
    * Create a new chat channel
+   *
    * @param channel Chat channel
    */
-  async newChannel(channel: IChatChannel) {
+  public async newChannel(channel: IChatChannel) {
     this.chatChannels.push([channel]);
     this.chatMessages.set(channel.name, new Y.Array<IChatMessage>());
   }
@@ -57,8 +80,7 @@ export class WorkspaceChat {
    *
    * @param channel Chat channel
    */
-  private async getArray(channel: string): Promise<Y.Array<IChatMessage>> {
-    await this.svdoc.pers.whenSynced;
+  private async getMsgArray(channel: string): Promise<Y.Array<IChatMessage>> {
     const array = this.chatMessages.get(channel);
     if (!array) throw new Error('Channel does not exist');
     return array;
@@ -69,8 +91,8 @@ export class WorkspaceChat {
    *
    * @returns Array of chat messages
    */
-  async getMessages(channel: string): Promise<IChatMessage[]> {
-    const array = await this.getArray(channel);
+  public async getMessages(channel: string): Promise<IChatMessage[]> {
+    const array = await this.getMsgArray(channel);
     if (!array) throw new Error('Channel does not exist');
     return array.toArray();
   }
@@ -80,7 +102,7 @@ export class WorkspaceChat {
    *
    * @param message Chat message
    */
-  async sendMessage(channel: string, message: IChatMessage) {
-    (await this.getArray(channel)).push([message]);
+  public async sendMessage(channel: string, message: IChatMessage) {
+    (await this.getMsgArray(channel)).push([message]);
   }
 }
