@@ -15,7 +15,7 @@
     <template v-if="routeIsWorkspace">
       <p class="menu-label">Projects</p>
       <ul class="menu-list">
-        <li v-for="proj in projects" :key="proj.id">
+        <li v-for="proj in projects" :key="proj.name">
           <router-link :to="linkProject(proj)">
             <div class="link-inner">
               <FontAwesomeIcon class="mr-1" :icon="faLayerGroup" size="sm" />

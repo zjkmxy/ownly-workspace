@@ -96,7 +96,7 @@ onBeforeUnmount(() => {
 
 <style scoped lang="scss">
 .container {
-  height: 100vh;
+  height: 100%;
 }
 </style>
 

@@ -6,7 +6,7 @@
     <!-- This view will show the main app -->
     <main v-else-if="!showLogin" class="full-h is-fullwidth router-view">
       <NavBar></NavBar>
-      <div class="container">
+      <div class="router-view-inner">
         <RouterView v-slot="{ Component }">
           <Transition name="fade-2" mode="out-in">
             <component :is="Component" />
@@ -30,5 +30,12 @@ const showLogin = ref(true);
 main.router-view {
   display: flex;
   flex-direction: row;
+  width: 100vw;
+  height: 100vh;
+
+  > .router-view-inner {
+    flex: 1;
+    overflow: hidden;
+  }
 }
 </style>
