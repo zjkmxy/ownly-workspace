@@ -47,6 +47,13 @@ export class SvsProvider {
     return provider;
   }
 
+  public async destroy() {
+    for (const doc of this.docs.values()) {
+      doc.destroy();
+    }
+    await this.svs.stop();
+  }
+
   private async start() {
     await this.svs.subscribe({
       on_yjs_delta: async (info, pub) => {
@@ -113,13 +120,6 @@ export class SvsProvider {
     this.aware.set(doc.guid, aware);
 
     return aware;
-  }
-
-  public async destroy() {
-    for (const doc of this.docs.values()) {
-      doc.destroy();
-    }
-    await this.svs.stop();
   }
 
   private async persist(uuid: string, update: Uint8Array) {
