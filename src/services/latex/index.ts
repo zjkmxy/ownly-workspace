@@ -20,7 +20,11 @@ export async function compile(project: WorkspaceProj): Promise<Uint8Array | stri
 
   // TODO: show progress
   for (const file of fileList) {
-    const content = await project.readFile(file.path);
+    // Folders are automatically created by the worker
+    if (file.path.endsWith('/')) continue;
+
+    // Write the file to the WASM filesystem
+    const content = await project.exportFile(file.path);
     if (content) {
       activeEngine.writeMemFSFile(file.path, content);
     }

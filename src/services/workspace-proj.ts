@@ -144,7 +144,9 @@ export class WorkspaceProj {
       throw new Error('File or folder already exists');
 
     const uuid = window.crypto.randomUUID();
-    this.fileMap.set(path, { uuid, path, is_blob });
+    const file: IProjectFile = { uuid, path, is_blob };
+    this.fileMap.set(path, file);
+    return file;
   }
 
   /** Delete a file or folder in the project */
@@ -164,21 +166,38 @@ export class WorkspaceProj {
     });
 
     if (!deletedCount) {
-      throw new Error('File not found');
+      throw new Error(`File or folder not found: ${delpath}`);
     }
   }
 
   /** Get the content document for a file */
   public async getFile(path: string): Promise<Y.Doc> {
     const uuid = this.fileMap.get(path)?.uuid;
-    if (!uuid) throw new Error('File not found');
+    if (!uuid) throw new Error(`File not found: ${path}`);
     return await this.provider.getDoc(uuid);
   }
 
-  /** Read a file's contents directly */
-  public async readFile(path: string): Promise<Uint8Array | string | null> {
+  /**
+   * Export the contents of a file directly.
+   *
+   * If the file is a text file, the content will be returned as a string.
+   * If the file is a binary file, the content will be returned as a Uint8Array.
+   * If the file is neither, null will be returned.
+   *
+   * If the file is a folder, an error will be thrown for now.
+   * Eventually, this will export a ZIP archive of the folder.
+   *
+   * @throws {Error} If file path is invalid.
+   * @throws {Error} If file is too large.
+   *
+   * @returns The file content as a string or Uint8Array.
+   */
+  public async exportFile(path: string): Promise<Uint8Array | string | null> {
+    // TODO: export as ZIP if folder
+    if (path.endsWith('/')) throw new Error('Cannot export a folder (yet)');
+
     const uuid = this.fileMap.get(path)?.uuid;
-    if (!uuid) throw new Error('File not found: ' + path);
+    if (!uuid) throw new Error(`File not found: ${path}`);
 
     const doc = new Y.Doc();
     await this.provider.readInto(doc, uuid);
@@ -190,10 +209,26 @@ export class WorkspaceProj {
     return null;
   }
 
+  /**
+   * Import a text or binary file into the project.
+   *
+   * If the file does not exist, it will be created.
+   * If the file already exists, it will be overwritten.
+   * Text or blob will be decided based on the file extension.
+   *
+   * @throws {Error} If file path is invalid.
+   * @throws {Error} If attempting to replace a text with blob or vice versa.
+   * @throws {Error} If text file cannot be decoded.
+   * @throws {Error} If blob or text is too large.
+   */
+  public async importFile(path: string, content: Uint8Array) {
+    throw new Error('Not implemented');
+  }
+
   /** Get an awareness instance for a file */
   public async getAwareness(path: string): Promise<awareProto.Awareness> {
     const uuid = this.fileMap.get(path)?.uuid;
-    if (!uuid) throw new Error('File not found');
+    if (!uuid) throw new Error(`File not found: ${path}`);
 
     return await this.provider.getAwareness(uuid);
   }
