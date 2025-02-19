@@ -223,7 +223,47 @@ export class WorkspaceProj {
    * @throws {Error} If blob or text is too large.
    */
   public async importFile(path: string, content: Uint8Array) {
-    console.warn('Importing file:', path, content.length);
+    if (path.endsWith('/')) {
+      throw new Error('Cannot import file as folder');
+    }
+
+    // Check if this is a blob or text file
+    const isText = utils.isExtensionType(path, 'code');
+    const isBlob = !isText;
+    if (isBlob) throw new Error('Binary files not implemented'); // TODO
+
+    // Get the existing file if present
+    let meta = this.fileMap.get(path);
+    if (meta && meta.is_blob !== isBlob) {
+      throw new Error('Cannot replace text with blob or vice versa');
+    }
+
+    // Create a new file if it does not exist
+    if (!meta) {
+      meta = await this.newFile(path, isBlob);
+    }
+
+    // Import binary content
+    if (isBlob) {
+      throw new Error('Not implemented'); // TODO
+    }
+
+    // Import text content
+    if (isText) {
+      const strContent = new TextDecoder().decode(content);
+      const doc = await this.getFile(path);
+      try {
+        const text = doc.getText('text');
+        doc.transact(() => {
+          text.delete(0, text.length);
+          text.insert(0, strContent);
+        });
+      } finally {
+        // TODO: if the doc is already open, we should not destroy it
+        // Or use some better technique like reference counting
+        doc.destroy();
+      }
+    }
   }
 
   /**

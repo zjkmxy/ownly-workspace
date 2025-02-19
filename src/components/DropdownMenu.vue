@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body" v-if="opened">
-    <div class="dropdown-backdrop" @click.stop.prevent="close">
+    <div class="dropdown-backdrop" @click.stop.prevent="close" @contextmenu.stop.prevent="close">
       <div class="dropdown is-active" :style="{ top: `${coords.y}px`, left: `${coords.x}px` }">
         <div class="dropdown-menu" role="menu">
           <div class="dropdown-content">
