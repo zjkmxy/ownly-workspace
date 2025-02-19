@@ -13,12 +13,13 @@
             {{ entry.name }}
           </div>
 
-          <ProjectTreeAddButton
+          <ProjectTreeMenu
             class="link-button"
             :allow-new="entry.is_folder"
             :allow-delete="true"
-            @new-file="newInSub(entry, 'file', $event)"
-            @new-folder="newInSub(entry, 'folder')"
+            @new-file="onSubtree(entry, (t) => t.newHere('file', $event))"
+            @new-folder="onSubtree(entry, (t) => t.newHere('folder', $event))"
+            @import="onSubtree(entry, (t) => t.importHere())"
             @delete="executeDelete(entry)"
           />
         </component>
@@ -78,9 +79,10 @@ import {
   faFileImage,
 } from '@fortawesome/free-solid-svg-icons';
 
-import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
+import ProjectTreeMenu from './ProjectTreeMenu.vue';
 
 import { Workspace } from '@/services/workspace';
+import * as utils from '@/utils';
 
 import type { IProject, IProjectFile } from '@/services/types';
 
@@ -127,7 +129,7 @@ const newName = ref(String());
 const newType = ref<'file' | 'folder'>('file');
 const newExtension = ref<string>();
 
-defineExpose({ newInHere, parent: props.parent });
+defineExpose({ newHere, importInHere: importHere, parent: props.parent });
 onMounted(checkRoute);
 watch(() => route.params.filename, checkRoute);
 const splitPath = computed(() => props.path.split('/').filter(Boolean));
@@ -221,56 +223,20 @@ function chooseIcon(entry: TreeEntry) {
     return foldersOpen.value[entry.name] ? faFolderOpen : faFolder;
   }
 
-  const extension = entry.name.split('.').pop()?.toLocaleLowerCase();
-  switch (extension) {
-    case 'md':
-    case 'json':
-    case 'tex':
-    case 'bib':
-    case 'sty':
-    case 'cls':
-
-    case 'js':
-    case 'ts':
-    case 'jsx':
-    case 'tsx':
-    case 'vue':
-    case 'html':
-    case 'css':
-    case 'scss':
-    case 'go':
-    case 'py':
-    case 'sh':
-    case 'yaml':
-    case 'yml':
-    case 'toml':
+  switch (utils.getExtensionType(entry.name)) {
+    case 'code':
+    case 'latex':
       return faFileCode;
-    case 'mdoc':
-    case 'docx':
-    case 'doc':
+    case 'word':
+    case 'milkdown':
       return faFileWord;
-    case 'pptx':
     case 'ppt':
       return faFilePowerpoint;
-    case 'xlsx':
-    case 'xls':
+    case 'excel':
       return faFileExcel;
     case 'pdf':
       return faFilePdf;
-    case 'png':
-    case 'jpg':
-    case 'jpeg':
-    case 'gif':
-    case 'svg':
-    case 'ico':
-    case 'webp':
-    case 'bmp':
-    case 'tiff':
-    case 'tif':
-    case 'heic':
-    case 'heif':
-    case 'avif':
-    case 'apng':
+    case 'image':
       return faFileImage;
     default:
       return faFile;
@@ -292,25 +258,14 @@ function openFolder(entry: TreeEntry, val?: boolean) {
   }
 }
 
-/** Create a new file in a subfolder */
-async function newInSub(subfolder: TreeEntry, type: 'file' | 'folder', extension?: string) {
+/** Run the callback on a subtree component */
+function onSubtree(subfolder: TreeEntry, callback: (subtree: any) => void) {
   if (!subfolder.is_folder) return;
   openFolder(subfolder, true);
-  await nextTick();
-
-  const stree = subtrees.value?.find((t: any) => t?.parent === subfolder.name);
-  stree?.newInHere(type, extension);
-}
-
-/** Create a new file in the current folder */
-async function newInHere(type: 'file' | 'folder', extension?: string) {
-  newType.value = type;
-  newExtension.value = extension || String();
-  showNew.value = true;
-  newName.value = String();
-  await nextTick();
-  newInput.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  newInput.value?.focus();
+  nextTick(() => {
+    const subtree = subtrees.value?.find((t: any) => t?.parent === subfolder.name);
+    if (subtree) callback(subtree);
+  });
 }
 
 /** Get the current project */
@@ -321,6 +276,17 @@ async function getProject() {
   const proj = wksp.proj.active;
   if (!proj) throw new Error('Project not found');
   return proj;
+}
+
+/** Create a new file in the current folder */
+async function newHere(type: 'file' | 'folder', extension?: string) {
+  newType.value = type;
+  newExtension.value = extension || String();
+  showNew.value = true;
+  newName.value = String();
+  await nextTick();
+  newInput.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  newInput.value?.focus();
 }
 
 /** Create a new file or folder */
@@ -373,6 +339,11 @@ async function executeDelete(entry: TreeEntry) {
     toast.error(`Error deleting ${path}: ${err}`);
     return;
   }
+}
+
+/** Import files from user */
+async function importHere() {
+  throw new Error('Not implemented');
 }
 </script>
 

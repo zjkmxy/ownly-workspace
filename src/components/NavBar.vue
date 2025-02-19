@@ -27,8 +27,9 @@
               class="link-button"
               :allow-new="true"
               :allow-delete="false"
-              @new-file="$refs.projectTree.find(() => true)?.newInHere('file', $event)"
-              @new-folder="$refs.projectTree.find(() => true)?.newInHere('folder')"
+              @new-file="$refs.projectTree[0]?.newHere('file', $event)"
+              @new-folder="$refs.projectTree[0]?.newHere('folder')"
+              @import="$refs.projectTree[0]?.importInHere()"
             />
           </router-link>
 
@@ -92,7 +93,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faLayerGroup, faPlus, faHashtag } from '@fortawesome/free-solid-svg-icons';
 
 import ProjectTree from './ProjectTree.vue';
-import ProjectTreeAddButton from './ProjectTreeAddButton.vue';
+import ProjectTreeAddButton from './ProjectTreeMenu.vue';
 import AddChannelModal from './AddChannelModal.vue';
 import AddProjectModal from './AddProjectModal.vue';
 

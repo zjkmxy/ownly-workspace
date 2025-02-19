@@ -10,6 +10,7 @@
     <DropdownMenu ref="dropdown">
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-folder')"> New folder </a>
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', '')"> New blank file </a>
+      <a class="dropdown-item" v-if="allowNew" @click="emit('import')"> Import files </a>
 
       <hr class="dropdown-divider" v-if="allowNew" />
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', 'mdoc')"> New RichDoc </a>
@@ -39,6 +40,7 @@ defineProps({
 const emit = defineEmits<{
   (e: 'new-folder'): void;
   (e: 'new-file', ext: string): void;
+  (e: 'import'): void;
   (e: 'delete'): void;
 }>();
 
