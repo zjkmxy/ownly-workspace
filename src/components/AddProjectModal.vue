@@ -41,6 +41,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -49,6 +50,7 @@ import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 import { Workspace } from '@/services/workspace';
 
 const emit = defineEmits(['close']);
+const router = useRouter();
 const $toast = useToast();
 
 const name = ref(String());
@@ -68,7 +70,7 @@ async function create() {
     }
 
     // Get workspace
-    const wksp = await Workspace.setupOrRedir();
+    const wksp = await Workspace.setupOrRedir(router);
     if (!wksp) return;
 
     // Check if project already exists

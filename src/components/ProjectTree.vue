@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch, type PropType } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -116,6 +116,7 @@ const props = defineProps({
 });
 
 const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
 const subtrees = ref<InstanceType<any>>();
@@ -314,7 +315,7 @@ async function newInHere(type: 'file' | 'folder', extension?: string) {
 
 /** Get the current project */
 async function getProject() {
-  const wksp = await Workspace.setupOrRedir();
+  const wksp = await Workspace.setupOrRedir(router);
   if (!wksp) throw new Error('Workspace not found');
 
   const proj = wksp.proj.getActive();

@@ -1,4 +1,3 @@
-import router from '@/router';
 import { useToast } from 'vue-toast-notification';
 import { EventEmitter } from 'events';
 
@@ -13,6 +12,7 @@ import * as utils from '@/utils/index';
 import type { WorkspaceAPI } from '@/services/ndn';
 import type { IChatChannel, IProject, IProjectFile, IWorkspace } from '@/services/types';
 import type TypedEmitter from 'typed-emitter';
+import type { Router } from 'vue-router';
 
 /**
  * Global events across workspace boundaries
@@ -28,6 +28,12 @@ export const GlobalWkspEvents = new EventEmitter() as TypedEmitter<{
  * This always runs in the background collecting data.
  */
 let active: Workspace | null = null;
+
+// Destroy the active workspace on hot reload
+import.meta.hot?.on('vite:beforeUpdate', async () => {
+  await active?.destroy();
+  active = null;
+});
 
 /**
  * Workspace service
@@ -75,39 +81,47 @@ export class Workspace {
     await this.api?.stop();
   }
 
+  get username(): string {
+    return this.api.name;
+  }
+
   /**
-   * Setup workspace from URL parameter or redirect to home.
+   * Setup workspace from URL parameter.
+   * @param space Workspace name from URL
    * @returns Workspace object or null if not found
    */
-  public static async setupOrRedir(): Promise<Workspace | null> {
-    // Unescape workspace name from URL
-    let space = String(router.currentRoute.value?.params?.space);
+  public static async setup(space: string): Promise<Workspace> {
+    console.log('Starting workspace:', space);
     if (!space) {
-      router.replace('/');
-      return null;
+      throw new Error('No workspace name provided');
     }
+
+    // Unescape URL name
     space = utils.unescapeUrlName(space);
 
     // Get workspace configuration from storage
     const metadata = await storage.db.workspaces.get(space);
     if (!metadata) {
-      useToast().error(`Workspace not found, have you joined it? <br/> [${space}]`);
-      router.replace('/');
-      return null;
+      throw new Error(`Workspace not found, have you joined it? <br/> [${space}]`);
     }
 
     // Start workspace if not already active
     if (active?.metadata.name !== metadata.name) {
-      try {
-        await active?.destroy();
-        active = await Workspace.create(metadata);
-      } catch (e) {
-        console.error(e);
-        useToast().error(`Failed to start workspace: ${e}`);
-        return null;
-      }
+      await active?.destroy();
+      active = await Workspace.create(metadata);
     }
 
     return active;
+  }
+
+  public static async setupOrRedir(router: Router): Promise<Workspace | null> {
+    try {
+      return await Workspace.setup(router.currentRoute.value.params.space as string);
+    } catch (e) {
+      console.error(e);
+      useToast().error(`Failed to start workspace: ${e}`);
+      router.push('/');
+      return null;
+    }
   }
 }

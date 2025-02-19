@@ -38,4 +38,6 @@ export type IProjectFile = {
   uuid: string;
   /** Full path of file */
   path: string;
+  /** Whether the file is a blob */
+  is_blob?: boolean;
 };

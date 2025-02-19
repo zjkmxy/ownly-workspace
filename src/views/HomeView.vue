@@ -44,15 +44,17 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import CreateWorkspaceModal from '@/components/home/CreateWorkspaceModal.vue';
 import Workspace from '@/components/home/Workspace.vue';
 
-import router from '@/router';
 import storage from '@/services/storage';
 import * as utils from '@/utils/index';
 
 import type * as types from '@/services/types';
+
+const router = useRouter();
 
 const showCreate = ref(false);
 const workspaces = ref([] as types.IWorkspace[]);

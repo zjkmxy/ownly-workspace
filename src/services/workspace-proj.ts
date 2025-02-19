@@ -127,14 +127,25 @@ export class WorkspaceProj {
     this.onListChange();
   }
 
+  /** Get the list of files */
+  public fileList(): IProjectFile[] {
+    return Array.from(this.fileMap.values());
+  }
+
+  /** Callback when the list of files changes */
+  private onListChange() {
+    if (!this.fileMap || active?.root.guid !== this.root.guid) return;
+    GlobalWkspEvents.emit('project-files', this.name, this.fileList());
+  }
+
   /** Create a new file or folder in the project */
-  public async newFile(path: string) {
+  public async newFile(path: string, is_blob?: boolean) {
     if (!path) throw new Error('File path is required');
     if (this.fileMap.has(path) || this.fileMap.has(path + '/'))
       throw new Error('File or folder already exists');
 
     const uuid = window.crypto.randomUUID();
-    this.fileMap.set(path, { uuid, path });
+    this.fileMap.set(path, { uuid, path, is_blob });
   }
 
   /** Delete a file or folder in the project */
@@ -165,14 +176,6 @@ export class WorkspaceProj {
     return await this.provider.getDoc(uuid);
   }
 
-  /** Get an awareness instance for a file */
-  public async getAwareness(path: string): Promise<awareProto.Awareness> {
-    const uuid = this.fileMap.get(path)?.uuid;
-    if (!uuid) throw new Error('File not found');
-
-    return await this.provider.getAwareness(uuid);
-  }
-
   /** Read a file's contents directly */
   public async readFile(path: string): Promise<Uint8Array | string | null> {
     const uuid = this.fileMap.get(path)?.uuid;
@@ -188,14 +191,11 @@ export class WorkspaceProj {
     return null;
   }
 
-  /** Get the list of files */
-  public fileList(): IProjectFile[] {
-    return Array.from(this.fileMap.values());
-  }
+  /** Get an awareness instance for a file */
+  public async getAwareness(path: string): Promise<awareProto.Awareness> {
+    const uuid = this.fileMap.get(path)?.uuid;
+    if (!uuid) throw new Error('File not found');
 
-  /** Callback when the list of files changes */
-  private onListChange() {
-    if (!this.fileMap || active?.root.guid !== this.root.guid) return;
-    GlobalWkspEvents.emit('project-files', this.name, this.fileList());
+    return await this.provider.getAwareness(uuid);
   }
 }

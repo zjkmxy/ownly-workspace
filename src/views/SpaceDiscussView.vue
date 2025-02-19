@@ -88,7 +88,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
 
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
@@ -102,6 +102,7 @@ import type { IChatMessage } from '@/services/types';
 import Spinner from '@/components/Spinner.vue';
 
 const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
 // Route state
@@ -137,7 +138,7 @@ watch(channelName, setup);
 async function setup() {
   try {
     // Set up the workspace
-    wksp.value = await Workspace.setupOrRedir();
+    wksp.value = await Workspace.setupOrRedir(router);
     if (!wksp.value) return;
 
     // Load the chat messages
@@ -188,7 +189,7 @@ async function send(event: Event) {
   // Send the message to the workspace
   const message = {
     uuid: Math.random() * 1e16,
-    user: wksp.value!.api.name,
+    user: wksp.value!.username,
     ts: Date.now(),
     message: outMessage.value,
   };
@@ -212,7 +213,7 @@ function onChatMessage(channel: string, message: IChatMessage) {
   const wrapper = scroller.value.$el;
   if (wrapper.scrollTop + wrapper.clientHeight + 200 >= wrapper.scrollHeight) {
     scroller.value.scrollToBottom();
-  } else if (message.user !== wksp.value!.api.name) {
+  } else if (message.user !== wksp.value!.username) {
     unreadCount.value++;
   }
 }

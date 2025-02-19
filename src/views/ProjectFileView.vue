@@ -50,7 +50,7 @@ import {
   shallowRef,
   watch,
 } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import * as Y from 'yjs';
@@ -74,6 +74,7 @@ import * as latex from '@/services/latex/index';
 import * as utils from '@/utils';
 
 const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
 const loading = ref(true);
@@ -106,7 +107,7 @@ async function create() {
     await destroy();
 
     // Load workspace
-    const wksp = await Workspace.setupOrRedir();
+    const wksp = await Workspace.setupOrRedir(router);
     if (!wksp) return;
 
     // Load project

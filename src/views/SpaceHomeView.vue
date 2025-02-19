@@ -24,6 +24,7 @@
 
 <script setup lang="ts">
 import { onMounted, shallowRef } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { faBriefcase } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -32,12 +33,14 @@ import Spinner from '@/components/Spinner.vue';
 
 import { Workspace } from '@/services/workspace';
 
+const router = useRouter();
+
 const wksp = shallowRef(null as Workspace | null);
 
 onMounted(setup);
 
 async function setup() {
-  wksp.value = await Workspace.setupOrRedir();
+  wksp.value = await Workspace.setupOrRedir(router);
   if (!wksp.value) return;
 }
 </script>

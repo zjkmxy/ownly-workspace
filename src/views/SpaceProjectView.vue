@@ -24,7 +24,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, shallowRef, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -36,6 +36,7 @@ import { Workspace } from '@/services/workspace';
 import type { WorkspaceProj } from '@/services/workspace-proj';
 
 const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
 const projName = computed(() => route.params.project as string);
@@ -46,7 +47,7 @@ watch(projName, setup);
 
 async function setup() {
   try {
-    const wksp = await Workspace.setupOrRedir();
+    const wksp = await Workspace.setupOrRedir(router);
     if (!wksp) return;
 
     proj.value = await wksp.proj.get(projName.value);
