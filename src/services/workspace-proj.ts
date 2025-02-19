@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 import * as awareProto from 'y-protocols/awareness.js';
 
-import { GlobalWkspEvents } from './workspace';
+import { GlobalBus } from './event-bus';
 import { SvsProvider } from './svs-provider';
 import * as utils from '@/utils';
 
@@ -24,8 +24,7 @@ export class WorkspaceProjManager {
   ) {
     this.list = this.root.getMap<IProject>('list');
 
-    const listObserver = async () =>
-      GlobalWkspEvents.emit('project-list', await this.getProjects());
+    const listObserver = async () => GlobalBus.emit('project-list', await this.getProjects());
     this.list.observe(listObserver);
     listObserver();
   }
@@ -134,7 +133,7 @@ export class WorkspaceProj {
   /** Callback when the list of files changes */
   private onListChange() {
     if (!this.fileMap || this.manager.active?.root.guid !== this.root.guid) return;
-    GlobalWkspEvents.emit('project-files', this.name, this.fileList());
+    GlobalBus.emit('project-files', this.name, this.fileList());
   }
 
   /** Create a new file or folder in the project */

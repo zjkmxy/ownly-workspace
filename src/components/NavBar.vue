@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -97,8 +97,8 @@ import ProjectTreeAddButton from './ProjectTreeMenu.vue';
 import AddChannelModal from './AddChannelModal.vue';
 import AddProjectModal from './AddProjectModal.vue';
 
+import { GlobalBus } from '@/services/event-bus';
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
-import { GlobalWkspEvents } from '@/services/workspace';
 
 const route = useRoute();
 const routeIsDashboard = computed(() => route.name === 'home');
@@ -114,33 +114,48 @@ const showProjectModal = ref(false);
 const activeProjectName = ref(null as string | null);
 const projectFiles = ref([] as IProjectFile[]);
 
-const linkProject = (project: IProject) => ({
-  name: 'project',
-  params: {
-    space: route.params.space,
-    project: project.name,
-  },
-});
-
-const linkDiscuss = (channel: IChatChannel) => ({
-  name: 'discuss',
-  params: {
-    space: route.params.space,
-    channel: channel.name,
-  },
-});
-
-onMounted(async () => {
-  // Subscribe for projects list
-  GlobalWkspEvents.addListener('project-list', (projs) => (projects.value = projs));
-  // Subscribe for project files list
-  GlobalWkspEvents.addListener('project-files', (name, files) => {
+const busListeners = {
+  'project-list': (projs: IProject[]) => (projects.value = projs),
+  'project-files': (name: string, files: IProjectFile[]) => {
     activeProjectName.value = name;
     projectFiles.value = files;
-  });
-  // Subscribe for chat channels
-  GlobalWkspEvents.addListener('chat-channels', (chans) => (channels.value = chans));
+  },
+  'chat-channels': (chans: IChatChannel[]) => (channels.value = chans),
+};
+
+onMounted(async () => {
+  GlobalBus.addListener('project-list', busListeners['project-list']);
+  GlobalBus.addListener('project-files', busListeners['project-files']);
+  GlobalBus.addListener('chat-channels', busListeners['chat-channels']);
 });
+
+onUnmounted(() => {
+  GlobalBus.removeListener('project-list', busListeners['project-list']);
+  GlobalBus.removeListener('project-files', busListeners['project-files']);
+  GlobalBus.removeListener('chat-channels', busListeners['chat-channels']);
+});
+
+/** Link to project home page */
+function linkProject(project: IProject) {
+  return {
+    name: 'project',
+    params: {
+      space: route.params.space,
+      project: project.name,
+    },
+  };
+}
+
+/** Link to discussion channel */
+function linkDiscuss(channel: IChatChannel) {
+  return {
+    name: 'discuss',
+    params: {
+      space: route.params.space,
+      channel: channel.name,
+    },
+  };
+}
 </script>
 
 <style scoped lang="scss">

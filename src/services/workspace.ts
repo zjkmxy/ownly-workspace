@@ -1,27 +1,17 @@
 import { useToast } from 'vue-toast-notification';
-import { EventEmitter } from 'events';
 
 import { WorkspaceChat } from './workspace-chat';
 import { WorkspaceProjManager } from './workspace-proj';
 
 import { SvsProvider } from './svs-provider';
+
 import storage from '@/services/storage';
 import ndn from '@/services/ndn';
 import * as utils from '@/utils/index';
 
 import type { WorkspaceAPI } from '@/services/ndn';
-import type { IChatChannel, IProject, IProjectFile, IWorkspace } from '@/services/types';
-import type TypedEmitter from 'typed-emitter';
 import type { Router } from 'vue-router';
-
-/**
- * Global events across workspace boundaries
- */
-export const GlobalWkspEvents = new EventEmitter() as TypedEmitter<{
-  'chat-channels': (channels: IChatChannel[]) => void;
-  'project-list': (projects: IProject[]) => void;
-  'project-files': (project: string, files: IProjectFile[]) => void;
-}>;
+import type { IWorkspace } from './types';
 
 /**
  * We keep an active instance of the open workspace.

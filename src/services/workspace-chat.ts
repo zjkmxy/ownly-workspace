@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import * as Y from 'yjs';
 
 import type { IChatChannel, IChatMessage } from './types';
-import { GlobalWkspEvents } from './workspace';
+import { GlobalBus } from './event-bus';
 import { SvsProvider } from './svs-provider';
 
 import type TypedEmitter from 'typed-emitter';
@@ -24,7 +24,7 @@ export class WorkspaceChat {
     this.chatChannels = doc.getArray<IChatChannel>('_chan_');
     this.chatMessages = doc.getMap<Y.Array<IChatMessage>>('_msg_');
 
-    const chanObserver = () => GlobalWkspEvents.emit('chat-channels', this.chatChannels.toArray());
+    const chanObserver = () => GlobalBus.emit('chat-channels', this.chatChannels.toArray());
     this.chatChannels.observe(chanObserver);
     chanObserver();
 

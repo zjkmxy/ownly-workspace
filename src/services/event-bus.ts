@@ -1,0 +1,28 @@
+import { EventEmitter } from 'events';
+
+import type TypedEmitter from 'typed-emitter';
+import type { IChatChannel, IProject, IProjectFile } from './types';
+
+/**
+ * Global event bus for the application.
+ */
+export const GlobalBus = new EventEmitter() as TypedEmitter<{
+  /**
+   * Event when the list of chat channels is updated.
+   * @param channels List of chat channels
+   */
+  'chat-channels': (channels: IChatChannel[]) => void;
+
+  /**
+   * Event when the list of projects is updated.
+   * @param projects List of projects
+   */
+  'project-list': (projects: IProject[]) => void;
+
+  /**
+   * Event when the list of files in the active project is updated.
+   * @param project Name of the project that is active
+   * @param files List of files in the project
+   */
+  'project-files': (project: string, files: IProjectFile[]) => void;
+}>;
