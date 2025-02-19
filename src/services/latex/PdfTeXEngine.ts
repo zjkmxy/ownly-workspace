@@ -53,8 +53,8 @@ export class PdfTeXEngine {
         }
       };
     });
-    this.latexWorker!.onmessage = (_: any) => {};
-    this.latexWorker!.onerror = (_: any) => {};
+    this.latexWorker!.onmessage = () => {};
+    this.latexWorker!.onerror = () => {};
   }
 
   public isReady(): boolean {
@@ -71,7 +71,7 @@ export class PdfTeXEngine {
     this.checkEngineStatus();
     this.latexWorkerStatus = EngineStatus.Busy;
     const start_compile_time = performance.now();
-    const res: CompileResult = await new Promise((resolve, _) => {
+    const res: CompileResult = await new Promise((resolve) => {
       this.latexWorker!.onmessage = (ev: any) => {
         const data: any = ev['data'];
         const cmd: string = data['cmd'] as string;
@@ -93,7 +93,7 @@ export class PdfTeXEngine {
       this.latexWorker!.postMessage({ cmd: 'compilelatex' });
       console.log('Engine compilation start');
     });
-    this.latexWorker!.onmessage = (_: any) => {};
+    this.latexWorker!.onmessage = () => {};
 
     return res;
   }
@@ -126,7 +126,7 @@ export class PdfTeXEngine {
       };
       this.latexWorker!.postMessage({ cmd: 'compileformat' });
     });
-    this.latexWorker!.onmessage = (_: any) => {};
+    this.latexWorker!.onmessage = () => {};
   }
 
   public setEngineMainFile(filename: string): void {

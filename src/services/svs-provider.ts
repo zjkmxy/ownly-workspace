@@ -6,6 +6,7 @@ import Dexie from 'dexie';
 import * as utils from '@/utils';
 
 import type { SvsAloApi, WorkspaceAPI } from './ndn';
+import type { AwarenessLocalState } from './types';
 
 /** IndexedDB schema for update entry  */
 type UpdateEntry = {
@@ -240,18 +241,20 @@ class NdnAwareness extends awareProto.Awareness {
     const b = (hash[1] % 128) + 110;
 
     // Set the local user state
-    me.setLocalStateField('user', {
+    const userState: AwarenessLocalState['user'] = {
       name: username, // common
       color: `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`, // milkdown
       rgb: [r, g, b], // monaco
-    });
+    };
+    me.setLocalStateField('user', userState);
 
     // Check for updates
     me.on('update', ({ added, updated, removed }: any, source: 'local' | 'remote') => {
       // Inject styles for remote updates
       if (source !== 'local') {
         for (const client of added) {
-          me.injectStyles(client, me.getStates().get(client)?.user);
+          const state = me.getStates().get(client) as AwarenessLocalState | undefined;
+          me.injectStyles(client, state?.user);
         }
         return;
       }
@@ -283,8 +286,8 @@ class NdnAwareness extends awareProto.Awareness {
     return me;
   }
 
-  private injectStyles(client: number, user: any) {
-    if (!user.color) return;
+  private injectStyles(client: number, user: AwarenessLocalState['user'] | undefined) {
+    if (!user?.color) return;
     if (awarenessHaveStyles.has(client)) return;
     awarenessHaveStyles.add(client);
 

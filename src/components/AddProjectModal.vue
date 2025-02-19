@@ -41,7 +41,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';

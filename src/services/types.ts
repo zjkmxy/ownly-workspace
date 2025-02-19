@@ -41,3 +41,11 @@ export type IProjectFile = {
   /** Whether the file is a blob */
   is_blob?: boolean;
 };
+
+export type AwarenessLocalState = {
+  user: {
+    name: string;
+    color: string;
+    rgb: [number, number, number];
+  };
+};

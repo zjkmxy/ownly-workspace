@@ -9,7 +9,7 @@
       </section>
 
       <div class="spacelist">
-        <Workspace
+        <WorkspaceCard
           v-for="ws in workspaces"
           :key="ws.name"
           :name="ws.label"
@@ -47,7 +47,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import CreateWorkspaceModal from '@/components/home/CreateWorkspaceModal.vue';
-import Workspace from '@/components/home/Workspace.vue';
+import WorkspaceCard from '@/components/home/WorkspaceCard.vue';
 
 import storage from '@/services/storage';
 import * as utils from '@/utils/index';

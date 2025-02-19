@@ -30,7 +30,7 @@
       <img alt="logo" class="logo invert-if-dark" src="@/assets/logo.svg" />
 
       <!-- Loading / Compiling Spinner -->
-      <Spinner v-if="(!loaded && pdf) || compiling" />
+      <LoadingSpinner v-if="(!loaded && pdf) || compiling" />
 
       <!-- PDF Viewer -->
       <VuePdfEmbed
@@ -49,7 +49,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
 
-import Spinner from '@/components/Spinner.vue';
+import LoadingSpinner from '@/components/LoadingSpinner.vue';
 
 import VuePdfEmbed from 'vue-pdf-embed';
 import 'vue-pdf-embed/dist/styles/annotationLayer.css';

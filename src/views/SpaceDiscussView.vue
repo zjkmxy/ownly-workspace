@@ -1,7 +1,7 @@
 <template>
   <div class="outer py-4">
     <div class="absolute-center" v-if="!items">
-      <Spinner />
+      <LoadingSpinner />
       Loading your messages ...
     </div>
 
@@ -95,11 +95,12 @@ import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faPaperPlane, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 
+import LoadingSpinner from '@/components/LoadingSpinner.vue';
+
 import * as utils from '@/utils';
 import { Workspace } from '@/services/workspace';
 
 import type { IChatMessage } from '@/services/types';
-import Spinner from '@/components/Spinner.vue';
 
 const route = useRoute();
 const router = useRouter();

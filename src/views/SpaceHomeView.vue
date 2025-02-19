@@ -1,7 +1,7 @@
 <template>
   <div class="outer py-4">
     <div class="absolute-center" v-if="!wksp">
-      <Spinner />
+      <LoadingSpinner />
       Loading your workspace ...
     </div>
 
@@ -29,7 +29,7 @@ import { useRouter } from 'vue-router';
 import { faBriefcase } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
-import Spinner from '@/components/Spinner.vue';
+import LoadingSpinner from '@/components/LoadingSpinner.vue';
 
 import { Workspace } from '@/services/workspace';
 

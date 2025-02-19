@@ -2,7 +2,7 @@
   <div class="wrapper">
     <Transition name="fade-rtl" mode="out-in">
       <div class="loading has-text-white-bis has-text-centered" v-if="showLoading">
-        <Spinner />
+        <LoadingSpinner />
         {{ loadStatus }}
       </div>
 
@@ -82,7 +82,7 @@
 import { onMounted, ref } from 'vue';
 import { useToast } from 'vue-toast-notification';
 
-import Spinner from '@/components/Spinner.vue';
+import LoadingSpinner from '@/components/LoadingSpinner.vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import {
   faEnvelope,

@@ -16,7 +16,6 @@ import type { Awareness } from 'y-protocols/awareness.js';
 import * as utils from '@/utils';
 import { monacoRegister } from '@/utils/monaco';
 
-// @ts-ignore
 self.MonacoEnvironment = {
   getWorker(_: any, label: string) {
     if (label === 'json') return new jsonWorker();

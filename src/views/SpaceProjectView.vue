@@ -1,7 +1,7 @@
 <template>
   <div class="outer py-4">
     <div class="absolute-center" v-if="!proj">
-      <Spinner />
+      <LoadingSpinner />
       Loading your project ...
     </div>
 
@@ -30,7 +30,7 @@ import { useToast } from 'vue-toast-notification';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 
-import Spinner from '@/components/Spinner.vue';
+import LoadingSpinner from '@/components/LoadingSpinner.vue';
 
 import { Workspace } from '@/services/workspace';
 import type { WorkspaceProj } from '@/services/workspace-proj';

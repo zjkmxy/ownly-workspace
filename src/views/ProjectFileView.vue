@@ -1,7 +1,7 @@
 <template>
   <div class="container" v-if="loading">
     <div class="absolute-center">
-      <Spinner />
+      <LoadingSpinner />
       Loading your file ...
     </div>
   </div>
@@ -28,7 +28,7 @@
 
       <template #fallback>
         <div class="absolute-center">
-          <Spinner />
+          <LoadingSpinner />
           Loading code editor ...
         </div>
       </template>
@@ -56,18 +56,18 @@ import { useToast } from 'vue-toast-notification';
 import * as Y from 'yjs';
 import * as awareProto from 'y-protocols/awareness.js';
 
-import Spinner from '@/components/Spinner.vue';
+import LoadingSpinner from '@/components/LoadingSpinner.vue';
 const CodeEditor = defineAsyncComponent({
   loader: () => import('@/components/files/CodeEditor.vue'),
-  loadingComponent: Spinner,
+  loadingComponent: LoadingSpinner,
 });
 const MilkdownEditor = defineAsyncComponent({
   loader: () => import('@/components/files/MilkdownEditor.vue'),
-  loadingComponent: Spinner,
+  loadingComponent: LoadingSpinner,
 });
 const PdfViewer = defineAsyncComponent({
   loader: () => import('@/components/files/PdfViewer.vue'),
-  loadingComponent: Spinner,
+  loadingComponent: LoadingSpinner,
 });
 
 import { Workspace } from '@/services/workspace';

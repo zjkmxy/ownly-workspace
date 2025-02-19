@@ -2,7 +2,7 @@
   <div class="modal is-active anim-fade">
     <div class="modal-background"></div>
     <div class="modal-content">
-      <Spinner class="fixed-center" v-if="loading" />
+      <LoadingSpinner class="fixed-center" v-if="loading" />
 
       <div class="box">
         <div class="title is-5 mb-4">Create Workspace</div>
@@ -50,7 +50,7 @@
 import { ref } from 'vue';
 import { useToast } from 'vue-toast-notification';
 
-import Spinner from '../Spinner.vue';
+import LoadingSpinner from '../LoadingSpinner.vue';
 
 import storage from '@/services/storage';
 import ndn from '@/services/ndn';

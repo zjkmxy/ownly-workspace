@@ -7,7 +7,7 @@
   >
     <FontAwesomeIcon class="mr-1" :icon="faCaretDown" size="2xs" />
 
-    <Dropdown ref="dropdown">
+    <DropdownMenu ref="dropdown">
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-folder')"> New folder </a>
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', '')"> New blank file </a>
 
@@ -20,7 +20,7 @@
 
       <hr class="dropdown-divider" v-if="allowNew && allowDelete" />
       <a class="dropdown-item" v-if="allowDelete" @click="emit('delete')"> Delete </a>
-    </Dropdown>
+    </DropdownMenu>
   </button>
 </template>
 
@@ -29,7 +29,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons';
-import Dropdown from './Dropdown.vue';
+import DropdownMenu from './DropdownMenu.vue';
 
 defineProps({
   allowNew: Boolean,
@@ -43,7 +43,7 @@ const emit = defineEmits<{
 }>();
 
 const button = ref<HTMLElement | null>(null);
-const dropdown = ref<InstanceType<typeof Dropdown> | null>(null);
+const dropdown = ref<InstanceType<typeof DropdownMenu> | null>(null);
 
 // This is a bit ugly, but simplifies the parent component
 // Attach to the parent's context menu event here and trigger the dropdown
