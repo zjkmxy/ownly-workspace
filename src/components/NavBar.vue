@@ -74,15 +74,8 @@
       <li><a>Connectivity</a></li>
     </ul>
 
-    <Teleport to="body">
-      <Transition name="fade-2">
-        <AddChannelModal v-if="showChannelModal" @close="showChannelModal = false" />
-      </Transition>
-
-      <Transition name="fade-2">
-        <AddProjectModal v-if="showProjectModal" @close="showProjectModal = false" />
-      </Transition>
-    </Teleport>
+    <AddChannelModal :show="showChannelModal" @close="showChannelModal = false" />
+    <AddProjectModal :show="showProjectModal" @close="showProjectModal = false" />
   </aside>
 </template>
 

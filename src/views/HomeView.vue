@@ -40,9 +40,7 @@
       </div>
     </div>
 
-    <Transition name="fade-2">
-      <CreateWorkspaceModal v-if="showCreate" @create="refreshList" @close="showCreate = false" />
-    </Transition>
+    <CreateWorkspaceModal :show="showCreate" @close="showCreate = false" @create="refreshList" />
   </div>
 </template>
 
