@@ -33,20 +33,11 @@ li > a:has(div.link-inner) {
     line-height: 0px;
     width: 1em;
     height: 1em;
+    transition: none;
+    color: inherit;
     background-color: rgba(0, 0, 0, 0.15) !important;
     &:hover {
       background-color: rgba(0, 0, 0, 0.25) !important;
-    }
-  }
-
-  &:not(.router-link-active) {
-    :deep(.link-button) {
-      color: white !important;
-    }
-  }
-  &.router-link-active {
-    :deep(.link-button) {
-      color: var(--bulma-text-strong) !important;
     }
   }
 }

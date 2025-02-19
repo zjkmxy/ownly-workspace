@@ -192,7 +192,7 @@ function linkDiscuss(channel: IChatChannel) {
     &.is-active,
     &.router-link-active {
       background-color: var(--bulma-body-background-color);
-      color: var(---bulma-text-strong);
+      color: var(--bulma-white-on-scheme);
     }
   }
 }
