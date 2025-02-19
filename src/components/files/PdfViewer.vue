@@ -47,14 +47,11 @@
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent, onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 
 import Spinner from '@/components/Spinner.vue';
-const VuePdfEmbed = defineAsyncComponent({
-  loader: () => import('vue-pdf-embed'),
-  loadingComponent: Spinner,
-});
 
+import VuePdfEmbed from 'vue-pdf-embed';
 import 'vue-pdf-embed/dist/styles/annotationLayer.css';
 import 'vue-pdf-embed/dist/styles/textLayer.css';
 

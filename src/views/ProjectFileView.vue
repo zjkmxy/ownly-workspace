@@ -65,8 +65,10 @@ const MilkdownEditor = defineAsyncComponent({
   loader: () => import('@/components/files/MilkdownEditor.vue'),
   loadingComponent: Spinner,
 });
-
-import PdfViewer from '@/components/files/PdfViewer.vue';
+const PdfViewer = defineAsyncComponent({
+  loader: () => import('@/components/files/PdfViewer.vue'),
+  loadingComponent: Spinner,
+});
 
 import { Workspace } from '@/services/workspace';
 import type { WorkspaceProj } from '@/services/workspace-proj';
