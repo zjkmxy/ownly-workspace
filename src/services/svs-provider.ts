@@ -42,6 +42,9 @@ export class SvsProvider {
     });
   }
 
+  /**
+   * Create a new SVS provider for a project.
+   */
   public static async create(wksp: WorkspaceAPI, project: string): Promise<SvsProvider> {
     const svs = await wksp.svs_alo(`${wksp.group}/${project}`);
 
@@ -51,6 +54,10 @@ export class SvsProvider {
     return provider;
   }
 
+  /**
+   * Destroy the provider.
+   * This will stop the SVS instance and clean up all documents.
+   */
   public async destroy() {
     for (const doc of this.docs.values()) {
       doc.destroy();
@@ -58,6 +65,10 @@ export class SvsProvider {
     await this.svs.stop();
   }
 
+  /**
+   * Start the provider.
+   * This will subscribe to updates and load persisted data.
+   */
   private async start() {
     await this.svs.subscribe({
       on_yjs_delta: async (info, pub) => {
@@ -78,6 +89,7 @@ export class SvsProvider {
     await this.svs.start();
   }
 
+  /** Get a Yjs document from the project. */
   public async getDoc(uuid: string): Promise<Y.Doc> {
     let doc = this.docs.get(uuid);
     if (doc) return doc;
@@ -119,6 +131,7 @@ export class SvsProvider {
       });
   }
 
+  /** Get the awareness instance for a document */
   public async getAwareness(uuid: string): Promise<awareProto.Awareness> {
     const doc = this.docs.get(uuid);
     if (!doc) throw new Error('Document not loaded');
@@ -135,6 +148,7 @@ export class SvsProvider {
     return aware;
   }
 
+  /** Persist a single update to IndexedDB */
   private async persist(uuid: string, update: Uint8Array) {
     const id = await this.db.updates.put({ uuid, update });
 
