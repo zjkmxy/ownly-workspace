@@ -1,7 +1,7 @@
 <template>
   <div class="outer has-background-primary soft-if-dark">
     <div class="inner">
-      <section class="hero is-primary">
+      <section class="hero">
         <div class="hero-body pb-1">
           <p class="title">Dashboard</p>
           <p class="subtitle mt-2">You can create or join one or more workspaces below</p>
