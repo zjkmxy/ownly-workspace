@@ -3,13 +3,15 @@
     <div class="card-content">
       <div class="block">
         <div class="media-content">
-          <p class="has-text-weight-bold">{{ name }}</p>
-          <p class="subtitle is-7 mt-1">{{ subtitle }}</p>
+          <p class="title is-4 has-text-weight-bold">{{ name }}</p>
+          <p class="subtitle is-5 mt-1">{{ subtitle }}</p>
         </div>
       </div>
 
-      <div class="content">
-        <button class="button is-primary is-fullwidth">Enter</button>
+      <div class="content has-text-right">
+        <button class="button is-primary is-small-caps" @click="$emit('open')">
+          Launch Workspace
+        </button>
       </div>
     </div>
   </div>

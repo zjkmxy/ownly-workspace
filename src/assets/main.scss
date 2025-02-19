@@ -33,6 +33,10 @@ main.full-h {
   position: fixed !important;
 }
 
+.is-small-caps {
+  font-variant: small-caps;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;

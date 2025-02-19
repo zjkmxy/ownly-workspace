@@ -1,26 +1,36 @@
 <template>
-  <div>
-    <section class="hero">
-      <div class="hero-body pb-1">
-        <p class="title">Dashboard</p>
-        <p class="subtitle mt-2">You can create or join one or more workspaces below</p>
-      </div>
-    </section>
+  <div class="outer has-background-primary soft-if-dark">
+    <div class="inner">
+      <section class="hero is-primary">
+        <div class="hero-body pb-1">
+          <p class="title">Dashboard</p>
+          <p class="subtitle mt-2">You can create or join one or more workspaces below</p>
+        </div>
+      </section>
 
-    <div class="spacelist">
-      <Workspace
-        v-for="ws in workspaces"
-        :key="ws.name"
-        :name="ws.label"
-        :subtitle="ws.name"
-        @click="open(ws)"
-      />
+      <div class="spacelist">
+        <Workspace
+          v-for="ws in workspaces"
+          :key="ws.name"
+          :name="ws.label"
+          :subtitle="ws.name"
+          @open="open(ws)"
+        />
 
-      <div class="workspace card">
-        <div class="card-content">
-          <div class="content">
-            <button class="button is-fullwidth mb-2" @click="showCreate = true">Create New</button>
-            <button class="button is-primary is-fullwidth">Join Workspace</button>
+        <div class="workspace card">
+          <div class="card-content">
+            <div class="block">
+              <div class="media-content">
+                <p class="subtitle is-5">Don't see what you are looking for?</p>
+              </div>
+            </div>
+
+            <div class="content has-text-right">
+              <button class="button mr-2 mb-2 is-small-caps" @click="showCreate = true">
+                Create a new workspace
+              </button>
+              <button class="button mr-2 is-primary is-small-caps">Join a workspace</button>
+            </div>
           </div>
         </div>
       </div>
@@ -54,7 +64,7 @@ refreshList();
 
 function open(ws: types.IWorkspace) {
   router.push({
-    name: 'files',
+    name: 'space-home',
     params: {
       space: utils.escapeUrlName(ws.name),
     },
@@ -63,19 +73,18 @@ function open(ws: types.IWorkspace) {
 </script>
 
 <style scoped lang="scss">
-.spacelist {
-  margin: 40px;
-}
-.workspace {
-  display: inline-block;
-  width: 100%;
-  vertical-align: top;
-}
+.outer {
+  height: 100%;
+  width: auto;
+  overflow-y: auto;
 
-@media (min-width: 600px) {
-  .workspace {
-    width: 250px;
-    margin-right: 20px;
+  .inner {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .spacelist {
+    margin: 40px;
   }
 }
 </style>

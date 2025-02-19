@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '@/views/HomeView.vue';
-import SpaceFilesView from '@/views/SpaceFilesView.vue';
+import SpaceHomeView from '@/views/SpaceHomeView.vue';
 import SpaceDiscussView from '@/views/SpaceDiscussView.vue';
 import SpaceProjectView from '@/views/SpaceProjectView.vue';
 import ProjectFileView from '@/views/ProjectFileView.vue';
@@ -15,8 +15,8 @@ const router = createRouter({
     },
     {
       path: '/:space/',
-      name: 'files',
-      component: SpaceFilesView,
+      name: 'space-home',
+      component: SpaceHomeView,
     },
     {
       path: '/:space/project/:project',
