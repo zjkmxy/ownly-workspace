@@ -318,7 +318,7 @@ async function getProject() {
   const wksp = await Workspace.setupOrRedir(router);
   if (!wksp) throw new Error('Workspace not found');
 
-  const proj = wksp.proj.getActive();
+  const proj = wksp.proj.active;
   if (!proj) throw new Error('Project not found');
   return proj;
 }

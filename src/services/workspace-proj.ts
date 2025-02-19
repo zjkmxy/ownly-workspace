@@ -8,9 +8,6 @@ import * as utils from '@/utils';
 import type { WorkspaceAPI } from './ndn';
 import type { IProject, IProjectFile } from './types';
 
-/** Currently active project in the workspace */
-let active: WorkspaceProj | null = null;
-
 /**
  * Project manager for the workspace.
  * Keeps track of the list of projects and their instances.
@@ -19,6 +16,7 @@ let active: WorkspaceProj | null = null;
 export class WorkspaceProjManager {
   private readonly list: Y.Map<IProject>;
   private readonly instances: Map<string, WorkspaceProj> = new Map();
+  public active: WorkspaceProj | null = null;
 
   private constructor(
     private readonly wksp: WorkspaceAPI,
@@ -46,7 +44,7 @@ export class WorkspaceProjManager {
     await Promise.all(Array.from(this.instances.values()).map((proj) => proj.destroy()));
     this.instances.clear();
     this.root.destroy();
-    active = null;
+    this.active = null;
   }
 
   /** Get the list of projects */
@@ -70,15 +68,9 @@ export class WorkspaceProjManager {
     if (!this.list.has(name)) throw new Error('Project not found');
 
     // Create project instance
-    proj = await WorkspaceProj.create(name, this.wksp);
+    proj = await WorkspaceProj.create(name, this.wksp, this);
     this.instances.set(name, proj);
     return proj;
-  }
-
-  /** Get the active project */
-  public getActive(): WorkspaceProj {
-    if (!active) throw new Error('No active project');
-    return active;
   }
 }
 
@@ -93,6 +85,7 @@ export class WorkspaceProj {
     public readonly name: string,
     private readonly root: Y.Doc,
     private readonly provider: SvsProvider,
+    private readonly manager: WorkspaceProjManager,
   ) {
     // Set up file list
     this.fileMap = root.getMap('file_list');
@@ -102,9 +95,15 @@ export class WorkspaceProj {
   /**
    * Create a new project instance
    *
+   * @param name Project name (slug)
    * @param wksp Workspace API
+   * @param manager Project manager instance
    */
-  public static async create(name: string, wksp: WorkspaceAPI): Promise<WorkspaceProj> {
+  public static async create(
+    name: string,
+    wksp: WorkspaceAPI,
+    manager: WorkspaceProjManager,
+  ): Promise<WorkspaceProj> {
     // Start SVS for project
     const provider = await SvsProvider.create(wksp, name);
 
@@ -112,7 +111,7 @@ export class WorkspaceProj {
     const root = await provider.getDoc('root');
 
     // Create project object
-    return new WorkspaceProj(name, root, provider);
+    return new WorkspaceProj(name, root, provider, manager);
   }
 
   /** Destroy the project instance */
@@ -123,7 +122,7 @@ export class WorkspaceProj {
 
   /** Make this the active project */
   public async activate(): Promise<void> {
-    active = this;
+    this.manager.active = this;
     this.onListChange();
   }
 
@@ -134,7 +133,7 @@ export class WorkspaceProj {
 
   /** Callback when the list of files changes */
   private onListChange() {
-    if (!this.fileMap || active?.root.guid !== this.root.guid) return;
+    if (!this.fileMap || this.manager.active?.root.guid !== this.root.guid) return;
     GlobalWkspEvents.emit('project-files', this.name, this.fileList());
   }
 
