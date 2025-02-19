@@ -9,7 +9,15 @@
 
     <Dropdown ref="dropdown">
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-folder')"> New folder </a>
-      <a class="dropdown-item" v-if="allowNew" @click="emit('new-file')"> New blank file </a>
+      <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', '')"> New blank file </a>
+
+      <hr class="dropdown-divider" v-if="allowNew" />
+      <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', 'mdoc')"> New RichDoc </a>
+      <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', 'md')">
+        New Markdown file
+      </a>
+      <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', 'tex')"> New LaTeX file </a>
+
       <hr class="dropdown-divider" v-if="allowNew && allowDelete" />
       <a class="dropdown-item" v-if="allowDelete" @click="emit('delete')"> Delete </a>
     </Dropdown>
@@ -28,7 +36,11 @@ defineProps({
   allowDelete: Boolean,
 });
 
-const emit = defineEmits(['new-folder', 'new-file', 'delete']);
+const emit = defineEmits<{
+  (e: 'new-folder'): void;
+  (e: 'new-file', ext: string): void;
+  (e: 'delete'): void;
+}>();
 
 const button = ref<HTMLElement | null>(null);
 const dropdown = ref<InstanceType<typeof Dropdown> | null>(null);

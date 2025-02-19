@@ -27,7 +27,7 @@
               class="link-button"
               :allow-new="true"
               :allow-delete="false"
-              @new-file="$refs.projectTree.find(() => true)?.newInHere('file')"
+              @new-file="$refs.projectTree.find(() => true)?.newInHere('file', $event)"
               @new-folder="$refs.projectTree.find(() => true)?.newInHere('folder')"
             />
           </router-link>

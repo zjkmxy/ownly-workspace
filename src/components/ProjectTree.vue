@@ -17,7 +17,7 @@
             class="link-button"
             :allow-new="entry.is_folder"
             :allow-delete="true"
-            @new-file="newInSub(entry, 'file')"
+            @new-file="newInSub(entry, 'file', $event)"
             @new-folder="newInSub(entry, 'folder')"
             @delete="executeDelete(entry)"
           />
@@ -124,6 +124,7 @@ const newInput = ref<HTMLInputElement | null>(null);
 const showNew = ref(false);
 const newName = ref(String());
 const newType = ref<'file' | 'folder'>('file');
+const newExtension = ref<string>();
 
 defineExpose({ newInHere, parent: props.parent });
 onMounted(checkRoute);
@@ -291,18 +292,19 @@ function openFolder(entry: TreeEntry, val?: boolean) {
 }
 
 /** Create a new file in a subfolder */
-async function newInSub(subfolder: TreeEntry, type: 'file' | 'folder') {
+async function newInSub(subfolder: TreeEntry, type: 'file' | 'folder', extension?: string) {
   if (!subfolder.is_folder) return;
   openFolder(subfolder, true);
   await nextTick();
 
   const stree = subtrees.value?.find((t: any) => t?.parent === subfolder.name);
-  stree?.newInHere(type);
+  stree?.newInHere(type, extension);
 }
 
 /** Create a new file in the current folder */
-async function newInHere(type: 'file' | 'folder') {
+async function newInHere(type: 'file' | 'folder', extension?: string) {
   newType.value = type;
+  newExtension.value = extension || String();
   showNew.value = true;
   newName.value = String();
   await nextTick();
@@ -333,7 +335,13 @@ async function executeNew() {
   }
 
   let path = `${props.path}${newName.value}`;
-  if (newType.value === 'folder') path += '/';
+  if (newType.value === 'folder') {
+    path += '/';
+  }
+
+  if (newExtension.value && !path.endsWith(newExtension.value)) {
+    path += `.${newExtension.value}`;
+  }
 
   try {
     const proj = await getProject();
