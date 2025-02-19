@@ -26,7 +26,13 @@
     </div>
 
     <div class="pdf-content center-spinner">
+      <!-- Watermark logo -->
+      <img alt="logo" class="logo invert-if-dark" src="@/assets/logo.svg" />
+
+      <!-- Loading / Compiling Spinner -->
       <Spinner v-if="(!loaded && pdf) || compiling" />
+
+      <!-- PDF Viewer -->
       <VuePdfEmbed
         v-if="pdf && width"
         annotation-layer
@@ -138,6 +144,15 @@ onMounted(() => {
       .vue-pdf-embed__page {
         margin-bottom: 10px;
       }
+    }
+
+    > .logo {
+      width: 80%;
+      max-width: 200px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
     }
 
     > .error {
