@@ -173,6 +173,9 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 	}
 
 	return js.ValueOf(map[string]any{
+		"sync_prefix": js.ValueOf(alo.SyncPrefix().String()),
+		"data_prefix": js.ValueOf(alo.DataPrefix().String()),
+
 		// start(): Promise<void>;
 		"start": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			for _, route := range routes {

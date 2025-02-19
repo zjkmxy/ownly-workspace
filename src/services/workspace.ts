@@ -95,7 +95,6 @@ export class Workspace {
    * @returns Workspace object or null if not found
    */
   public static async setup(space: string): Promise<Workspace> {
-    console.log('Starting workspace:', space);
     if (!space) {
       throw new Error('No workspace name provided');
     }

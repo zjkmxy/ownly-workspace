@@ -52,6 +52,11 @@ export interface WorkspaceAPI {
 
 /** API of the SVS ALO instance */
 export interface SvsAloApi {
+  /** Sync prefix of the instance */
+  sync_prefix: string;
+  /** Data prefix of the instance */
+  data_prefix: string;
+
   /** Start the SVS instance */
   start(): Promise<void>;
   /** Stop the SVS instance */

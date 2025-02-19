@@ -126,7 +126,10 @@ export class SvsProvider {
     let aware = this.aware.get(uuid);
     if (aware) return aware;
 
-    aware = await NdnAwareness.create(uuid, doc, this.wksp, this.project);
+    // Allocate a name under the same namespace as the SVS instance.
+    // This way we don't need to register a separate prefix with the network.
+    const name = `${this.svs.sync_prefix}/32=aware/${uuid}`;
+    aware = await NdnAwareness.create(name, doc, this.wksp);
     this.aware.set(doc.guid, aware);
 
     return aware;
@@ -202,13 +205,8 @@ class NdnAwareness extends awareProto.Awareness {
   private throttle: number = 0;
   private readonly throttleSet: Set<number> = new Set();
 
-  public static async create(
-    uuid: string,
-    doc: Y.Doc,
-    wksp: WorkspaceAPI,
-    project: string,
-  ): Promise<NdnAwareness> {
-    const ndnAwareness = await wksp.awareness(`${wksp.group}/${project}/32=aware/${uuid}`);
+  public static async create(name: string, doc: Y.Doc, wksp: WorkspaceAPI): Promise<NdnAwareness> {
+    const ndnAwareness = await wksp.awareness(name);
     await ndnAwareness.start();
 
     // Create the awareness instance
