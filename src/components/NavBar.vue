@@ -29,7 +29,7 @@
               :allow-delete="false"
               @new-file="$refs.projectTree[0]?.newHere('file', $event)"
               @new-folder="$refs.projectTree[0]?.newHere('folder')"
-              @import="$refs.projectTree[0]?.importInHere()"
+              @import="$refs.projectTree[0]?.importHere()"
             />
           </router-link>
 

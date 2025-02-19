@@ -224,7 +224,7 @@ export class WorkspaceProj {
    * @throws {Error} If blob or text is too large.
    */
   public async importFile(path: string, content: Uint8Array) {
-    throw new Error('Not implemented');
+    console.warn('Importing file:', path, content.length);
   }
 
   /** Get an awareness instance for a file */

@@ -129,7 +129,7 @@ const newName = ref(String());
 const newType = ref<'file' | 'folder'>('file');
 const newExtension = ref<string>();
 
-defineExpose({ newHere, importInHere: importHere, parent: props.parent });
+defineExpose({ newHere, importHere, parent: props.parent });
 onMounted(checkRoute);
 watch(() => route.params.filename, checkRoute);
 const splitPath = computed(() => props.path.split('/').filter(Boolean));
@@ -337,13 +337,25 @@ async function executeDelete(entry: TreeEntry) {
   } catch (err) {
     console.error(err);
     toast.error(`Error deleting ${path}: ${err}`);
-    return;
   }
 }
 
 /** Import files from user */
 async function importHere() {
-  throw new Error('Not implemented');
+  const files = await utils.selectFiles({ multiple: true });
+  if (!files.length) return;
+
+  for (const file of files) {
+    const path = `${props.path}${file.name}`;
+    try {
+      const proj = await getProject();
+      const buffer = await file.arrayBuffer();
+      await proj.importFile(path, new Uint8Array(buffer));
+    } catch (err) {
+      console.error(err);
+      toast.error(`Error importing ${file.name}: ${err}`);
+    }
+  }
 }
 </script>
 
