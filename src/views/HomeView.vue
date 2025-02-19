@@ -29,7 +29,9 @@
               <button class="button mr-2 mb-2 is-small-caps" @click="showCreate = true">
                 Create a new workspace
               </button>
-              <button class="button mr-2 is-primary is-small-caps">Join a workspace</button>
+              <button class="button mr-2 is-primary is-small-caps soft-if-dark">
+                Join a workspace
+              </button>
             </div>
           </div>
         </div>

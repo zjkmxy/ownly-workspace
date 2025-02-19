@@ -9,7 +9,7 @@
       </div>
 
       <div class="content has-text-right">
-        <button class="button is-primary is-small-caps" @click="$emit('open')">
+        <button class="button is-primary is-small-caps soft-if-dark" @click="$emit('open')">
           Launch Workspace
         </button>
       </div>

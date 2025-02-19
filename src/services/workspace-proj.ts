@@ -226,7 +226,12 @@ export class WorkspaceProj {
     console.warn('Importing file:', path, content.length);
   }
 
-  /** Get an awareness instance for a file */
+  /**
+   * Get an awareness instance for a file.
+   * Awareness is used by Yjs to track user cursors and selections.
+   *
+   * @param path File path.
+   */
   public async getAwareness(path: string): Promise<awareProto.Awareness> {
     const uuid = this.fileMap.get(path)?.uuid;
     if (!uuid) throw new Error(`File not found: ${path}`);
