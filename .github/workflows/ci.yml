@@ -2,9 +2,7 @@ name: ci
 
 on:
   push:
-    branches: ['main']
   pull_request:
-    branches: ['main']
 
 jobs:
   build:
@@ -19,6 +17,15 @@ jobs:
 
       - run: npm ci
       - run: npm run build
+
+      - uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/master'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          cname: ownly.work
+          force_orphan: false
 
   lint:
     runs-on: ubuntu-latest
