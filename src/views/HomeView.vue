@@ -3,8 +3,10 @@
     <div class="inner">
       <section class="hero">
         <div class="hero-body pb-1">
-          <p class="title">Dashboard</p>
-          <p class="subtitle mt-2">You can create or join one or more workspaces below</p>
+          <p class="title has-text-white">Dashboard</p>
+          <p class="subtitle mt-2 has-text-white">
+            You can create or join one or more workspaces below
+          </p>
         </div>
       </section>
 

@@ -110,7 +110,7 @@ class NDNService {
     const result = await WebAssembly.instantiateStreaming(fetch('/main.wasm'), go.importObject);
 
     // Callback given by WebAssembly to set the NDN API
-    const ndnPromise = new Promise((resolve, reject) => {
+    const ndnPromise = new Promise<NDNAPI>((resolve, reject) => {
       const cancel = setTimeout(() => reject(new Error('NDN API not set')), 5000);
       window.set_ndn = (ndn: NDNAPI) => {
         window.set_ndn = undefined;
@@ -121,12 +121,10 @@ class NDNService {
     });
 
     go.run(result.instance);
-    this.api = (await ndnPromise) as NDNAPI;
+    this.api = await ndnPromise;
 
     // Provide JS APIs
     await this.api.setup_keychain(new KeyChainJS());
-
-    console.log('NDN API setup is complete', this.api);
   }
 }
 
