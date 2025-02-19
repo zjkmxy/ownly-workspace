@@ -81,6 +81,10 @@ export class Workspace {
     await this.api?.stop();
   }
 
+  /**
+   * Username is the NDN name of the user.
+   * This is not necessarily the display name.
+   */
   get username(): string {
     return this.api.name;
   }
