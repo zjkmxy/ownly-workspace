@@ -200,11 +200,14 @@ export class WorkspaceProj {
     if (!uuid) throw new Error(`File not found: ${path}`);
 
     const doc = new Y.Doc();
-    await this.provider.readInto(doc, uuid);
-    if (utils.isExtensionType(path, 'code')) {
-      return doc.getText('text').toString();
+    try {
+      await this.provider.readInto(doc, uuid);
+      if (utils.isExtensionType(path, 'code')) {
+        return doc.getText('text').toString();
+      }
+    } finally {
+      doc.destroy();
     }
-    doc.destroy();
 
     return null;
   }
