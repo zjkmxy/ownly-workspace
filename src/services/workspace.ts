@@ -117,7 +117,15 @@ export class Workspace {
     return active;
   }
 
+  /**
+   * Setup workspace from URL parameter or redirect to home.
+   */
   public static async setupOrRedir(router: Router): Promise<Workspace | null> {
+    // Ugly hack to wait for the previous workspace to be destroyed
+    if (import.meta.hot) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
     try {
       return await Workspace.setup(router.currentRoute.value.params.space as string);
     } catch (e) {
