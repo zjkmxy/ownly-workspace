@@ -356,8 +356,8 @@ async function importHere() {
       const buffer = await file.arrayBuffer();
       await proj.importFile(path, new Uint8Array(buffer));
     } catch (err) {
-      console.error(err);
-      toast.error(`Error importing ${file.name}: ${err}`);
+      console.warn(err);
+      toast.warning(`Could not import ${file.name}: ${err}`);
     }
   }
 }

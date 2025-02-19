@@ -209,6 +209,8 @@ export class WorkspaceProj {
       await this.provider.readInto(doc, meta.uuid);
       if (utils.isExtensionType(path, 'code')) {
         return doc.getText('text').toString();
+      } else if (utils.isExtensionType(path, 'milkdown')) {
+        return doc.getXmlFragment('milkdown').toJSON();
       }
     } finally {
       doc.destroy();
@@ -236,8 +238,15 @@ export class WorkspaceProj {
 
     // Check if this is a blob or text file
     const isText = utils.isExtensionType(path, 'code');
-    const isBlob = !isText;
+    const isMilkdown = utils.isExtensionType(path, 'milkdown');
+    const isBlob = !isText && !isMilkdown;
     if (isBlob) throw new Error('Binary files not implemented'); // TODO
+
+    // This requires us to parse the XML document. A better way might be
+    // to export to markdown and then import it back.
+    if (isMilkdown) {
+      throw new Error('Format cannot be imported');
+    }
 
     // Get the existing file if present
     let meta = this.fileMap.get(path);
