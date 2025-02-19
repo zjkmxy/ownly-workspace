@@ -136,10 +136,15 @@ export class WorkspaceProj {
     GlobalBus.emit('project-files', this.name, this.fileList());
   }
 
+  /** Check if a file or folder exists */
+  public fileMeta(path: string): IProjectFile | undefined {
+    return this.fileMap.get(path);
+  }
+
   /** Create a new file or folder in the project */
   public async newFile(path: string, is_blob?: boolean) {
     if (!path) throw new Error('File path is required');
-    if (this.fileMap.has(path) || this.fileMap.has(path + '/'))
+    if (this.fileMeta(path) || this.fileMeta(path + '/'))
       throw new Error('File or folder already exists');
 
     const uuid = window.crypto.randomUUID();
@@ -171,9 +176,10 @@ export class WorkspaceProj {
 
   /** Get the content document for a file */
   public async getFile(path: string): Promise<Y.Doc> {
-    const uuid = this.fileMap.get(path)?.uuid;
-    if (!uuid) throw new Error(`File not found: ${path}`);
-    return await this.provider.getDoc(uuid);
+    const meta = this.fileMeta(path);
+    if (!meta?.uuid) throw new Error(`File not found: ${path}`);
+    if (meta.is_blob) throw new Error('Binary files not implemented'); // TODO
+    return await this.provider.getDoc(meta.uuid);
   }
 
   /**
@@ -194,12 +200,13 @@ export class WorkspaceProj {
       throw new Error('Cannot export folder as file');
     }
 
-    const uuid = this.fileMap.get(path)?.uuid;
-    if (!uuid) throw new Error(`File not found: ${path}`);
+    const meta = this.fileMap.get(path);
+    if (!meta?.uuid) throw new Error(`File not found: ${path}`);
+    if (meta.is_blob) throw new Error('Binary files not implemented'); // TODO
 
     const doc = new Y.Doc();
     try {
-      await this.provider.readInto(doc, uuid);
+      await this.provider.readInto(doc, meta.uuid);
       if (utils.isExtensionType(path, 'code')) {
         return doc.getText('text').toString();
       }
