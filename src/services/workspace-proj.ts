@@ -184,17 +184,16 @@ export class WorkspaceProj {
    * If the file is a binary file, the content will be returned as a Uint8Array.
    * If the file is neither, null will be returned.
    *
-   * If the file is a folder, an error will be thrown for now.
-   * Eventually, this will export a ZIP archive of the folder.
-   *
    * @throws {Error} If file path is invalid.
+   * @throws {Error} If path is a folder.
    * @throws {Error} If file is too large.
    *
    * @returns The file content as a string or Uint8Array.
    */
   public async exportFile(path: string): Promise<Uint8Array | string | null> {
-    // TODO: export as ZIP if folder
-    if (path.endsWith('/')) throw new Error('Cannot export a folder (yet)');
+    if (path.endsWith('/')) {
+      throw new Error('Cannot export folder as file');
+    }
 
     const uuid = this.fileMap.get(path)?.uuid;
     if (!uuid) throw new Error(`File not found: ${path}`);
