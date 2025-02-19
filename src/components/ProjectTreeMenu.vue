@@ -18,8 +18,9 @@
         New Markdown file
       </a>
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', 'tex')"> New LaTeX file </a>
+      <hr class="dropdown-divider" v-if="allowNew" />
 
-      <hr class="dropdown-divider" v-if="allowNew && allowDelete" />
+      <a class="dropdown-item" @click="emit('export')"> Export </a>
       <a class="dropdown-item" v-if="allowDelete" @click="emit('delete')"> Delete </a>
     </DropdownMenu>
   </button>
@@ -41,6 +42,7 @@ const emit = defineEmits<{
   (e: 'new-folder'): void;
   (e: 'new-file', ext: string): void;
   (e: 'import'): void;
+  (e: 'export'): void;
   (e: 'delete'): void;
 }>();
 

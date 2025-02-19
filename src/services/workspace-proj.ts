@@ -270,6 +270,7 @@ export class WorkspaceProj {
         // Or use some better technique like reference counting
         doc.destroy();
       }
+      return;
     }
   }
 

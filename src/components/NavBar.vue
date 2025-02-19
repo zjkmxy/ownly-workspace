@@ -22,7 +22,7 @@
               {{ proj.name }}
             </div>
 
-            <ProjectTreeAddButton
+            <ProjectTreeMenu
               v-if="activeProjectName === proj.name"
               class="link-button"
               :allow-new="true"
@@ -30,6 +30,7 @@
               @new-file="$refs.projectTree[0]?.newHere('file', $event)"
               @new-folder="$refs.projectTree[0]?.newHere('folder')"
               @import="$refs.projectTree[0]?.importHere()"
+              @export="$refs.projectTree[0]?.executeExport(null)"
             />
           </router-link>
 
@@ -93,7 +94,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faLayerGroup, faPlus, faHashtag } from '@fortawesome/free-solid-svg-icons';
 
 import ProjectTree from './ProjectTree.vue';
-import ProjectTreeAddButton from './ProjectTreeMenu.vue';
+import ProjectTreeMenu from './ProjectTreeMenu.vue';
 import AddChannelModal from './AddChannelModal.vue';
 import AddProjectModal from './AddProjectModal.vue';
 

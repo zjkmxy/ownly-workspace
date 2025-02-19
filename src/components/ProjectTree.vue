@@ -20,6 +20,7 @@
             @new-file="onSubtree(entry, (t) => t.newHere('file', $event))"
             @new-folder="onSubtree(entry, (t) => t.newHere('folder', $event))"
             @import="onSubtree(entry, (t) => t.importHere())"
+            @export="executeExport(entry)"
             @delete="executeDelete(entry)"
           />
         </component>
@@ -63,6 +64,9 @@
 import { computed, nextTick, onMounted, ref, watch, type PropType } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toast-notification';
+
+import streamSaver from 'streamsaver';
+import * as zip from '@zip.js/zip.js';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import {
@@ -129,7 +133,7 @@ const newName = ref(String());
 const newType = ref<'file' | 'folder'>('file');
 const newExtension = ref<string>();
 
-defineExpose({ newHere, importHere, parent: props.parent });
+defineExpose({ newHere, importHere, executeExport, parent: props.parent });
 onMounted(checkRoute);
 watch(() => route.params.filename, checkRoute);
 const splitPath = computed(() => props.path.split('/').filter(Boolean));
@@ -355,6 +359,78 @@ async function importHere() {
       console.error(err);
       toast.error(`Error importing ${file.name}: ${err}`);
     }
+  }
+}
+
+/** Export a file or folder */
+async function executeExport(entry: TreeEntry | null) {
+  // Get export path inside the project
+  let path = props.path;
+  const isFolder = !entry || entry.is_folder;
+  if (entry) {
+    path += entry.name;
+    if (isFolder) path += '/';
+  }
+
+  // Folders are exported as ZIP
+  let filename = entry ? entry.name : props.project.name;
+  if (isFolder) filename += '.zip';
+
+  let writer: WritableStreamDefaultWriter | zip.ZipWriter<any> = null!;
+  try {
+    // Get the project
+    const proj = await getProject();
+
+    // Get the files we want to export
+    let exportFiles = [path];
+    if (isFolder) {
+      exportFiles = proj
+        .fileList()
+        .map((f) => f.path)
+        .filter((f) => f.startsWith(path));
+    }
+
+    // Create a writable download stream
+    const fileStream = streamSaver.createWriteStream(filename);
+    if (isFolder) {
+      writer = new zip.ZipWriter(fileStream);
+    } else {
+      writer = fileStream.getWriter();
+    }
+
+    // Export each file
+    for (const filePath of exportFiles) {
+      // Skip subfolder entries
+      if (filePath.endsWith('/')) continue;
+
+      try {
+        // Export the file or folder
+        let content = await proj.exportFile(filePath);
+
+        // Always write as binary
+        if (content === null) {
+          throw new Error('File not exported');
+        } else if (typeof content === 'string') {
+          content = new TextEncoder().encode(content);
+        }
+
+        // Write the content to the stream
+        if (writer instanceof zip.ZipWriter) {
+          const relPath = filePath.substring(path.length);
+          await writer.add(relPath, new zip.Uint8ArrayReader(content));
+        } else {
+          await writer.write(content);
+        }
+      } catch (err) {
+        console.warn(err);
+        toast.warning(`Error exporting ${filePath}: ${err}`);
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error(`Error exporting ${path}: ${err}`);
+  } finally {
+    writer?.close();
   }
 }
 </script>
