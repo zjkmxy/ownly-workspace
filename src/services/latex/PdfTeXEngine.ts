@@ -23,10 +23,10 @@ export enum EngineStatus {
 
 const ENGINE_PATH = '/latex/swiftlatexpdftex.js';
 
-export class CompileResult {
-  pdf: Uint8Array | undefined = undefined;
-  status: number = -254;
-  log: string = 'No log';
+export interface CompileResult {
+  pdf: Uint8Array | undefined;
+  status: number;
+  log: string;
 }
 
 export class PdfTeXEngine {
@@ -39,11 +39,12 @@ export class PdfTeXEngine {
       throw new Error('Other instance is running, abort()');
     }
     this.latexWorkerStatus = EngineStatus.Init;
-    await new Promise<void>((resolve, reject) => {
+
+    return new Promise<void>((resolve, reject) => {
       this.latexWorker = new Worker(ENGINE_PATH);
       this.latexWorker.onmessage = (ev: any) => {
-        const data: any = ev['data'];
-        const cmd: string = data['result'] as string;
+        const data: any = ev.data;
+        const cmd: string = data.result;
         if (cmd === 'ok') {
           this.latexWorkerStatus = EngineStatus.Ready;
           resolve();
@@ -51,10 +52,11 @@ export class PdfTeXEngine {
           this.latexWorkerStatus = EngineStatus.Error;
           reject();
         }
+
+        this.latexWorker!.onmessage = () => {};
+        this.latexWorker!.onerror = () => {};
       };
     });
-    this.latexWorker!.onmessage = () => {};
-    this.latexWorker!.onerror = () => {};
   }
 
   public isReady(): boolean {
@@ -67,109 +69,78 @@ export class PdfTeXEngine {
     }
   }
 
-  public async compileLaTeX(): Promise<CompileResult> {
+  public async compileLaTeX(workdir: string, mainfile: string): Promise<CompileResult> {
     this.checkEngineStatus();
     this.latexWorkerStatus = EngineStatus.Busy;
-    const start_compile_time = performance.now();
-    const res: CompileResult = await new Promise((resolve) => {
-      this.latexWorker!.onmessage = (ev: any) => {
-        const data: any = ev['data'];
-        const cmd: string = data['cmd'] as string;
-        if (cmd !== 'compile') return;
-        const result: string = data['result'] as string;
-        const log: string = data['log'] as string;
-        const status: number = data['status'] as number;
-        this.latexWorkerStatus = EngineStatus.Ready;
-        console.log('Engine compilation finish ' + (performance.now() - start_compile_time));
-        const nice_report = new CompileResult();
-        nice_report.status = status;
-        nice_report.log = log;
-        if (result === 'ok') {
-          const pdf: Uint8Array = new Uint8Array(data['pdf']);
-          nice_report.pdf = pdf;
-        }
-        resolve(nice_report);
-      };
-      this.latexWorker!.postMessage({ cmd: 'compilelatex' });
-      console.log('Engine compilation start');
-    });
-    this.latexWorker!.onmessage = () => {};
 
-    return res;
+    return new Promise<CompileResult>((resolve) => {
+      this.latexWorker!.onmessage = (ev: any) => {
+        const data: any = ev.data;
+        const cmd: string = data.cmd;
+        if (cmd !== 'compile') return;
+
+        const result: string = data.result;
+        const log: string = data.log;
+        const status: number = data.status;
+
+        this.latexWorkerStatus = EngineStatus.Ready;
+
+        resolve({
+          pdf: result === 'ok' ? new Uint8Array(data.pdf) : undefined,
+          status: status,
+          log: log,
+        });
+
+        this.latexWorker!.onmessage = () => {};
+      };
+
+      this.latexWorker!.postMessage({
+        cmd: 'compilelatex',
+        workdir: workdir,
+        mainfile: mainfile,
+      });
+    });
   }
 
   /* Internal Use */
   public async compileFormat(): Promise<void> {
     this.checkEngineStatus();
     this.latexWorkerStatus = EngineStatus.Busy;
-    await new Promise<void>((resolve, reject) => {
+
+    return new Promise<void>((resolve, reject) => {
       this.latexWorker!.onmessage = (ev: any) => {
-        const data: any = ev['data'];
-        const cmd: string = data['cmd'] as string;
+        const data: any = ev.data;
+        const cmd: string = data.cmd;
         if (cmd !== 'compile') return;
-        const result: string = data['result'] as string;
-        const log: string = data['log'] as string;
-        // const status: number = data['status'] as number;
+
+        const result: string = data.result;
+        const log: string = data.log;
+
         this.latexWorkerStatus = EngineStatus.Ready;
+
         if (result === 'ok') {
-          const formatArray = data['pdf']; /* PDF for result */
+          const formatArray = data.format;
           const formatBlob = new Blob([formatArray], { type: 'application/octet-stream' });
           const formatURL = URL.createObjectURL(formatBlob);
-          setTimeout(() => {
-            URL.revokeObjectURL(formatURL);
-          }, 30000);
           console.log('Download format file via ' + formatURL);
           resolve();
         } else {
           reject(log);
         }
+
+        this.latexWorker!.onmessage = () => {};
       };
+
       this.latexWorker!.postMessage({ cmd: 'compileformat' });
     });
-    this.latexWorker!.onmessage = () => {};
-  }
-
-  public setEngineMainFile(filename: string): void {
-    this.checkEngineStatus();
-    if (this.latexWorker !== undefined) {
-      this.latexWorker.postMessage({ cmd: 'setmainfile', url: filename });
-    }
-  }
-
-  public writeMemFSFile(filename: string, srccode: string | Uint8Array): void {
-    this.checkEngineStatus();
-    if (this.latexWorker !== undefined) {
-      this.latexWorker.postMessage({ cmd: 'writefile', url: filename, src: srccode });
-    }
-  }
-
-  public makeMemFSFolder(folder: string): void {
-    this.checkEngineStatus();
-    if (this.latexWorker !== undefined) {
-      if (folder === '' || folder === '/') {
-        return;
-      }
-      this.latexWorker.postMessage({ cmd: 'mkdir', url: folder });
-    }
-  }
-
-  public flushCache(): void {
-    this.checkEngineStatus();
-    if (this.latexWorker !== undefined) {
-      this.latexWorker.postMessage({ cmd: 'flushcache' });
-    }
   }
 
   public setTexliveEndpoint(url: string): void {
-    if (this.latexWorker !== undefined) {
-      this.latexWorker.postMessage({ cmd: 'settexliveurl', url: url });
-    }
+    this.latexWorker?.postMessage({ cmd: 'settexliveurl', url: url });
   }
 
   public closeWorker(): void {
-    if (this.latexWorker !== undefined) {
-      this.latexWorker.postMessage({ cmd: 'grace' });
-      this.latexWorker = undefined;
-    }
+    this.latexWorker?.postMessage({ cmd: 'close' });
+    this.latexWorker = undefined;
   }
 }
