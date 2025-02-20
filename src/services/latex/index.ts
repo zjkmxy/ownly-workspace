@@ -5,7 +5,7 @@ import type { WorkspaceProj } from '../workspace-proj';
 let activeProject: string | null = null;
 let activeEngine: PdfTeXEngine | null = null;
 
-export async function compile(project: WorkspaceProj): Promise<Uint8Array | string> {
+export async function compile(project: WorkspaceProj): Promise<Uint8Array> {
   if (!activeEngine || activeProject !== project.name) {
     activeEngine?.closeWorker();
     activeEngine = new PdfTeXEngine();

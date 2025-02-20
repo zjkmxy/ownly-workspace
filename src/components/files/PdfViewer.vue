@@ -2,10 +2,16 @@
   <div class="pdfviewer" ref="pdfviewer">
     <div class="pdf-toolbar">
       <div class="left">
-        <button @click="$emit('compile')" class="button is-primary is-small soft-if-dark">
+        <button
+          v-if="hasCompile"
+          @click="$emit('compile')"
+          class="button is-primary is-small soft-if-dark"
+        >
           Compile
         </button>
-        <button class="button is-small soft-if-dark ml-1">Download</button>
+        <button class="button is-small soft-if-dark ml-1" :disabled="!rawPdf" @click="download">
+          Download
+        </button>
       </div>
       <div class="right">
         <button
@@ -47,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, shallowRef, watch } from 'vue';
 
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 
@@ -58,11 +64,23 @@ import 'vue-pdf-embed/dist/styles/textLayer.css';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
 
+import streamSaver from 'streamsaver';
+
 defineEmits(['compile']);
 
 const props = defineProps({
+  filename: {
+    type: String,
+    required: false,
+    default: 'document.pdf',
+  },
+  hasCompile: {
+    type: Boolean,
+    required: false,
+    default: false,
+  },
   pdf: {
-    type: [Uint8Array, String, null],
+    type: [Uint8Array, null],
     required: false,
   },
   compiling: {
@@ -80,17 +98,30 @@ const props = defineProps({
 const pdfviewer = ref<InstanceType<typeof HTMLDivElement> | null>(null);
 const width = ref(0);
 const loaded = ref(false);
+const rawPdf = shallowRef<Uint8Array | null>(null);
 
 watch(
   () => props.pdf,
   () => {
     loaded.value = false;
+
+    // Copy the pdf to prevent viewer from destroying the original
+    // This is needed for the download button to work
+    rawPdf.value = props.pdf ? new Uint8Array(props.pdf) : null;
   },
 );
 
 onMounted(() => {
   width.value = (pdfviewer.value?.clientWidth ?? 800) - 20;
 });
+
+async function download() {
+  if (!rawPdf.value) return;
+  const fileStream = streamSaver.createWriteStream(props.filename);
+  const writer = fileStream.getWriter();
+  await writer.write(rawPdf.value);
+  await writer.close();
+}
 </script>
 
 <style lang="scss">

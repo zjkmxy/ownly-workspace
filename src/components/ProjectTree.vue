@@ -467,7 +467,7 @@ async function executeExport(entry: TreeEntry | null) {
     console.error(err);
     toast.error(`Error exporting ${path}: ${err}`);
   } finally {
-    writer?.close();
+    await writer?.close();
   }
 }
 </script>

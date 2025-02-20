@@ -19,10 +19,12 @@
         <PdfViewer
           class="result"
           v-if="isLatex"
+          :filename="resultPdfName"
           :pdf="resultPdf"
-          @compile="compileLatex"
+          :hasCompile="true"
           :compiling="isPdfCompiling"
           :error="resultError"
+          @compile="compileLatex"
         />
       </div>
 
@@ -94,7 +96,8 @@ const contentCode = shallowRef<Y.Text | null>(null);
 const contentMilk = shallowRef<Y.XmlFragment | null>(null);
 
 const isLatex = computed(() => utils.isExtensionType(basename.value, 'latex'));
-const resultPdf = shallowRef<Uint8Array | string | null>(null);
+const resultPdfName = computed(() => `${proj.value?.name}.pdf`);
+const resultPdf = shallowRef<Uint8Array | null>(null);
 const isPdfCompiling = ref(false);
 const resultError = ref(String());
 
