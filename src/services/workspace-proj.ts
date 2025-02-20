@@ -3,6 +3,7 @@ import * as awareProto from 'y-protocols/awareness.js';
 
 import { GlobalBus } from './event-bus';
 import { SvsProvider } from './svs-provider';
+import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
 
 import type { WorkspaceAPI } from './ndn';
@@ -27,6 +28,11 @@ export class WorkspaceProjManager {
     const listObserver = async () => GlobalBus.emit('project-list', await this.getProjects());
     this.list.observe(listObserver);
     listObserver();
+  }
+
+  /** Name of the workspace (group) */
+  public get group(): string {
+    return this.wksp.group;
   }
 
   /** Create the project manager instance */
@@ -304,5 +310,39 @@ export class WorkspaceProj {
     if (!uuid) throw new Error(`File not found: ${path}`);
 
     return await this.provider.getAwareness(uuid);
+  }
+
+  /**
+   * Synchronize the project to the OPFS.
+   *
+   * @returns The path to the project in the OPFS.
+   */
+  public async syncFS(): Promise<string> {
+    const basedir = `${this.manager.group}/${this.name}`;
+    const folder = await opfs.getDirectoryHandle(basedir, { create: true });
+
+    // TODO: show progress
+    for (const file of this.fileList()) {
+      // Folders are automatically created, don't bother writing them
+      if (file.path.endsWith('/')) continue;
+
+      // Write the file to the OPFS filesystem.
+      // TODO: synchronize this more efficiently (check timestamps)
+      let content = await this.exportFile(file.path);
+      if (content !== null) {
+        // Only binary content is accepted
+        if (typeof content === 'string') {
+          content = new TextEncoder().encode(content);
+        }
+
+        // Write file to the FS recursively
+        await opfs.writeFile(file.path, content, {
+          create: true,
+          root: folder,
+        });
+      }
+    }
+
+    return basedir;
   }
 }

@@ -15,30 +15,18 @@ export async function compile(project: WorkspaceProj): Promise<Uint8Array | stri
     activeProject = project.name;
   }
 
+  // Fail fast if main.tex is not found
   const fileList = project.fileList();
   if (!fileList.some((file) => file.path === '/main.tex')) {
     throw new Error('main.tex not found at root of project');
   }
 
-  // TODO: show progress
-  for (const file of fileList) {
-    // Folders are automatically created by the worker
-    if (file.path.endsWith('/')) continue;
+  // Sync the project to OPFS
+  const root = await project.syncFS();
 
-    // Write the file to the OPFS filesystem.
-    // TODO: synchronize this more efficiently and generically.
-    // TODO: prefix the path with the workspace prefix.
-    let content = await project.exportFile(file.path);
-    if (content !== null) {
-      if (typeof content === 'string') {
-        content = new TextEncoder().encode(content);
-      }
-      await opfs.writeFileOpfsRecursive(`/${project.name}${file.path}`, content);
-    }
-  }
-
+  // Compile the project
   // TODO: show progress
-  const res = await activeEngine.compileLaTeX(`/${project.name}`, 'main.tex');
+  const res = await activeEngine.compileLaTeX(root, 'main.tex');
   if (res.status == EngineStatus.Error) {
     throw new Error('Engine Error');
   } else if (res.pdf === undefined) {
