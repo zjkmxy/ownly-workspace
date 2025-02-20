@@ -318,7 +318,7 @@ export class WorkspaceProj {
    *
    * @param prefix The prefix to synchronize, relative path in the project.
    *
-   * @returns The path to the project in the OPFS.
+   * @returns The path to the project in the OPFS + prefix.
    */
   public async syncFs(prefix: string = '/'): Promise<string> {
     if (prefix[prefix.length - 1] !== '/') throw new Error('Prefix must end with /');
@@ -383,7 +383,7 @@ export class WorkspaceProj {
       }
     }
 
-    return basedir;
+    return basedir + prefix;
   }
 
   /**
