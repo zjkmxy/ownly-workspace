@@ -355,10 +355,8 @@ async function importHere() {
   // Import all selected files
   for (const file of files) {
     try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-
       const path = `${props.path}${file.name}`;
-      await proj.importFile(path, bytes);
+      await proj.importFile(path, file.stream());
     } catch (err) {
       console.warn(err);
       toast.warning(`Could not import ${file.name}: ${err}`);
@@ -387,11 +385,9 @@ async function importZipHere() {
       const writer = new zip.BlobWriter();
       await entry.getData?.(writer);
       const content = await writer.getData();
-      console.log(entry.filename, content);
-      const bytes = new Uint8Array(await content.arrayBuffer());
 
       const path = `${props.path}${entry.filename}`;
-      await proj.importFile(path, bytes);
+      await proj.importFile(path, content.stream());
     } catch (err) {
       console.warn(err);
       toast.warning(`Could not import ${entry.filename}: ${err}`);

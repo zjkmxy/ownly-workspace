@@ -247,7 +247,7 @@ export class WorkspaceProj {
    * @throws {Error} If text file cannot be decoded.
    * @throws {Error} If blob or text is too large.
    */
-  public async importFile(path: string, content: Uint8Array) {
+  public async importFile(path: string, content: ReadableStream<Uint8Array>) {
     path = utils.normalizePath(path);
     if (path.endsWith('/')) {
       throw new Error('Cannot import file as folder');
@@ -283,7 +283,8 @@ export class WorkspaceProj {
 
     // Import text content
     if (isText) {
-      const strContent = new TextDecoder().decode(content);
+      const buffer = await new Response(content).arrayBuffer();
+      const strContent = new TextDecoder().decode(buffer);
       const doc = await this.getFile(path);
       try {
         const text = doc.getText('text');
