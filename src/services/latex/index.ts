@@ -1,7 +1,5 @@
 import { EngineStatus, PdfTeXEngine } from './PdfTeXEngine';
 
-import * as opfs from '../opfs';
-
 import type { WorkspaceProj } from '../workspace-proj';
 
 let activeProject: string | null = null;
