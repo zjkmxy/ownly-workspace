@@ -9,7 +9,7 @@
       </div>
 
       <div class="content has-text-right">
-        <button class="button is-primary is-small-caps soft-if-dark" @click="$emit('open')">
+        <button class="button is-primary is-small-caps soft-if-dark" @click="launch">
           Launch Workspace
         </button>
       </div>
@@ -22,6 +22,17 @@ defineProps({
   name: String,
   subtitle: String,
 });
+
+const emit = defineEmits(['open']);
+
+function launch() {
+  emit('open');
+
+  // Take this chance to request persistent storage
+  navigator.storage?.persist?.().then((persisted) => {
+    console.log(`Storage persistance state: ${persisted}`);
+  });
+}
 </script>
 
 <style scoped lang="scss">
