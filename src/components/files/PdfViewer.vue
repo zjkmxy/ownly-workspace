@@ -47,8 +47,9 @@
         :width="width"
         @loaded="loaded = true"
       />
-      <div v-if="error" class="error">{{ error }}</div>
     </div>
+
+    <div v-if="error" class="error">{{ error }}</div>
   </div>
 </template>
 
@@ -133,6 +134,7 @@ async function download() {
 
 <style scoped lang="scss">
 .pdfviewer {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -182,21 +184,21 @@ async function download() {
       left: 50%;
       transform: translate(-50%, -50%);
     }
+  }
 
-    > .error {
-      text-align: left;
-      position: absolute;
-      top: 0;
-      left: 0;
-      background-color: rgba(100, 0, 0, 0.85);
-      width: 100%;
-      font-family: monospace;
-      white-space: pre;
-      padding: 10px;
-      max-height: 80%;
-      overflow: auto;
-      color: white;
-    }
+  > .error {
+    text-align: left;
+    position: absolute;
+    top: 40px;
+    left: 0;
+    background-color: rgba(100, 0, 0, 0.85);
+    width: 100%;
+    font-family: monospace;
+    white-space: pre;
+    padding: 10px;
+    max-height: 80%;
+    overflow: auto;
+    color: white;
   }
 }
 </style>
