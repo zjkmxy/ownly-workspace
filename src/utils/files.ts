@@ -27,3 +27,16 @@ export async function selectFiles(opts: { accept?: string; multiple?: boolean })
     input.click();
   });
 }
+
+/**
+ * Tries to return a monotonically increasing epoch time.
+ * If two calls are made within the same millisecond, the second call will be higher.
+ * This is useful for sorting updates in a database.
+ */
+export function monotonicEpoch(): number {
+  let time = Date.now();
+  while (time <= lastMonotonicEpoch) time++;
+  lastMonotonicEpoch = time;
+  return time;
+}
+let lastMonotonicEpoch = 0;

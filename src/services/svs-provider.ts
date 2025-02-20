@@ -8,11 +8,25 @@ import * as utils from '@/utils';
 import type { SvsAloApi, WorkspaceAPI } from './ndn';
 import type { AwarenessLocalState } from './types';
 
-/** IndexedDB schema for update entry  */
+/**
+ * IndexedDB schema for update entry.
+ * Each row is a single Yjs update.
+ */
 type UpdateEntry = {
   id?: number;
   uuid: string;
+  utime: number;
   update: Uint8Array;
+};
+
+/**
+ * IndexedDB schema for FS sync entry.
+ * Each row is a single file system update.
+ */
+type FsSyncEntry = {
+  uuid: string;
+  utime: number;
+  mtime: number;
 };
 
 /**
@@ -29,6 +43,7 @@ export class SvsProvider {
 
   private db: Dexie & {
     updates: Dexie.Table<UpdateEntry, number>;
+    fs_sync: Dexie.Table<FsSyncEntry, string>;
   };
 
   private constructor(
@@ -40,6 +55,7 @@ export class SvsProvider {
     this.db = new Dexie(`${slug}-${project}`) as typeof this.db;
     this.db.version(1).stores({
       updates: '++id, uuid',
+      fs_sync: 'uuid',
     });
   }
 
@@ -149,9 +165,45 @@ export class SvsProvider {
     return aware;
   }
 
+  /**
+   * Check if a FS file is in sync with the document.
+   *
+   * @param uuid UUID of the document
+   * @param mtime Last modified time of the file
+   *
+   * @returns Last update time if sync is needed, or null if no sync is needed
+   */
+  public async needsSync(uuid: string, mtime: number): Promise<number | null> {
+    // Get last update time for the document
+    const lastUpdate = await this.db.updates.where('uuid').equals(uuid).last();
+    if (!lastUpdate) return null;
+
+    // If the file was modified by someone else, we need to sync
+    const lastSync = await this.db.fs_sync.get(uuid);
+    if (lastSync?.mtime !== mtime) return lastUpdate.utime;
+
+    // Check if the document was modified after the last sync
+    if (lastUpdate.utime !== lastSync.utime) return lastUpdate.utime;
+
+    // No sync needed
+    return null;
+  }
+
+  /**
+   * Mark a FS file as in sync with the document.
+   *
+   * @param uuid UUID of the document
+   * @param utime Last update time of the document that was synced
+   * @param mtime Last modified time of the file
+   */
+  public async markSynced(uuid: string, utime: number, mtime: number): Promise<void> {
+    await this.db.fs_sync.put({ uuid, utime, mtime });
+  }
+
   /** Persist a single update to IndexedDB */
   private async persist(uuid: string, update: Uint8Array) {
-    const id = await this.db.updates.put({ uuid, update });
+    const utime = utils.monotonicEpoch();
+    const id = await this.db.updates.put({ uuid, utime, update });
 
     // Mark the document as dirty
     this.persistDirty.add(uuid);
@@ -193,8 +245,9 @@ export class SvsProvider {
           temp.destroy();
 
           // Merge updates and delete old ones in a transaction
+          const utime = utils.monotonicEpoch();
           await this.db.transaction('rw', this.db.updates, async () => {
-            await this.db.updates.put({ uuid, update: merged });
+            await this.db.updates.put({ uuid, utime, update: merged });
             await this.db.updates
               .where('uuid')
               .equals(uuid)

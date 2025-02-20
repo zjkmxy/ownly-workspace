@@ -200,32 +200,33 @@ export class WorkspaceProj {
   /**
    * Export the contents of a file directly.
    *
-   * If the file is a text file, the content will be returned as a string.
-   * If the file is a binary file, the content will be returned as a Uint8Array.
-   * If the file is neither, null will be returned.
-   *
    * @throws {Error} If file path is invalid.
    * @throws {Error} If path is a folder.
    * @throws {Error} If file is too large.
    *
-   * @returns The file content as a string or Uint8Array.
+   * @returns The file content as Uint8Array.
    */
-  public async exportFile(path: string): Promise<Uint8Array | string | null> {
+  public async exportFile(path: string): Promise<Uint8Array | null> {
     if (path.endsWith('/')) {
       throw new Error('Cannot export folder as file');
     }
 
+    // Get the file metadata
     const meta = this.fileMap.get(path);
     if (!meta?.uuid) throw new Error(`File not found: ${path}`);
     if (meta.is_blob) throw new Error('Binary files not implemented'); // TODO
 
+    // Always return a Uint8Array
+    const toUtf8 = (str: string) => new TextEncoder().encode(str);
+
+    // Get the file content
     const doc = new Y.Doc();
     try {
       await this.provider.readInto(doc, meta.uuid);
       if (utils.isExtensionType(path, 'code')) {
-        return doc.getText('text').toString();
+        return toUtf8(doc.getText('text').toString());
       } else if (utils.isExtensionType(path, 'milkdown')) {
-        return doc.getXmlFragment('milkdown').toJSON();
+        return toUtf8(doc.getXmlFragment('milkdown').toJSON());
       }
     } finally {
       doc.destroy();
@@ -315,34 +316,109 @@ export class WorkspaceProj {
   /**
    * Synchronize the project to the OPFS.
    *
+   * @param prefix The prefix to synchronize, relative path in the project.
+   *
    * @returns The path to the project in the OPFS.
    */
-  public async syncFS(): Promise<string> {
+  public async syncFs(prefix: string = '/'): Promise<string> {
+    if (prefix[prefix.length - 1] !== '/') throw new Error('Prefix must end with /');
+
     const basedir = `${this.manager.group}/${this.name}`;
-    const folder = await opfs.getDirectoryHandle(basedir, { create: true });
+    const folder = await opfs.getDirectoryHandle(basedir + prefix, { create: true });
 
     // TODO: show progress
-    for (const file of this.fileList()) {
+    // TODO: catch errors but continue
+
+    // Map path => [uuid, utime]
+    const updateList = new Map<string, [string, number]>();
+    for (const entry of this.fileMap.values()) {
+      if (!entry.path.startsWith(prefix)) continue;
+      updateList.set(entry.path, [entry.uuid, -2]);
+    }
+
+    // Iterate over each file in the project already in the FS.
+    for await (const [path, entry, parent] of opfs.walk(folder, prefix)) {
+      const uuid = updateList.get(path)?.[0];
+      if (!uuid) {
+        // Delete the file from the OPFS filesystem.
+        // We may need to preserve some, e.g. generated files
+        await parent.removeEntry(entry.name);
+        continue;
+      }
+
+      // Check if the file is up to date
+      const file = await entry.getFile();
+      const utime = await this.provider.needsSync(uuid, file.lastModified);
+      if (utime === null) {
+        updateList.delete(path);
+        continue;
+      }
+
+      // Update the file in the OPFS filesystem.
+      updateList.set(path, [uuid, utime]);
+    }
+
+    for (const [path, meta] of updateList.entries()) {
+      const uuid = meta[0];
+
       // Folders are automatically created, don't bother writing them
-      if (file.path.endsWith('/')) continue;
+      if (path.endsWith('/')) continue;
+
+      // Get the update time for the file
+      let utime = meta[1];
+      if (utime < 0) utime = (await this.provider.needsSync(uuid, -1)) ?? -1;
+      if (utime < 0) continue;
 
       // Write the file to the OPFS filesystem.
-      // TODO: synchronize this more efficiently (check timestamps)
-      let content = await this.exportFile(file.path);
+      const content = await this.exportFile(path);
       if (content !== null) {
-        // Only binary content is accepted
-        if (typeof content === 'string') {
-          content = new TextEncoder().encode(content);
-        }
+        const relpath = path.substring(prefix.length);
+        const fileHandle = await opfs.getFileHandle(relpath, { create: true, root: folder });
+        if (fileHandle) {
+          await opfs.write(fileHandle, content);
 
-        // Write file to the FS recursively
-        await opfs.writeFile(file.path, content, {
-          create: true,
-          root: folder,
-        });
+          const mtime = (await fileHandle.getFile()).lastModified;
+          await this.provider.markSynced(uuid, utime, mtime);
+        }
       }
     }
 
     return basedir;
+  }
+
+  /**
+   * Sync a single file in the OPFS.
+   *
+   * @param path Path to the file in the project.
+   */
+  public async syncFsFile(path: string): Promise<string> {
+    if (path.endsWith('/')) throw new Error('Cannot sync folder as file');
+
+    // Get metadata for the file
+    path = utils.normalizePath(path);
+    const meta = this.fileMap.get(path);
+    if (!meta) throw new Error(`File not found: ${path}`);
+
+    // Get the file in the FS
+    const basedir = `${this.manager.group}/${this.name}`;
+    const folder = await opfs.getDirectoryHandle(basedir, { create: true });
+    const fileHandle = await opfs.getFileHandle(path, { create: true, root: folder });
+    if (!fileHandle) throw new Error(`File could not be created: ${path}`);
+
+    // Check if the file is up to date
+    let mtime = (await fileHandle.getFile()).lastModified;
+    const utime = await this.provider.needsSync(meta.uuid, mtime);
+    if (utime === null) return basedir + path;
+
+    // Write the file to the filesystem.
+    const content = await this.exportFile(path);
+    if (content !== null) {
+      await opfs.write(fileHandle, content);
+
+      mtime = (await fileHandle.getFile()).lastModified;
+      await this.provider.markSynced(meta.uuid, utime, mtime);
+    }
+
+    return basedir + path;
   }
 }

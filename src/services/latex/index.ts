@@ -20,7 +20,7 @@ export async function compile(project: WorkspaceProj): Promise<Uint8Array> {
   }
 
   // Sync the project to OPFS
-  const root = await project.syncFS();
+  const root = await project.syncFs();
 
   // Compile the project
   // TODO: show progress
