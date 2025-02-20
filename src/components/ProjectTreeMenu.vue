@@ -11,6 +11,7 @@
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-folder')"> New folder </a>
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', '')"> New blank file </a>
       <a class="dropdown-item" v-if="allowNew" @click="emit('import')"> Import files </a>
+      <a class="dropdown-item" v-if="allowNew" @click="emit('import-zip')"> Import ZIP folder </a>
 
       <hr class="dropdown-divider" v-if="allowNew" />
       <a class="dropdown-item" v-if="allowNew" @click="emit('new-file', 'mdoc')"> New RichDoc </a>
@@ -42,6 +43,7 @@ const emit = defineEmits<{
   (e: 'new-folder'): void;
   (e: 'new-file', ext: string): void;
   (e: 'import'): void;
+  (e: 'import-zip'): void;
   (e: 'export'): void;
   (e: 'delete'): void;
 }>();

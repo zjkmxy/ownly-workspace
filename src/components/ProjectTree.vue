@@ -20,6 +20,7 @@
             @new-file="onSubtree(entry, (t) => t.newHere('file', $event))"
             @new-folder="onSubtree(entry, (t) => t.newHere('folder', $event))"
             @import="onSubtree(entry, (t) => t.importHere())"
+            @import-zip="onSubtree(entry, (t) => t.importZipHere())"
             @export="executeExport(entry)"
             @delete="executeDelete(entry)"
           />
@@ -133,7 +134,7 @@ const newName = ref(String());
 const newType = ref<'file' | 'folder'>('file');
 const newExtension = ref<string>();
 
-defineExpose({ newHere, importHere, executeExport, parent: props.parent });
+defineExpose({ newHere, importHere, importZipHere, executeExport, parent: props.parent });
 onMounted(checkRoute);
 watch(() => route.params.filename, checkRoute);
 const splitPath = computed(() => props.path.split('/').filter(Boolean));
@@ -346,18 +347,54 @@ async function executeDelete(entry: TreeEntry) {
 
 /** Import files from user */
 async function importHere() {
+  const proj = await getProject();
+
   const files = await utils.selectFiles({ multiple: true });
   if (!files.length) return;
 
+  // Import all selected files
   for (const file of files) {
-    const path = `${props.path}${file.name}`;
     try {
-      const proj = await getProject();
-      const buffer = await file.arrayBuffer();
-      await proj.importFile(path, new Uint8Array(buffer));
+      const bytes = new Uint8Array(await file.arrayBuffer());
+
+      const path = `${props.path}${file.name}`;
+      await proj.importFile(path, bytes);
     } catch (err) {
       console.warn(err);
       toast.warning(`Could not import ${file.name}: ${err}`);
+    }
+  }
+}
+
+/** Import a ZIP file from user */
+async function importZipHere() {
+  const proj = await getProject();
+
+  const files = await utils.selectFiles({
+    accept: '.zip',
+    multiple: false,
+  });
+  const zipFile = files[0] ?? null;
+  if (!zipFile) return;
+
+  // Read the ZIP file and import each entry
+  const reader = new zip.ZipReader(new zip.BlobReader(zipFile));
+  for await (const entry of reader.getEntriesGenerator()) {
+    try {
+      // We don't need to make folders
+      if (entry.directory) continue;
+
+      const writer = new zip.BlobWriter();
+      await entry.getData?.(writer);
+      const content = await writer.getData();
+      console.log(entry.filename, content);
+      const bytes = new Uint8Array(await content.arrayBuffer());
+
+      const path = `${props.path}${entry.filename}`;
+      await proj.importFile(path, bytes);
+    } catch (err) {
+      console.warn(err);
+      toast.warning(`Could not import ${entry.filename}: ${err}`);
     }
   }
 }

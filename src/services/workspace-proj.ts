@@ -138,6 +138,7 @@ export class WorkspaceProj {
 
   /** Check if a file or folder exists */
   public fileMeta(path: string): IProjectFile | undefined {
+    path = utils.normalizePath(path);
     return this.fileMap.get(path);
   }
 
@@ -147,6 +148,13 @@ export class WorkspaceProj {
     if (this.fileMeta(path) || this.fileMeta(path + '/'))
       throw new Error('File or folder already exists');
 
+    // check for invalid characters
+    if (/[<>:'"|?*\\]/g.test(path)) {
+      throw new Error(`Invalid characters in file path: ${path}`);
+    }
+
+    // create the file
+    path = utils.normalizePath(path);
     const uuid = window.crypto.randomUUID();
     const file: IProjectFile = { uuid, path, is_blob };
     this.fileMap.set(path, file);
@@ -154,23 +162,24 @@ export class WorkspaceProj {
   }
 
   /** Delete a file or folder in the project */
-  public async deleteFile(delpath: string) {
-    const isFolder = delpath.endsWith('/');
+  public async deleteFile(path: string) {
+    path = utils.normalizePath(path);
+    const isFolder = path.endsWith('/');
 
     let deletedCount = 0;
     this.root.transact(() => {
-      this.fileMap.forEach((_, path) => {
-        const matchFolder = isFolder && path.startsWith(delpath);
-        const matchFile = path === delpath;
+      this.fileMap.forEach((_, fpath) => {
+        const matchFolder = isFolder && fpath.startsWith(path);
+        const matchFile = fpath === path;
         if (matchFolder || matchFile) {
-          this.fileMap.delete(path);
+          this.fileMap.delete(fpath);
           deletedCount++;
         }
       });
     });
 
     if (!deletedCount) {
-      throw new Error(`File or folder not found: ${delpath}`);
+      throw new Error(`File or folder not found: ${path}`);
     }
   }
 
@@ -232,6 +241,7 @@ export class WorkspaceProj {
    * @throws {Error} If blob or text is too large.
    */
   public async importFile(path: string, content: Uint8Array) {
+    path = utils.normalizePath(path);
     if (path.endsWith('/')) {
       throw new Error('Cannot import file as folder');
     }

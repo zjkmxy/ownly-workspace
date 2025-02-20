@@ -30,6 +30,7 @@
               @new-file="$refs.projectTree[0]?.newHere('file', $event)"
               @new-folder="$refs.projectTree[0]?.newHere('folder')"
               @import="$refs.projectTree[0]?.importHere()"
+              @import-zip="$refs.projectTree[0]?.importZipHere()"
               @export="$refs.projectTree[0]?.executeExport(null)"
             />
           </router-link>

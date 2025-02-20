@@ -35,3 +35,13 @@ export function unbyteify<T>(data: Uint8Array): T {
   const decoder = new TextDecoder();
   return JSON.parse(decoder.decode(data));
 }
+
+/**
+ * Normalize a path.
+ * @param path Path to normalize
+ */
+export function normalizePath(path: string): string {
+  if (!path) return path;
+  if (path[0] !== '/') path = '/' + path;
+  return path.replace(/\/+/g, '/');
+}
