@@ -1,5 +1,14 @@
 <template>
   <div class="pdfviewer" ref="pdfviewer">
+    <!-- Loading / Compiling Spinner -->
+    <div class="absolute-center" v-if="(!loaded && pdf) || compiling">
+      <LoadingSpinner />
+    </div>
+
+    <!-- Watermark logo -->
+    <img alt="logo" class="logo invert-if-dark" src="@/assets/logo.svg" />
+
+    <!-- Top toolbar -->
     <div class="pdf-toolbar">
       <div class="left">
         <button
@@ -31,14 +40,8 @@
       </div>
     </div>
 
-    <div class="pdf-content center-spinner">
-      <!-- Watermark logo -->
-      <img alt="logo" class="logo invert-if-dark" src="@/assets/logo.svg" />
-
-      <!-- Loading / Compiling Spinner -->
-      <LoadingSpinner v-if="(!loaded && pdf) || compiling" />
-
-      <!-- PDF Viewer -->
+    <!-- PDF Viewer -->
+    <div class="pdf-content">
       <VuePdfEmbed
         v-if="pdf && width"
         annotation-layer
@@ -49,6 +52,7 @@
       />
     </div>
 
+    <!-- Error message -->
     <div v-if="error" class="error">{{ error }}</div>
   </div>
 </template>
@@ -161,7 +165,6 @@ async function download() {
   }
 
   > .pdf-content {
-    position: relative;
     overflow-y: scroll;
     overflow-x: auto;
     flex: 1;
@@ -175,15 +178,16 @@ async function download() {
         margin-bottom: 10px;
       }
     }
+  }
 
-    > .logo {
-      width: 80%;
-      max-width: 200px;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
+  > .logo {
+    width: 80%;
+    max-width: 200px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
   }
 
   > .error {
