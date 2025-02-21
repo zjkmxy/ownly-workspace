@@ -368,7 +368,6 @@ export class WorkspaceProj {
       // Get the update time for the file
       let utime = meta[1];
       if (utime < 0) utime = (await this.provider.needsSync(uuid, -1)) ?? -1;
-      if (utime < 0) continue;
 
       // Write the file to the OPFS filesystem.
       const content = await this.exportFile(path);
