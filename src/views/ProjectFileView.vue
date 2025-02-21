@@ -34,6 +34,13 @@
     </Suspense>
 
     <MilkdownEditor v-else-if="contentMilk" :yxml="contentMilk" :awareness="awareness!" />
+
+    <BlobView
+      v-else-if="contentBlob"
+      :version="contentBlob"
+      :path="filepath"
+      :basename="basename"
+    />
   </div>
 </template>
 
@@ -66,6 +73,7 @@ const PdfViewer = defineAsyncComponent({
   loader: () => import('@/components/files/PdfViewer.vue'),
   loadingComponent: LoadingSpinner,
 });
+import BlobView from '@/components/files/BlobView.vue';
 
 import * as latex from '@/services/latex/index';
 import * as utils from '@/utils';

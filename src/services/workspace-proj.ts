@@ -269,7 +269,6 @@ export class WorkspaceProj {
     // Get the file metadata
     const meta = this.fileMap.get(path);
     if (!meta?.uuid) throw new Error(`File not found: ${path}`);
-    if (meta.is_blob) throw new Error('Binary files not implemented'); // TODO
 
     // Always return a Uint8Array
     const toUtf8 = (str: string) => new TextEncoder().encode(str);
@@ -278,9 +277,23 @@ export class WorkspaceProj {
     const doc = new Y.Doc();
     try {
       await this.provider.readInto(doc, meta.uuid);
-      if (utils.isExtensionType(path, 'code')) {
+
+      if (meta.is_blob) {
+        // Get the latest blob version
+        const history = doc.getArray<IBlobVersion>('blobs');
+        const latest = history.get(0);
+        if (!latest) return null;
+
+        // Get the blob content from local or network
+        // TODO: this makes it very important to show progress
+        const res = await this.provider.consumeBlob(latest.name);
+        return res.data;
+      } else if (utils.isExtensionType(path, 'code')) {
+        // Get the text content as UTF-8
         return toUtf8(doc.getText('text').toString());
       } else if (utils.isExtensionType(path, 'milkdown')) {
+        // Get the milkdown XML content
+        // TODO: maybe change this to render the markdown
         return toUtf8(doc.getXmlFragment('milkdown').toJSON());
       }
     } finally {
@@ -340,14 +353,13 @@ export class WorkspaceProj {
       // Update the file version history
       const doc = await this.getFile(path);
       try {
+        const version: IBlobVersion = {
+          name: name,
+          time: Date.now(),
+          size: buffer.byteLength,
+        };
         const history = doc.getArray<IBlobVersion>('blobs');
-        history.push([
-          {
-            name: name,
-            time: Date.now(),
-            size: buffer.byteLength,
-          },
-        ]);
+        history.unshift([version]);
       } finally {
         // TODO: see comment on isText block below
         doc.destroy();
@@ -373,6 +385,22 @@ export class WorkspaceProj {
         doc.destroy();
       }
       return;
+    }
+  }
+
+  /**
+   *  Download a file or folder from the project.
+   *
+   * @param path Path in the project.
+   */
+  public async download(path: string) {
+    const fsPath = await this.syncFs(path);
+    if (fsPath.endsWith('/')) {
+      const handle = await opfs.getDirectoryHandle(fsPath);
+      await opfs.download(handle);
+    } else {
+      const handle = await opfs.getFileHandle(fsPath);
+      await opfs.download(handle);
     }
   }
 
@@ -444,21 +472,30 @@ export class WorkspaceProj {
       // Folders are automatically created, don't bother writing them
       if (path.endsWith('/')) continue;
 
-      // Get the update time for the file
-      let utime = meta[1];
-      if (utime < 0) utime = (await this.provider.needsSync(uuid, -1)) ?? -1;
+      try {
+        // Get the update time for the file
+        let utime = meta[1];
+        if (utime < 0) utime = (await this.provider.needsSync(uuid, -1)) ?? -1;
 
-      // Write the file to the OPFS filesystem.
-      const content = await this.exportFile(path);
-      if (content !== null) {
-        const relpath = path.substring(prefix.length);
-        const fileHandle = await opfs.getFileHandle(relpath, { create: true, root: folder });
-        if (fileHandle) {
-          await opfs.write(fileHandle, content);
+        // Write the file to the OPFS filesystem.
+        //
+        // TODO: this will fetch files from the network for blobs.
+        // It might make sense to do this in parallel.
+        //
+        const content = await this.exportFile(path);
+        if (content !== null) {
+          const relpath = path.substring(prefix.length);
+          const fileHandle = await opfs.getFileHandle(relpath, { create: true, root: folder });
+          if (fileHandle) {
+            await opfs.write(fileHandle, content);
 
-          const mtime = (await fileHandle.getFile()).lastModified;
-          await this.provider.markSynced(uuid, utime, mtime);
+            const mtime = (await fileHandle.getFile()).lastModified;
+            await this.provider.markSynced(uuid, utime, mtime);
+          }
         }
+      } catch (err) {
+        GlobalBus.emit('wksp-error', new Error(`sync failed for ${path}: ${err}`));
+        continue;
       }
     }
 

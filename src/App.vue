@@ -16,12 +16,29 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue';
 import { RouterView } from 'vue-router';
-import { ref } from 'vue';
-import LandingView from '@/views/LandingView.vue';
-import NavBar from './components/NavBar.vue';
+import { useToast } from 'vue-toast-notification';
 
+import NavBar from '@/components/NavBar.vue';
+import LandingView from '@/views/LandingView.vue';
+
+import { GlobalBus } from './services/event-bus';
+
+const toast = useToast();
 const showLogin = ref(true);
+
+onMounted(() => {
+  GlobalBus.addListener('wksp-error', wkspErrorListener);
+});
+
+onUnmounted(() => {
+  GlobalBus.removeListener('wksp-error', wkspErrorListener);
+});
+
+function wkspErrorListener(error: Error) {
+  toast.error(error.toString());
+}
 </script>
 
 <style scoped lang="scss">

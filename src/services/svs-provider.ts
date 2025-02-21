@@ -182,6 +182,14 @@ export class SvsProvider {
   }
 
   /**
+   * Consume a blob object from the network.
+   * Strictly speaking, this has nothing to do with SVS, it's a pure network operation.
+   */
+  public async consumeBlob(name: string) {
+    return this.wksp.consume(name);
+  }
+
+  /**
    * Get the awareness instance for a document.
    * If an awareness exists, the same instance will be returned.
    *

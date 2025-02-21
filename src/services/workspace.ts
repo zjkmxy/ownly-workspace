@@ -1,12 +1,11 @@
-import { useToast } from 'vue-toast-notification';
-
 import { WorkspaceChat } from './workspace-chat';
-import { WorkspaceProjManager } from './workspace-proj';
+import { WorkspaceProj, WorkspaceProjManager } from './workspace-proj';
 
 import { SvsProvider } from '@/services/svs-provider';
 
 import storage from '@/services/storage';
 import ndn from '@/services/ndn';
+import { GlobalBus } from '@/services/event-bus';
 import * as utils from '@/utils/index';
 
 import type { WorkspaceAPI } from '@/services/ndn';
@@ -109,6 +108,8 @@ export class Workspace {
 
   /**
    * Setup workspace from URL parameter or redirect to home.
+   *
+   * @param router Vue router
    */
   public static async setupOrRedir(router: Router): Promise<Workspace | null> {
     // Ugly hack to wait for the previous workspace to be destroyed
@@ -120,9 +121,23 @@ export class Workspace {
       return await Workspace.setup(router.currentRoute.value.params.space as string);
     } catch (e) {
       console.error(e);
-      useToast().error(`Failed to start workspace: ${e}`);
+      GlobalBus.emit('wksp-error', new Error(`Failed to start workspace: ${e}`));
       router.push('/');
       return null;
     }
+  }
+
+  /**
+   * Utility to setupOrRedir and get the active project.
+   *
+   * @param router Vue router
+   */
+  public static async setupAndGetActiveProj(router: Router): Promise<WorkspaceProj> {
+    const wksp = await Workspace.setupOrRedir(router);
+    if (!wksp) throw new Error('Workspace not found');
+
+    const proj = wksp.proj.active;
+    if (!proj) throw new Error('Project not found');
+    return proj;
   }
 }

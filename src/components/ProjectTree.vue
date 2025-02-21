@@ -82,7 +82,6 @@ import ProjectTreeInput from './ProjectTreeInput.vue';
 import ProjectTreeMenu from './ProjectTreeMenu.vue';
 
 import { Workspace } from '@/services/workspace';
-import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
 
 import type { IProject, IProjectFile } from '@/services/types';
@@ -270,16 +269,6 @@ function onSubtree(subfolder: TreeEntry, callback: (subtree: any) => void) {
   });
 }
 
-/** Get the current project */
-async function getProject() {
-  const wksp = await Workspace.setupOrRedir(router);
-  if (!wksp) throw new Error('Workspace not found');
-
-  const proj = wksp.proj.active;
-  if (!proj) throw new Error('Project not found');
-  return proj;
-}
-
 /** Get the project path to a entry */
 function getEntryPath(entry: TreeEntry) {
   return `${props.path}${entry.name}${entry.is_folder ? '/' : ''}`;
@@ -317,7 +306,7 @@ async function executeNew(name: string) {
   }
 
   try {
-    const proj = await getProject();
+    const proj = await Workspace.setupAndGetActiveProj(router);
     await proj.newFile(path);
   } catch (err) {
     console.error(err);
@@ -337,7 +326,7 @@ async function executeDelete(entry: TreeEntry) {
   // TODO: confirmation prompt
 
   try {
-    const proj = await getProject();
+    const proj = await Workspace.setupAndGetActiveProj(router);
     await proj.deleteFile(path);
   } catch (err) {
     console.error(err);
@@ -347,7 +336,7 @@ async function executeDelete(entry: TreeEntry) {
 
 /** Import files from user */
 async function importHere() {
-  const proj = await getProject();
+  const proj = await Workspace.setupAndGetActiveProj(router);
 
   const files = await utils.selectFiles({ multiple: true });
   if (!files.length) return;
@@ -367,7 +356,7 @@ async function importHere() {
 
 /** Import a ZIP file from user */
 async function importZipHere() {
-  const proj = await getProject();
+  const proj = await Workspace.setupAndGetActiveProj(router);
 
   const files = await utils.selectFiles({
     accept: '.zip',
@@ -408,21 +397,11 @@ async function importZipHere() {
 
 /** Export a file or folder */
 async function executeExport(entry: TreeEntry | null) {
-  // Get export path inside the project
+  // If entry is null, use root path
   const path = entry ? getEntryPath(entry) : props.path;
-  const isFolder = !entry || entry.is_folder;
-
   try {
-    const proj = await getProject();
-
-    const fsPath = await proj.syncFs(path);
-    if (isFolder) {
-      const handle = await opfs.getDirectoryHandle(fsPath);
-      await opfs.download(handle);
-    } else {
-      const handle = await opfs.getFileHandle(fsPath);
-      await opfs.download(handle);
-    }
+    const proj = await Workspace.setupAndGetActiveProj(router);
+    await proj.download(path);
   } catch (err) {
     console.error(err);
     toast.error(`Error exporting ${path}: ${err}`);
@@ -434,7 +413,7 @@ async function executeRename(name: string) {
   if (!renameEntry.value) return;
 
   try {
-    const proj = await getProject();
+    const proj = await Workspace.setupAndGetActiveProj(router);
 
     const oldPath = getEntryPath(renameEntry.value);
     const newPath = getEntryPath({ ...renameEntry.value, name });

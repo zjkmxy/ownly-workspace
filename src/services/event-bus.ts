@@ -25,4 +25,13 @@ export const GlobalBus = new EventEmitter() as TypedEmitter<{
    * @param files List of files in the project
    */
   'project-files': (project: string, files: IProjectFile[]) => void;
+
+  /**
+   * Various informational errors may be received here.
+   * Getting this event means that the error was ignored, and this is informational.
+   *
+   * 1. Workspace setup failed.
+   * 2. FS Sync failures.
+   */
+  'wksp-error': (error: Error) => void;
 }>;
