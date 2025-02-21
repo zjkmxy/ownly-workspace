@@ -16,7 +16,7 @@
         <PdfViewer
           class="result"
           v-if="isLatex"
-          :filename="resultPdfName"
+          :basename="resultPdfName"
           :pdf="resultPdf"
           :hasCompile="true"
           :compiling="isPdfCompiling"
@@ -88,7 +88,6 @@ const router = useRouter();
 const toast = useToast();
 
 const loading = ref(true);
-const projName = computed(() => route.params.project as string);
 const filename = computed(() => route.params.filename as string[]);
 const filepath = computed(() => '/' + filename.value.join('/'));
 const basename = computed(() => filename.value[filename.value.length - 1]);
@@ -110,7 +109,7 @@ const resultError = ref(String());
 
 onMounted(create);
 watch(filename, create);
-watch(projName, create);
+watch(() => route.params.project, create);
 onBeforeUnmount(destroy);
 
 async function create() {
@@ -124,18 +123,9 @@ async function create() {
   try {
     loading.value = true;
 
-    if (proj.value?.name !== projName.value) {
-      await destroy();
-
-      // Load workspace
-      const wksp = await Workspace.setupOrRedir(router);
-      if (!wksp) return;
-
-      // Load project
-      proj.value = await wksp.proj.get(projName.value);
-      if (!proj.value) return;
-      await proj.value.activate();
-    }
+    const newProj = await Workspace.setupAndGetActiveProj(router);
+    if (proj.value?.name !== newProj.name) await destroy();
+    proj.value = newProj;
 
     // Load file metadata
     const metadata = proj.value.getFileMeta(filepath.value);

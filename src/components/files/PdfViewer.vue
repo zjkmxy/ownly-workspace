@@ -74,7 +74,7 @@ import streamSaver from 'streamsaver';
 defineEmits(['compile']);
 
 const props = defineProps({
-  filename: {
+  basename: {
     type: String,
     required: false,
     default: 'document.pdf',
@@ -109,6 +109,7 @@ watch(() => props.pdf, create);
 
 onMounted(() => {
   width.value = Math.max((pdfviewer.value?.clientWidth ?? 800) - 20, 400);
+  width.value = Math.min(Math.max(width.value, 400), 1000);
   create();
 });
 
@@ -121,7 +122,7 @@ function create() {
 
 async function download() {
   if (!props.pdf) return;
-  const fileStream = streamSaver.createWriteStream(props.filename);
+  const fileStream = streamSaver.createWriteStream(props.basename);
   const writer = fileStream.getWriter();
   await writer.write(props.pdf);
   await writer.close();
@@ -168,6 +169,7 @@ async function download() {
     overflow-x: auto;
     flex: 1;
     text-align: center;
+    margin-bottom: 10px;
 
     :deep(.vue-pdf-embed) {
       display: inline-block;

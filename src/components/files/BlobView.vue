@@ -6,6 +6,7 @@
     </div>
 
     <img v-else-if="previewImage" class="img-preview" :alt="basename" :src="previewImage" />
+    <PdfViewer v-else-if="previewPdf" :basename="basename" :pdf="previewPdf" />
 
     <div v-else class="card no-preview">
       <div class="card-content">
@@ -29,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { defineAsyncComponent, onMounted, onUnmounted, ref, shallowRef } from 'vue';
 import { useToast } from 'vue-toast-notification';
 import { useRouter } from 'vue-router';
 
@@ -37,6 +38,10 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faFile } from '@fortawesome/free-solid-svg-icons';
 
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
+const PdfViewer = defineAsyncComponent({
+  loader: () => import('@/components/files/PdfViewer.vue'),
+  loadingComponent: LoadingSpinner,
+});
 
 import { Workspace } from '@/services/workspace';
 import * as opfs from '@/services/opfs';
@@ -49,6 +54,7 @@ const router = useRouter();
 
 const previewLoading = ref(false);
 const previewImage = ref<string | null>(null);
+const previewPdf = shallowRef<Uint8Array | null>(null);
 
 const props = defineProps<{
   version: IBlobVersion;
@@ -68,8 +74,15 @@ onMounted(async () => {
       const proj = await Workspace.setupAndGetActiveProj(router);
       const path = await proj.syncFs(props.path);
       const handle = await opfs.getFileHandle(path);
+      const file = await handle.getFile();
 
-      if (isImage) await loadImagePreview(handle);
+      if (isImage) {
+        previewImage.value = URL.createObjectURL(file);
+      }
+      if (isPdf) {
+        const buf = await file.arrayBuffer();
+        previewPdf.value = new Uint8Array(buf);
+      }
     }
   } catch (err) {
     console.warn(`Error loading preview for ${props.path}`, err);
@@ -92,11 +105,6 @@ async function exportFile() {
     console.error(err);
     toast.error(`Error exporting ${props.path}: ${err}`);
   }
-}
-
-async function loadImagePreview(handle: FileSystemFileHandle) {
-  const file = await handle.getFile();
-  previewImage.value = URL.createObjectURL(file);
 }
 </script>
 

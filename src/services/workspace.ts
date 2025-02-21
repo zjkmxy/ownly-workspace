@@ -16,13 +16,11 @@ import type { IWorkspace } from '@/services/types';
  * We keep an active instance of the open workspace.
  * This always runs in the background collecting data.
  */
-let active: Workspace | null = null;
-
-// Destroy the active workspace on hot reload
-import.meta.hot?.on('vite:beforeUpdate', async () => {
-  await active?.destroy();
-  active = null;
-});
+declare global {
+  interface Window {
+    ActiveWorkspace: Workspace | null;
+  }
+}
 
 /**
  * Workspace service
@@ -98,12 +96,17 @@ export class Workspace {
     }
 
     // Start workspace if not already active
-    if (active?.metadata.name !== metadata.name) {
-      await active?.destroy();
-      active = await Workspace.create(metadata);
+    if (window.ActiveWorkspace?.metadata.name !== metadata.name) {
+      try {
+        await window.ActiveWorkspace?.destroy();
+      } catch (e) {
+        console.error(e);
+        GlobalBus.emit('wksp-error', new Error(`Failed to stop workspace: ${e}`));
+      }
+      window.ActiveWorkspace = await Workspace.create(metadata);
     }
 
-    return active;
+    return window.ActiveWorkspace;
   }
 
   /**
@@ -112,11 +115,6 @@ export class Workspace {
    * @param router Vue router
    */
   public static async setupOrRedir(router: Router): Promise<Workspace | null> {
-    // Ugly hack to wait for the previous workspace to be destroyed
-    if (import.meta.hot) {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-
     try {
       return await Workspace.setup(router.currentRoute.value.params.space as string);
     } catch (e) {
