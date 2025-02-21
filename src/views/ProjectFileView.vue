@@ -119,23 +119,18 @@ async function create() {
     }
 
     // Load file content
-    let newDoc: Y.Doc | null = null;
-    let newAwareness: awareProto.Awareness | null = null;
+    const newDoc = await proj.value.getFile(filepath.value);
+    const newAwareness = await proj.value.getAwareness(filepath.value);
+
     let newContentCode: Y.Text | null = null;
     let newContentMilk: Y.XmlFragment | null = null;
 
     if (utils.isExtensionType(basename.value, 'code')) {
-      // Text file (show as code)
-      newDoc = await proj.value.getFile(filepath.value);
-      newAwareness = await proj.value.getAwareness(filepath.value);
       newContentCode = newDoc.getText('text');
     } else if (utils.isExtensionType(basename.value, 'milkdown')) {
-      // Milkdown XML fragment
-      newDoc = await proj.value.getFile(filepath.value);
-      newAwareness = await proj.value.getAwareness(filepath.value);
       newContentMilk = newDoc.getXmlFragment('milkdown');
     } else {
-      // Unsupported file type
+      newDoc.destroy(); // destroys awareness
       throw new Error(`Unsupported content extension: ${basename.value}`);
     }
 
