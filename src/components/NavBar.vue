@@ -1,7 +1,7 @@
 <template>
   <aside class="menu main-nav has-background-primary soft-if-dark">
     <router-link to="/" v-slot="{ navigate }">
-      <img alt="logo" class="logo" src="@/assets/logo.svg" @click="navigate" />
+      <img alt="logo" class="logo" src="@/assets/logo-white.svg" @click="navigate" />
     </router-link>
 
     <!-- non-workspace general routes -->

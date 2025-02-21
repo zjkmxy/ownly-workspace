@@ -1,6 +1,6 @@
 <template>
   <div class="wrapper">
-    <img alt="logo" class="logo" src="@/assets/logo.svg" />
+    <img alt="logo" class="logo" src="@/assets/logo-white.svg" />
     <hr class="logo-sep" />
 
     <div class="header is-size-4">

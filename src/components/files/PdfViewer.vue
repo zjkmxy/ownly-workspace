@@ -6,7 +6,7 @@
     </div>
 
     <!-- Watermark logo -->
-    <img alt="logo" class="logo invert-if-dark" src="@/assets/logo.svg" />
+    <img alt="logo" class="logo invert-if-dark" src="@/assets/logo-white.svg" />
 
     <!-- Top toolbar -->
     <div class="pdf-toolbar">
