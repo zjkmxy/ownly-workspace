@@ -22,6 +22,7 @@
       <hr class="dropdown-divider" v-if="allowNew" />
 
       <a class="dropdown-item" @click="emit('export')"> Export </a>
+      <a class="dropdown-item" v-if="allowRename" @click="emit('rename')"> Rename </a>
       <a class="dropdown-item" v-if="allowDelete" @click="emit('delete')"> Delete </a>
     </DropdownMenu>
   </button>
@@ -37,6 +38,7 @@ import DropdownMenu from './DropdownMenu.vue';
 defineProps({
   allowNew: Boolean,
   allowDelete: Boolean,
+  allowRename: Boolean,
 });
 
 const emit = defineEmits<{
@@ -45,6 +47,7 @@ const emit = defineEmits<{
   (e: 'import'): void;
   (e: 'import-zip'): void;
   (e: 'export'): void;
+  (e: 'rename'): void;
   (e: 'delete'): void;
 }>();
 

@@ -40,3 +40,10 @@ export function monotonicEpoch(): number {
   return time;
 }
 let lastMonotonicEpoch = 0;
+
+/**
+ * Checks if a path is valid for a project.
+ */
+export function isPathValid(path: string): boolean {
+  return !/[<>:'"|?*\\]/g.test(path);
+}

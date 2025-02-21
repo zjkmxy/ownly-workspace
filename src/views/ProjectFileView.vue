@@ -139,6 +139,14 @@ async function create() {
       throw new Error(`Unsupported content extension: ${basename.value}`);
     }
 
+    // If the content doc is the same, then do not reset the doc
+    // The provider returns the same doc if the file is already loaded
+    // This will change if we support multiple open handles (e.g. ref counting)
+    //
+    // Test in case: rename an open file and open it - the path changes but
+    // the underlying document is the same
+    if (contentDoc.value?.guid === newDoc.guid) return;
+
     // Do the reset synchronously so that the UI does not refresh
     // This means that there will be no flicker and the PDF will stay.
     resetDoc();

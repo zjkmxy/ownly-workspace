@@ -1,63 +1,60 @@
 <template>
   <ul class="menu-list project-inner">
-    <template v-for="entry of tree" :key="entry.name">
-      <li>
-        <component
-          :is="entry.is_folder ? 'a' : 'router-link'"
-          :to="entry.is_folder ? null : linkToFile(entry)"
-          @click="openFolder(entry)"
-          class="one-entry"
-        >
-          <div class="link-inner">
-            <FontAwesomeIcon class="mr-1" :icon="chooseIcon(entry)" size="sm" />
-            {{ entry.name }}
-          </div>
+    <li v-for="entry of tree" :key="entry.name">
+      <!-- Rename this entry -->
+      <ProjectTreeInput
+        class="tree-input"
+        v-if="renameEntry?.name === entry.name"
+        @cancel="renameEntry = null"
+        :name="renameEntry.name"
+        @done="executeRename"
+      />
 
-          <ProjectTreeMenu
-            class="link-button"
-            :allow-new="entry.is_folder"
-            :allow-delete="true"
-            @new-file="onSubtree(entry, (t) => t.newHere('file', $event))"
-            @new-folder="onSubtree(entry, (t) => t.newHere('folder', $event))"
-            @import="onSubtree(entry, (t) => t.importHere())"
-            @import-zip="onSubtree(entry, (t) => t.importZipHere())"
-            @export="executeExport(entry)"
-            @delete="executeDelete(entry)"
-          />
-        </component>
-
-        <project-tree
-          ref="subtrees"
-          v-if="isFolderOpen(entry)"
-          :project="props.project"
-          :files="[]"
-          :rtree="entry.children ?? []"
-          :path="`${path}${entry.name}/`"
-          :parent="entry.name"
-        />
-      </li>
-    </template>
-
-    <div class="field" v-if="showNew">
-      <div class="control">
-        <input
-          ref="newInput"
-          class="input"
-          type="text"
-          placeholder="..."
-          v-model="newName"
-          @keyup.enter="executeNew"
-        />
-        <div class="buttons">
-          <button class="button is-small" @click="showNew = false">
-            <FontAwesomeIcon :icon="faTimes" size="sm" />
-          </button>
-          <button class="button is-small" @click="executeNew">
-            <FontAwesomeIcon :icon="faCheck" size="sm" />
-          </button>
+      <!-- Render the entry -->
+      <component
+        v-else
+        :is="entry.is_folder ? 'a' : 'router-link'"
+        :to="entry.is_folder ? null : linkToFile(entry)"
+        @click="openFolder(entry)"
+        class="one-entry"
+      >
+        <div class="link-inner">
+          <FontAwesomeIcon class="mr-1" :icon="chooseIcon(entry)" size="sm" />
+          {{ entry.name }}
         </div>
-      </div>
-    </div>
+
+        <ProjectTreeMenu
+          class="link-button"
+          :allow-new="entry.is_folder"
+          :allow-delete="true"
+          :allow-rename="true"
+          @new-file="onSubtree(entry, (t) => t.newHere('file', $event))"
+          @new-folder="onSubtree(entry, (t) => t.newHere('folder', $event))"
+          @import="onSubtree(entry, (t) => t.importHere())"
+          @import-zip="onSubtree(entry, (t) => t.importZipHere())"
+          @export="executeExport(entry)"
+          @rename="renameEntry = entry"
+          @delete="executeDelete(entry)"
+        />
+      </component>
+
+      <project-tree
+        ref="subtrees"
+        v-if="isFolderOpen(entry)"
+        :project="props.project"
+        :files="[]"
+        :rtree="entry.children ?? []"
+        :path="`${path}${entry.name}/`"
+        :parent="entry.name"
+      />
+    </li>
+
+    <ProjectTreeInput
+      class="tree-input"
+      v-if="newFile.show"
+      @cancel="newFile.show = false"
+      @done="executeNew"
+    />
   </ul>
 </template>
 
@@ -70,8 +67,6 @@ import * as zip from '@zip.js/zip.js';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import {
-  faTimes,
-  faCheck,
   faFolder,
   faFolderOpen,
   faFile,
@@ -83,6 +78,7 @@ import {
   faFileImage,
 } from '@fortawesome/free-solid-svg-icons';
 
+import ProjectTreeInput from './ProjectTreeInput.vue';
 import ProjectTreeMenu from './ProjectTreeMenu.vue';
 
 import { Workspace } from '@/services/workspace';
@@ -127,12 +123,13 @@ const router = useRouter();
 const toast = useToast();
 
 const subtrees = ref<InstanceType<any>>();
-const newInput = ref<HTMLInputElement | null>(null);
 
-const showNew = ref(false);
-const newName = ref(String());
-const newType = ref<'file' | 'folder'>('file');
-const newExtension = ref<string>();
+const newFile = ref({
+  show: false,
+  type: 'file' as 'file' | 'folder',
+  ext: null as string | null,
+});
+const renameEntry = ref(null as TreeEntry | null);
 
 defineExpose({ newHere, importHere, importZipHere, executeExport, parent: props.parent });
 onMounted(checkRoute);
@@ -283,36 +280,40 @@ async function getProject() {
   return proj;
 }
 
+/** Get the project path to a entry */
+function getEntryPath(entry: TreeEntry) {
+  return `${props.path}${entry.name}${entry.is_folder ? '/' : ''}`;
+}
+
 /** Create a new file in the current folder */
-async function newHere(type: 'file' | 'folder', extension?: string) {
-  newType.value = type;
-  newExtension.value = extension || String();
-  showNew.value = true;
-  newName.value = String();
-  await nextTick();
-  newInput.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  newInput.value?.focus();
+async function newHere(type: 'file' | 'folder', ext?: string) {
+  newFile.value = {
+    show: true,
+    type: type,
+    ext: ext || String(),
+  };
 }
 
 /** Create a new file or folder */
-async function executeNew() {
-  if (newName.value.length < 1 || newName.value.length > 40) {
+async function executeNew(name: string) {
+  if (name.length < 1 || name.length > 40) {
     toast.error('File and folder name must be between 1 and 40 characters');
     return;
   }
 
-  if (newName.value.includes('/')) {
+  if (name.includes('/')) {
     toast.error('File and folder name cannot contain slashes');
     return;
   }
 
-  let path = `${props.path}${newName.value}`;
-  if (newType.value === 'folder') {
+  let path = `${props.path}${name}`;
+  if (newFile.value.type === 'folder') {
     path += '/';
   }
 
-  if (newExtension.value && !path.endsWith(newExtension.value)) {
-    path += `.${newExtension.value}`;
+  const ext = newFile.value.ext;
+  if (ext && !path.endsWith(ext)) {
+    path += `.${ext}`;
   }
 
   try {
@@ -320,19 +321,18 @@ async function executeNew() {
     await proj.newFile(path);
   } catch (err) {
     console.error(err);
-    toast.error(`Error creating ${newName.value}: ${err}`);
+    toast.error(`Error creating ${name}: ${err}`);
     return;
   }
 
-  toast.success(`Created ${newName.value}`);
+  toast.success(`Created ${name}`);
 
-  showNew.value = false;
+  newFile.value.show = false;
 }
 
 /** Delete a file or folder */
 async function executeDelete(entry: TreeEntry) {
-  let path = `${props.path}${entry.name}`;
-  if (entry.is_folder) path += '/';
+  const path = getEntryPath(entry);
 
   // TODO: confirmation prompt
 
@@ -398,12 +398,8 @@ async function importZipHere() {
 /** Export a file or folder */
 async function executeExport(entry: TreeEntry | null) {
   // Get export path inside the project
-  let path = props.path;
+  const path = entry ? getEntryPath(entry) : props.path;
   const isFolder = !entry || entry.is_folder;
-  if (entry) {
-    path += entry.name;
-    if (isFolder) path += '/';
-  }
 
   try {
     const proj = await getProject();
@@ -421,6 +417,24 @@ async function executeExport(entry: TreeEntry | null) {
     toast.error(`Error exporting ${path}: ${err}`);
   }
 }
+
+/** Rename a file or folder */
+async function executeRename(name: string) {
+  if (!renameEntry.value) return;
+
+  try {
+    const proj = await getProject();
+
+    const oldPath = getEntryPath(renameEntry.value);
+    const newPath = getEntryPath({ ...renameEntry.value, name });
+    await proj.moveFile(oldPath, newPath);
+
+    renameEntry.value = null;
+  } catch (err) {
+    console.error(err);
+    toast.error(`Error renaming ${renameEntry.value!.name}: ${err}`);
+  }
+}
 </script>
 
 <style lang="scss" scoped>
@@ -436,35 +450,11 @@ async function executeExport(entry: TreeEntry | null) {
   }
 
   li > a,
-  .field input {
+  .tree-input :deep(input) {
     height: 1.9em;
     font-size: 0.88em;
     padding: 0.4em 0.5em;
     line-height: 1.05em;
-  }
-
-  .field {
-    position: relative;
-    margin-top: 2px;
-
-    input {
-      border-radius: 3px;
-      padding-right: 44px; // hack for buttons
-    }
-
-    .buttons {
-      position: absolute;
-      right: 0;
-      top: 0;
-      gap: 2px;
-
-      button {
-        padding: 0;
-        width: 20px;
-        background-color: transparent;
-        box-shadow: none;
-      }
-    }
   }
 
   .one-entry > .link-button {

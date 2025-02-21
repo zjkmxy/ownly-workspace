@@ -154,12 +154,12 @@ export class WorkspaceProj {
     if (this.fileMeta(path) || this.fileMeta(path + '/'))
       throw new Error('File or folder already exists');
 
-    // check for invalid characters
-    if (/[<>:'"|?*\\]/g.test(path)) {
-      throw new Error(`Invalid characters in file path: ${path}`);
+    // Check for invalid characters
+    if (!utils.isPathValid(path)) {
+      throw new Error(`Invalid characters in path: ${path}`);
     }
 
-    // create the file
+    // Create the file
     path = utils.normalizePath(path);
     const uuid = window.crypto.randomUUID();
     const file: IProjectFile = { uuid, path, is_blob };
@@ -189,12 +189,68 @@ export class WorkspaceProj {
     }
   }
 
-  /** Get the content document for a file */
+  /**
+   * Get the content document for a file
+   *
+   * @param path File path.
+   * @throws {Error} If file path is invalid.
+   * @returns The Y.Doc instance for the file.
+   */
   public async getFile(path: string): Promise<Y.Doc> {
     const meta = this.fileMeta(path);
     if (!meta?.uuid) throw new Error(`File not found: ${path}`);
     if (meta.is_blob) throw new Error('Binary files not implemented'); // TODO
     return await this.provider.getDoc(meta.uuid);
+  }
+
+  /**
+   * Move a file or folder to a new location.
+   *
+   * @param oldPath Old file path.
+   * @param newPath New file path.
+   */
+  public async moveFile(oldPath: string, newPath: string) {
+    oldPath = utils.normalizePath(oldPath);
+    newPath = utils.normalizePath(newPath);
+
+    // Check if moving file to folder and vice versa
+    if (oldPath.endsWith('/') !== newPath.endsWith('/')) {
+      throw new Error('Cannot move file to folder or vice versa');
+    }
+
+    // Check for invalid characters
+    if (!utils.isPathValid(newPath)) {
+      throw new Error(`Invalid characters in path: ${newPath}`);
+    }
+
+    // Check if the new path already exists
+    if (this.fileMap.has(newPath)) {
+      throw new Error(`File already exists: ${newPath}`);
+    }
+
+    // Get all matching files
+    const oldIsFolder = oldPath.endsWith('/');
+    const oldMetas: IProjectFile[] = this.fileList().filter((f) => {
+      if (f.path === oldPath) return true;
+      if (oldIsFolder && f.path.startsWith(oldPath)) return true;
+      return false;
+    });
+    if (!oldMetas.length) {
+      throw new Error(`No matching files found: ${oldPath}`);
+    }
+
+    // Move all matching files in a single transaction
+    this.root.transact(() => {
+      for (const meta of oldMetas) {
+        const fOldPath = meta.path;
+        const fNewPath = fOldPath.replace(oldPath, newPath); // only first occurrence
+
+        const newMeta = structuredClone(meta);
+        newMeta.path = fNewPath;
+        this.fileMap.delete(fOldPath);
+        this.fileMap.set(fNewPath, newMeta);
+      }
+    });
   }
 
   /**
@@ -424,5 +480,26 @@ export class WorkspaceProj {
     }
 
     return basedir + path;
+  }
+
+  /**
+   * Repair any issues in the project.
+   * This should hopefully never be needed.
+   */
+  private repair() {
+    this.root.transact(() => {
+      this.fileMap.forEach((meta, path) => {
+        if (!utils.isPathValid(path)) {
+          this.fileMap.delete(path);
+          console.warn(`Invalid path removed: ${path}`);
+        }
+
+        if (meta.path !== path) {
+          this.fileMap.delete(path);
+          this.fileMap.set(meta.path, meta);
+          console.warn(`Path repaired: ${path} => ${meta.path}`);
+        }
+      });
+    });
   }
 }
