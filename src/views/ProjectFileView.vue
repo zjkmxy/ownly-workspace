@@ -1,18 +1,15 @@
 <template>
-  <div class="container" v-if="loading">
-    <div class="absolute-center">
+  <div class="outer">
+    <div class="absolute-center" v-if="loading">
       <LoadingSpinner />
       Loading your file ...
     </div>
-  </div>
 
-  <div v-else-if="contentCode" class="container center-spinner">
-    <Suspense>
+    <Suspense v-if="contentCode">
       <div class="code">
         <CodeEditor
           class="editor"
           :ytext="contentCode"
-          :key="filepath"
           :basename="basename"
           :awareness="awareness!"
         />
@@ -35,10 +32,8 @@
         </div>
       </template>
     </Suspense>
-  </div>
 
-  <div v-else-if="contentMilk" class="center-spinner">
-    <MilkdownEditor :yxml="contentMilk" :awareness="awareness!" />
+    <MilkdownEditor v-else-if="contentMilk" :yxml="contentMilk" :awareness="awareness!" />
   </div>
 </template>
 
@@ -95,7 +90,7 @@ const awareness = shallowRef<awareProto.Awareness | null>(null);
 const contentCode = shallowRef<Y.Text | null>(null);
 const contentMilk = shallowRef<Y.XmlFragment | null>(null);
 
-const isLatex = computed(() => utils.isExtensionType(basename.value, 'latex'));
+const isLatex = ref<boolean>(false); // ref to prevent ui glitch
 const resultPdfName = computed(() => `${proj.value?.name}.pdf`);
 const resultPdf = shallowRef<Uint8Array | null>(null);
 const isPdfCompiling = ref(false);
@@ -109,29 +104,49 @@ onBeforeUnmount(destroy);
 async function create() {
   try {
     loading.value = true;
-    await destroy();
 
-    // Load workspace
-    const wksp = await Workspace.setupOrRedir(router);
-    if (!wksp) return;
+    if (proj.value?.name !== projName.value) {
+      await destroy();
 
-    // Load project
-    proj.value = await wksp.proj.get(projName.value);
-    if (!proj.value) return;
-    await proj.value.activate();
+      // Load workspace
+      const wksp = await Workspace.setupOrRedir(router);
+      if (!wksp) return;
+
+      // Load project
+      proj.value = await wksp.proj.get(projName.value);
+      if (!proj.value) return;
+      await proj.value.activate();
+    }
 
     // Load file content
-    contentDoc.value = await proj.value.getFile(filepath.value);
+    let newDoc: Y.Doc | null = null;
+    let newAwareness: awareProto.Awareness | null = null;
+    let newContentCode: Y.Text | null = null;
+    let newContentMilk: Y.XmlFragment | null = null;
 
     if (utils.isExtensionType(basename.value, 'code')) {
-      awareness.value = await proj.value.getAwareness(filepath.value);
-      contentCode.value = contentDoc.value.getText('text');
+      // Text file (show as code)
+      newDoc = await proj.value.getFile(filepath.value);
+      newAwareness = await proj.value.getAwareness(filepath.value);
+      newContentCode = newDoc.getText('text');
     } else if (utils.isExtensionType(basename.value, 'milkdown')) {
-      awareness.value = await proj.value.getAwareness(filepath.value);
-      contentMilk.value = contentDoc.value.getXmlFragment('milkdown');
+      // Milkdown XML fragment
+      newDoc = await proj.value.getFile(filepath.value);
+      newAwareness = await proj.value.getAwareness(filepath.value);
+      newContentMilk = newDoc.getXmlFragment('milkdown');
     } else {
+      // Unsupported file type
       throw new Error(`Unsupported content extension: ${basename.value}`);
     }
+
+    // Do the reset synchronously so that the UI does not refresh
+    // This means that there will be no flicker and the PDF will stay.
+    resetDoc();
+    contentDoc.value = newDoc;
+    awareness.value = newAwareness;
+    contentCode.value = newContentCode;
+    contentMilk.value = newContentMilk;
+    isLatex.value = utils.isExtensionType(basename.value, 'latex');
   } catch (err) {
     console.error(err);
     toast.error(`Failed to load file: ${err}`);
@@ -140,14 +155,17 @@ async function create() {
   }
 }
 
-async function destroy() {
+function resetDoc() {
   contentCode.value = null;
   contentMilk.value = null;
   awareness.value = null;
 
   contentDoc.value?.destroy();
   contentDoc.value = null;
+}
 
+async function destroy() {
+  resetDoc();
   isPdfCompiling.value = false;
   resultPdf.value = null;
   resultError.value = String();
@@ -168,8 +186,10 @@ async function compileLatex() {
 </script>
 
 <style scoped lang="scss">
-.container {
+.outer {
+  position: relative;
   height: 100%;
+  width: 100%;
 }
 
 .code {

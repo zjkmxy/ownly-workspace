@@ -8,9 +8,7 @@
       <NavBar></NavBar>
       <div class="router-view-inner">
         <RouterView v-slot="{ Component }">
-          <Transition name="fade-2" mode="out-in">
-            <component :is="Component" />
-          </Transition>
+          <component :is="Component" />
         </RouterView>
       </div>
     </main>

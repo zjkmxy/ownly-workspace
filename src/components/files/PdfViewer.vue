@@ -18,7 +18,7 @@
         >
           Compile
         </button>
-        <button class="button is-small soft-if-dark ml-1" :disabled="!rawPdf" @click="download">
+        <button class="button is-small soft-if-dark ml-1" :disabled="!pdf" @click="download">
           Download
         </button>
       </div>
@@ -43,10 +43,10 @@
     <!-- PDF Viewer -->
     <div class="pdf-content">
       <VuePdfEmbed
-        v-if="pdf && width"
+        v-if="pdfCopy && width"
         annotation-layer
         text-layer
-        :source="pdf"
+        :source="pdfCopy"
         :width="width"
         @loaded="loaded = true"
       />
@@ -103,28 +103,27 @@ const props = defineProps({
 const pdfviewer = ref<InstanceType<typeof HTMLDivElement> | null>(null);
 const width = ref(0);
 const loaded = ref(false);
-const rawPdf = shallowRef<Uint8Array | null>(null);
+const pdfCopy = shallowRef<Uint8Array | null>(null);
 
-watch(
-  () => props.pdf,
-  () => {
-    loaded.value = false;
-
-    // Copy the pdf to prevent viewer from destroying the original
-    // This is needed for the download button to work
-    rawPdf.value = props.pdf ? new Uint8Array(props.pdf) : null;
-  },
-);
+watch(() => props.pdf, create);
 
 onMounted(() => {
-  width.value = (pdfviewer.value?.clientWidth ?? 800) - 20;
+  width.value = Math.max((pdfviewer.value?.clientWidth ?? 800) - 20, 400);
+  create();
 });
 
+function create() {
+  loaded.value = false;
+  // Copy the pdf to prevent viewer from destroying the original
+  // This is needed for the download button to work
+  pdfCopy.value = props.pdf ? new Uint8Array(props.pdf) : null;
+}
+
 async function download() {
-  if (!rawPdf.value) return;
+  if (!props.pdf) return;
   const fileStream = streamSaver.createWriteStream(props.filename);
   const writer = fileStream.getWriter();
-  await writer.write(rawPdf.value);
+  await writer.write(props.pdf);
   await writer.close();
 }
 </script>

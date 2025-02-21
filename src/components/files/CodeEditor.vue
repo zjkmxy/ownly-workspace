@@ -1,9 +1,9 @@
 <template>
-  <div ref="container" class="container"></div>
+  <div ref="outer" class="outer"></div>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, type PropType } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
 
 import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
@@ -38,12 +38,22 @@ const props = defineProps({
   },
 });
 
-const container = ref<InstanceType<typeof HTMLDivElement> | null>(null);
+const outer = ref<InstanceType<typeof HTMLDivElement> | null>(null);
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 let ybinding: MonacoBinding | null = null;
 
-onMounted(() => {
+watch(
+  () => props.ytext,
+  () => {
+    destroy();
+    create();
+  },
+);
+onMounted(create);
+onBeforeUnmount(destroy);
+
+function create() {
   monacoRegister();
 
   const ext = props.basename.split('.').pop()?.toLocaleLowerCase();
@@ -66,7 +76,7 @@ onMounted(() => {
       break;
   }
 
-  editor = monaco.editor.create(container.value!, {
+  editor = monaco.editor.create(outer.value!, {
     value: String(),
     language: language,
     theme: utils.themeIsDark() ? 'vs-dark' : 'vs',
@@ -84,13 +94,13 @@ onMounted(() => {
     new Set([editor]),
     props.awareness,
   );
-});
+}
 
-onBeforeUnmount(() => {
+function destroy() {
   ybinding?.destroy();
   editor?.getModel()?.dispose();
   editor?.dispose();
-});
+}
 </script>
 
 <style scoped lang="scss">

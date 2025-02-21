@@ -1,9 +1,9 @@
 <template>
-  <div ref="container" class="container"></div>
+  <div ref="outer" class="outer"></div>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, type PropType } from 'vue';
+import { onBeforeUnmount, onMounted, ref, watch, type PropType } from 'vue';
 
 import * as Y from 'yjs';
 import type { Awareness } from 'y-protocols/awareness.js';
@@ -25,12 +25,22 @@ const props = defineProps({
   },
 });
 
-const container = ref<InstanceType<typeof HTMLDivElement> | null>(null);
+const outer = ref<InstanceType<typeof HTMLDivElement> | null>(null);
 
 let crepe: Crepe | null = null;
 let collabService: CollabService | null = null;
 
-onMounted(async () => {
+watch(
+  () => props.yxml,
+  async () => {
+    await destroy();
+    await create();
+  },
+);
+onMounted(create);
+onBeforeUnmount(destroy);
+
+async function create() {
   if (utils.themeIsDark()) {
     await import('@milkdown/crepe/theme/frame-dark.css');
   } else {
@@ -38,7 +48,7 @@ onMounted(async () => {
   }
 
   crepe = new Crepe({
-    root: container.value!,
+    root: outer.value!,
   });
   crepe.editor.use(collab);
   await crepe.create();
@@ -47,18 +57,19 @@ onMounted(async () => {
     collabService = ctx.get(collabServiceCtx);
     collabService.bindXmlFragment(props.yxml).setAwareness(props.awareness).connect();
   });
-});
+}
 
-onBeforeUnmount(() => {
+async function destroy() {
   collabService?.disconnect();
-  crepe?.destroy();
-});
+  await crepe?.destroy();
+}
 </script>
 
 <style scoped lang="scss">
-.container :deep(.milkdown) {
+.outer :deep(.milkdown) {
   height: 100vh;
   overflow-y: scroll;
+  overflow-x: hidden;
 }
 </style>
 
