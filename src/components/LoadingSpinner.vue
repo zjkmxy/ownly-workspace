@@ -1,10 +1,17 @@
 <template>
   <div class="has-text-centered is-fullwidth spinner">
     <div class="lds-dual-ring"></div>
+    <template v-if="text">
+      <p>{{ text }}</p>
+    </template>
   </div>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+defineProps({
+  text: String,
+});
+</script>
 
 <style lang="css" scoped>
 .lds-dual-ring,

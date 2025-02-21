@@ -1,9 +1,6 @@
 <template>
   <div class="outer py-4">
-    <div class="absolute-center" v-if="!items">
-      <LoadingSpinner />
-      Loading your messages ...
-    </div>
+    <LoadingSpinner v-if="!items" class="absolute-center" text="Loading your messages ..." />
 
     <template v-else>
       <DynamicScroller
@@ -222,6 +219,7 @@ function onChatMessage(channel: string, message: IChatMessage) {
 
 <style scoped lang="scss">
 .outer {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;

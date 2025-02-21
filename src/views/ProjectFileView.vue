@@ -1,9 +1,6 @@
 <template>
   <div class="outer">
-    <div class="absolute-center" v-if="loading">
-      <LoadingSpinner />
-      Loading your file ...
-    </div>
+    <LoadingSpinner v-if="loading" class="absolute-center" text="Loading your file ..." />
 
     <Suspense v-if="contentCode">
       <div class="code">
@@ -26,14 +23,17 @@
       </div>
 
       <template #fallback>
-        <div class="absolute-center">
-          <LoadingSpinner />
-          Loading code editor ...
-        </div>
+        <LoadingSpinner class="absolute-center" text="Loading code editor ..." />
       </template>
     </Suspense>
 
-    <MilkdownEditor v-else-if="contentMilk" :yxml="contentMilk" :awareness="awareness!" />
+    <Suspense v-else-if="contentMilk">
+      <MilkdownEditor :yxml="contentMilk" :awareness="awareness!" />
+
+      <template #fallback>
+        <LoadingSpinner class="absolute-center" text="Loading document editor ..." />
+      </template>
+    </Suspense>
 
     <BlobView
       v-else-if="contentBlob"

@@ -1,9 +1,6 @@
 <template>
   <div class="outer py-4">
-    <div class="absolute-center" v-if="!proj">
-      <LoadingSpinner />
-      Loading your project ...
-    </div>
+    <LoadingSpinner v-if="!proj" class="absolute-center" text="Loading your project ..." />
 
     <template v-else>
       <section class="hero project-ready">
@@ -63,7 +60,9 @@ async function setup() {
 
 <style scoped lang="scss">
 .outer {
+  position: relative;
   user-select: none;
+  height: 100%;
 }
 .project-ready .subtitle {
   line-height: 1.8em;

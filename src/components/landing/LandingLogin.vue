@@ -1,10 +1,11 @@
 <template>
   <div class="wrapper">
     <Transition name="fade-rtl" mode="out-in">
-      <div class="loading has-text-white-bis has-text-centered" v-if="showLoading">
-        <LoadingSpinner />
-        {{ loadStatus }}
-      </div>
+      <LoadingSpinner
+        v-if="showLoading"
+        class="has-text-white-bis has-text-centered"
+        :text="loadStatus"
+      />
 
       <div class="box anim-rtl-fade p-4" v-else-if="showEmail">
         <div class="header is-size-4 has-text-weight-semibold">Get started</div>

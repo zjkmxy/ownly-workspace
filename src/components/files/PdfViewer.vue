@@ -1,9 +1,7 @@
 <template>
   <div class="pdfviewer" ref="pdfviewer">
     <!-- Loading / Compiling Spinner -->
-    <div class="absolute-center" v-if="(!loaded && pdf) || compiling">
-      <LoadingSpinner />
-    </div>
+    <LoadingSpinner v-if="(!loaded && pdf) || compiling" class="absolute-center" />
 
     <!-- Watermark logo -->
     <img alt="logo" class="logo invert-if-dark" src="@/assets/logo-white.svg" />

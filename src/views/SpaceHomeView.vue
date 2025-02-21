@@ -1,9 +1,6 @@
 <template>
   <div class="outer py-4">
-    <div class="absolute-center" v-if="!wksp">
-      <LoadingSpinner />
-      Loading your workspace ...
-    </div>
+    <LoadingSpinner v-if="!wksp" class="absolute-center" text="Loading your workspace ..." />
 
     <template v-else>
       <section class="hero project-ready">
@@ -47,7 +44,9 @@ async function setup() {
 
 <style scoped lang="scss">
 .outer {
+  position: relative;
   user-select: none;
+  height: 100%;
 }
 .project-ready .subtitle {
   line-height: 1.8em;

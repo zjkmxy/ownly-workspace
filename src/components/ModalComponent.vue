@@ -4,7 +4,7 @@
       <div class="modal is-active anim-fade" v-if="show || loading">
         <div class="modal-background"></div>
         <div class="modal-content">
-          <LoadingSpinner class="fixed-center" v-if="loading" />
+          <LoadingSpinner v-if="loading" class="fixed-center" />
 
           <div class="box" v-if="show">
             <slot></slot>

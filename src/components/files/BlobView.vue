@@ -1,9 +1,6 @@
 <template>
   <div class="blob-view">
-    <div v-if="previewLoading" class="absolute-center">
-      <LoadingSpinner />
-      Loading preview ...
-    </div>
+    <LoadingSpinner v-if="previewLoading" class="absolute-center" text="Loading preview ..." />
 
     <img v-else-if="previewImage" class="img-preview" :alt="basename" :src="previewImage" />
     <PdfViewer v-else-if="previewPdf" :basename="basename" :pdf="previewPdf" />
