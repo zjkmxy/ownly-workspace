@@ -13,10 +13,11 @@
       <!-- Render the entry -->
       <component
         v-else
+        class="one-entry"
         :is="entry.is_folder ? 'a' : 'router-link'"
         :to="entry.is_folder ? null : linkToFile(entry)"
+        :title="entry.name"
         @click="openFolder(entry)"
-        class="one-entry"
       >
         <div class="link-inner">
           <FontAwesomeIcon class="mr-1" :icon="chooseIcon(entry)" size="sm" />
