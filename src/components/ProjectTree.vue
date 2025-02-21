@@ -408,12 +408,11 @@ async function executeExport(entry: TreeEntry | null) {
   try {
     const proj = await getProject();
 
+    const fsPath = await proj.syncFs(path);
     if (isFolder) {
-      const fsPath = await proj.syncFs(path);
       const handle = await opfs.getDirectoryHandle(fsPath);
       await opfs.download(handle);
     } else {
-      const fsPath = await proj.syncFsFile(path);
       const handle = await opfs.getFileHandle(fsPath);
       await opfs.download(handle);
     }

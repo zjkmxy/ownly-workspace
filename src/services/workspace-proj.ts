@@ -322,8 +322,12 @@ export class WorkspaceProj {
    * @returns The path to the project in the OPFS + prefix.
    */
   public async syncFs(prefix: string = '/'): Promise<string> {
-    if (prefix[prefix.length - 1] !== '/') throw new Error('Prefix must end with /');
+    if (prefix[prefix.length - 1] !== '/') {
+      return this.syncFsFile(prefix);
+    }
 
+    // Get the folder in the FS
+    prefix = utils.normalizePath(prefix);
     const basedir = `${this.manager.group}/${this.name}`;
     const folder = await opfs.getDirectoryHandle(basedir + prefix, { create: true });
 
@@ -391,7 +395,7 @@ export class WorkspaceProj {
    *
    * @param path Path to the file in the project.
    */
-  public async syncFsFile(path: string): Promise<string> {
+  private async syncFsFile(path: string): Promise<string> {
     if (path.endsWith('/')) throw new Error('Cannot sync folder as file');
 
     // Get metadata for the file
