@@ -37,6 +37,7 @@
 
     <BlobView
       v-else-if="contentBlob"
+      :key="filepath"
       :version="contentBlob"
       :path="filepath"
       :basename="basename"

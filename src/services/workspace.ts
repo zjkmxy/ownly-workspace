@@ -136,8 +136,14 @@ export class Workspace {
     const wksp = await Workspace.setupOrRedir(router);
     if (!wksp) throw new Error('Workspace not found');
 
-    const proj = wksp.proj.active;
-    if (!proj) throw new Error('Project not found');
+    if (wksp.proj.active) return wksp.proj.active;
+
+    // No active project, try to get it from the URL
+    const projName = router.currentRoute.value.params.project as string;
+    if (!projName) throw new Error('No project name provided');
+
+    const proj = await wksp.proj.get(projName);
+    await proj.activate();
     return proj;
   }
 }

@@ -20,7 +20,7 @@
 <script setup lang="ts">
 import { nextTick, watch } from 'vue';
 
-import LoadingSpinner from './LoadingSpinner.vue';
+import LoadingSpinner from '@/components/LoadingSpinner.vue';
 
 const props = defineProps({
   show: {
