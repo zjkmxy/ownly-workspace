@@ -1,9 +1,9 @@
 import { EventEmitter } from 'events';
 import * as Y from 'yjs';
 
-import type { IChatChannel, IChatMessage } from './types';
-import { GlobalBus } from './event-bus';
-import { SvsProvider } from './svs-provider';
+import type { IChatChannel, IChatMessage } from '@/services/types';
+import { GlobalBus } from '@/services/event-bus';
+import { SvsProvider } from '@/services/svs-provider';
 
 import type TypedEmitter from 'typed-emitter';
 

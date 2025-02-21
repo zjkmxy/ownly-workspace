@@ -61,6 +61,9 @@ export class SvsProvider {
 
   /**
    * Create a new SVS provider for a project.
+   *
+   * @param wksp Workspace API
+   * @param project Project name
    */
   public static async create(wksp: WorkspaceAPI, project: string): Promise<SvsProvider> {
     const svs = await wksp.svs_alo(`${wksp.group}/${project}`);
@@ -106,7 +109,11 @@ export class SvsProvider {
     await this.svs.start();
   }
 
-  /** Get a Yjs document from the project. */
+  /**
+   * Get a Yjs document from the project.
+   *
+   *  @param uuid UUID of the document
+   */
   public async getDoc(uuid: string): Promise<Y.Doc> {
     let doc = this.docs.get(uuid);
     if (doc) return doc;
@@ -138,7 +145,12 @@ export class SvsProvider {
     return doc;
   }
 
-  /** Load updates from persistence into a document */
+  /**
+   * Load updates from persistence into a document.
+   *
+   * @param doc Document to load into
+   * @param uuid UUID of the document
+   */
   public async readInto(doc: Y.Doc, uuid: string): Promise<void> {
     await this.db.updates
       .where('uuid')
@@ -148,7 +160,33 @@ export class SvsProvider {
       });
   }
 
-  /** Get the awareness instance for a document */
+  /**
+   * Publish a blob object to the group
+   *
+   * @param uuid UUID of the document
+   * @param blob Blob to publish
+   *
+   * @returns Name of the published blob
+   */
+  public async publishBlob(uuid: string, blob: Uint8Array): Promise<string> {
+    // Seems okay to use ms time as version for now.
+    const version = Date.now();
+
+    // Place all blobs under the data prefix.
+    const name = `${this.svs.data_prefix}/32=blob/${uuid}/v=${version}`;
+    await this.wksp.produce(name, blob);
+
+    // TODO: publish name to sync group for repo to pick up
+
+    return name;
+  }
+
+  /**
+   * Get the awareness instance for a document.
+   * If an awareness exists, the same instance will be returned.
+   *
+   * @param uuid UUID of the document
+   */
   public async getAwareness(uuid: string): Promise<awareProto.Awareness> {
     const doc = this.docs.get(uuid);
     if (!doc) throw new Error('Document not loaded');

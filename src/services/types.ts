@@ -49,3 +49,12 @@ export type AwarenessLocalState = {
     rgb: [number, number, number];
   };
 };
+
+export type IBlobVersion = {
+  /** Name of the NDN object */
+  name: string;
+  /** Timestamp of version */
+  time: number;
+  /** Size of the blob */
+  size: number;
+};

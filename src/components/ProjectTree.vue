@@ -357,6 +357,7 @@ async function importHere() {
     try {
       const path = `${props.path}${file.name}`;
       await proj.importFile(path, file.stream());
+      toast.success(`Imported ${file.name}`);
     } catch (err) {
       console.warn(err);
       toast.warning(`Could not import ${file.name}: ${err}`);
@@ -377,6 +378,9 @@ async function importZipHere() {
 
   // Read the ZIP file and import each entry
   const reader = new zip.ZipReader(new zip.BlobReader(zipFile));
+
+  // TODO: show progress for each file (also for importHere)
+  let importedCount = 0;
   for await (const entry of reader.getEntriesGenerator()) {
     try {
       // We don't need to make folders
@@ -388,9 +392,16 @@ async function importZipHere() {
 
       const path = `${props.path}${entry.filename}`;
       await proj.importFile(path, content.stream());
+      importedCount++;
     } catch (err) {
       console.warn(err);
       toast.warning(`Could not import ${entry.filename}: ${err}`);
+    }
+
+    if (importedCount > 0) {
+      toast.success(`Imported ${importedCount} files from ${zipFile.name}`);
+    } else {
+      toast.warning(`No files imported from ${zipFile.name}`);
     }
   }
 }

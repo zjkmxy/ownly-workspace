@@ -10,6 +10,7 @@ import (
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
+	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/ndn/svs_ps"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security"
@@ -91,6 +92,51 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 			}
 
 			return nil, nil
+		}),
+
+		// produce(name: string, data: Uint8Array): Promise<void>;
+		"produce": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			name, err := enc.NameFromStr(p[0].String())
+			if err != nil {
+				return nil, err
+			}
+
+			_, err = client.Produce(ndn.ProduceArgs{
+				Name:    name,
+				Content: enc.Wire{utils.JsArrayToSlice(p[1])},
+			})
+
+			return nil, err
+		}),
+
+		// consume(name: string): Promise<{ data: Uint8Array; name: string; }>;
+		"consume": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			name, err := enc.NameFromStr(p[0].String())
+			if err != nil {
+				return nil, err
+			}
+
+			// Attempt to get the content from the local store
+			local, err := client.GetLocal(name)
+			if err == nil {
+				return js.ValueOf(map[string]any{
+					"data": utils.SliceToJsArray(local.Join()),
+					"name": js.ValueOf(name.String()),
+				}), nil
+			}
+
+			// Fetch the content from the network
+			ch := make(chan ndn.ConsumeState)
+			client.Consume(name, func(state ndn.ConsumeState) { ch <- state })
+			state := <-ch
+			if err := state.Error(); err != nil {
+				return nil, err
+			}
+
+			return js.ValueOf(map[string]any{
+				"data": utils.SliceToJsArray(state.Content().Join()),
+				"name": js.ValueOf(state.Name().String()),
+			}), nil
 		}),
 
 		// svs_alo(group: string): Promise<SvsAloApi>;

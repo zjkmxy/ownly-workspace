@@ -3,7 +3,7 @@ import { useToast } from 'vue-toast-notification';
 import { WorkspaceChat } from './workspace-chat';
 import { WorkspaceProjManager } from './workspace-proj';
 
-import { SvsProvider } from './svs-provider';
+import { SvsProvider } from '@/services/svs-provider';
 
 import storage from '@/services/storage';
 import ndn from '@/services/ndn';
@@ -11,7 +11,7 @@ import * as utils from '@/utils/index';
 
 import type { WorkspaceAPI } from '@/services/ndn';
 import type { Router } from 'vue-router';
-import type { IWorkspace } from './types';
+import type { IWorkspace } from '@/services/types';
 
 /**
  * We keep an active instance of the open workspace.

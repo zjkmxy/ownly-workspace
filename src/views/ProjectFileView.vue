@@ -67,10 +67,12 @@ const PdfViewer = defineAsyncComponent({
   loadingComponent: LoadingSpinner,
 });
 
-import { Workspace } from '@/services/workspace';
-import type { WorkspaceProj } from '@/services/workspace-proj';
 import * as latex from '@/services/latex/index';
 import * as utils from '@/utils';
+import { Workspace } from '@/services/workspace';
+
+import type { WorkspaceProj } from '@/services/workspace-proj';
+import type { IBlobVersion } from '@/services/types';
 
 const route = useRoute();
 const router = useRouter();
@@ -89,6 +91,7 @@ const awareness = shallowRef<awareProto.Awareness | null>(null);
 
 const contentCode = shallowRef<Y.Text | null>(null);
 const contentMilk = shallowRef<Y.XmlFragment | null>(null);
+const contentBlob = shallowRef<IBlobVersion | null>(null);
 
 const isLatex = ref<boolean>(false); // ref to prevent ui glitch
 const resultPdfName = computed(() => `${proj.value?.name}.pdf`);
@@ -118,19 +121,35 @@ async function create() {
       await proj.value.activate();
     }
 
-    // Load file content
-    const newDoc = await proj.value.getFile(filepath.value);
-    const newAwareness = await proj.value.getAwareness(filepath.value);
+    // Load file metadata
+    const metadata = proj.value.getFileMeta(filepath.value);
+    if (!metadata) throw new Error(`File not found: ${filepath.value}`);
 
+    // Load file content
+    let newDoc: Y.Doc | null = null;
+    let newAwareness: awareProto.Awareness | null = null;
     let newContentCode: Y.Text | null = null;
     let newContentMilk: Y.XmlFragment | null = null;
+    let newContentBlob: IBlobVersion | null = null;
 
-    if (utils.isExtensionType(basename.value, 'code')) {
+    if (metadata.is_blob) {
+      // Blob file, the doc contains the version list
+      newDoc = await proj.value.getFile(filepath.value);
+      const versions = newDoc.getArray<IBlobVersion>('blobs');
+      newContentBlob = versions.get(0);
+      if (!newContentBlob) throw new Error(`Blob file is empty: ${filepath.value}`);
+      console.log('Blob file:', newContentBlob);
+    } else if (utils.isExtensionType(basename.value, 'code')) {
+      // Text file content
+      newDoc = await proj.value.getFile(filepath.value);
+      newAwareness = await proj.value.getAwareness(filepath.value);
       newContentCode = newDoc.getText('text');
     } else if (utils.isExtensionType(basename.value, 'milkdown')) {
+      // Milkdown XML fragment content
+      newDoc = await proj.value.getFile(filepath.value);
+      newAwareness = await proj.value.getAwareness(filepath.value);
       newContentMilk = newDoc.getXmlFragment('milkdown');
     } else {
-      newDoc.destroy(); // destroys awareness
       throw new Error(`Unsupported content extension: ${basename.value}`);
     }
 
@@ -149,6 +168,7 @@ async function create() {
     awareness.value = newAwareness;
     contentCode.value = newContentCode;
     contentMilk.value = newContentMilk;
+    contentBlob.value = newContentBlob;
     isLatex.value = utils.isExtensionType(basename.value, 'latex');
   } catch (err) {
     console.error(err);

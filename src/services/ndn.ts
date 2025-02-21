@@ -44,6 +44,11 @@ export interface WorkspaceAPI {
   /** Stop the workspace */
   stop(): Promise<void>;
 
+  /** Produce an NDN object under a given name */
+  produce(name: string, data: Uint8Array): Promise<void>;
+  /** Consume an NDN object with a name */
+  consume(name: string): Promise<{ data: Uint8Array; name: string }>;
+
   /** SVS ALO instance */
   svs_alo(group: string): Promise<SvsAloApi>;
   /** Awareness instance */

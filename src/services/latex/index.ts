@@ -14,7 +14,7 @@ export async function compile(project: WorkspaceProj): Promise<Uint8Array> {
   }
 
   // Fail fast if main.tex is not found
-  const fileList = project.fileList();
+  const fileList = project.getFileList();
   if (!fileList.some((file) => file.path === '/main.tex')) {
     throw new Error('main.tex not found at root of project');
   }

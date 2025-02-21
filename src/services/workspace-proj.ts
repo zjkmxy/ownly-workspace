@@ -1,13 +1,13 @@
 import * as Y from 'yjs';
 import * as awareProto from 'y-protocols/awareness.js';
 
-import { GlobalBus } from './event-bus';
-import { SvsProvider } from './svs-provider';
+import { GlobalBus } from '@/services/event-bus';
+import { SvsProvider } from '@/services/svs-provider';
 import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
 
 import type { WorkspaceAPI } from './ndn';
-import type { IProject, IProjectFile } from './types';
+import type { IBlobVersion, IProject, IProjectFile } from './types';
 
 /**
  * Project manager for the workspace.
@@ -132,18 +132,18 @@ export class WorkspaceProj {
   }
 
   /** Get the list of files */
-  public fileList(): IProjectFile[] {
+  public getFileList(): IProjectFile[] {
     return Array.from(this.fileMap.values());
   }
 
   /** Callback when the list of files changes */
   private onListChange() {
     if (!this.fileMap || this.manager.active?.root.guid !== this.root.guid) return;
-    GlobalBus.emit('project-files', this.name, this.fileList());
+    GlobalBus.emit('project-files', this.name, this.getFileList());
   }
 
   /** Check if a file or folder exists */
-  public fileMeta(path: string): IProjectFile | undefined {
+  public getFileMeta(path: string): IProjectFile | undefined {
     path = utils.normalizePath(path);
     return this.fileMap.get(path);
   }
@@ -151,7 +151,7 @@ export class WorkspaceProj {
   /** Create a new file or folder in the project */
   public async newFile(path: string, is_blob?: boolean) {
     if (!path) throw new Error('File path is required');
-    if (this.fileMeta(path) || this.fileMeta(path + '/'))
+    if (this.getFileMeta(path) || this.getFileMeta(path + '/'))
       throw new Error('File or folder already exists');
 
     // Check for invalid characters
@@ -197,9 +197,8 @@ export class WorkspaceProj {
    * @returns The Y.Doc instance for the file.
    */
   public async getFile(path: string): Promise<Y.Doc> {
-    const meta = this.fileMeta(path);
+    const meta = this.getFileMeta(path);
     if (!meta?.uuid) throw new Error(`File not found: ${path}`);
-    if (meta.is_blob) throw new Error('Binary files not implemented'); // TODO
     return await this.provider.getDoc(meta.uuid);
   }
 
@@ -230,7 +229,7 @@ export class WorkspaceProj {
 
     // Get all matching files
     const oldIsFolder = oldPath.endsWith('/');
-    const oldMetas: IProjectFile[] = this.fileList().filter((f) => {
+    const oldMetas: IProjectFile[] = this.getFileList().filter((f) => {
       if (f.path === oldPath) return true;
       if (oldIsFolder && f.path.startsWith(oldPath)) return true;
       return false;
@@ -313,7 +312,6 @@ export class WorkspaceProj {
     const isText = utils.isExtensionType(path, 'code');
     const isMilkdown = utils.isExtensionType(path, 'milkdown');
     const isBlob = !isText && !isMilkdown;
-    if (isBlob) throw new Error('Binary files not implemented'); // TODO
 
     // This requires us to parse the XML document. A better way might be
     // to export to markdown and then import it back.
@@ -334,7 +332,28 @@ export class WorkspaceProj {
 
     // Import binary content
     if (isBlob) {
-      throw new Error('Not implemented'); // TODO
+      // Read the full buffer for now. We can use a stream directly in the
+      // future if we want to support big files for some reason.
+      const buffer = await new Response(content).arrayBuffer();
+      const name = await this.provider.publishBlob(meta.uuid, new Uint8Array(buffer));
+
+      // Update the file version history
+      const doc = await this.getFile(path);
+      try {
+        const history = doc.getArray<IBlobVersion>('blobs');
+        history.push([
+          {
+            name: name,
+            time: Date.now(),
+            size: buffer.byteLength,
+          },
+        ]);
+      } finally {
+        // TODO: see comment on isText block below
+        doc.destroy();
+      }
+
+      return;
     }
 
     // Import text content
