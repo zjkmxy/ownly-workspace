@@ -386,12 +386,12 @@ async function importZipHere() {
       console.warn(err);
       toast.warning(`Could not import ${entry.filename}: ${err}`);
     }
+  }
 
-    if (importedCount > 0) {
-      toast.success(`Imported ${importedCount} files from ${zipFile.name}`);
-    } else {
-      toast.warning(`No files imported from ${zipFile.name}`);
-    }
+  if (importedCount > 0) {
+    toast.success(`Imported ${importedCount} files from ${zipFile.name}`);
+  } else {
+    toast.warning(`No files imported from ${zipFile.name}`);
   }
 }
 
