@@ -113,6 +113,13 @@ watch(projName, create);
 onBeforeUnmount(destroy);
 
 async function create() {
+  // If something fails, we should destroy these
+  let newDoc: Y.Doc | null = null;
+  let newAwareness: awareProto.Awareness | null = null;
+  let newContentCode: Y.Text | null = null;
+  let newContentMilk: Y.XmlFragment | null = null;
+  let newContentBlob: IBlobVersion | null = null;
+
   try {
     loading.value = true;
 
@@ -134,19 +141,11 @@ async function create() {
     if (!metadata) throw new Error(`File not found: ${filepath.value}`);
 
     // Load file content
-    let newDoc: Y.Doc | null = null;
-    let newAwareness: awareProto.Awareness | null = null;
-    let newContentCode: Y.Text | null = null;
-    let newContentMilk: Y.XmlFragment | null = null;
-    let newContentBlob: IBlobVersion | null = null;
-
     if (metadata.is_blob) {
       // Blob file, the doc contains the version list
       newDoc = await proj.value.getFile(filepath.value);
-      const versions = newDoc.getArray<IBlobVersion>('blobs');
-      newContentBlob = versions.get(0);
-      if (!newContentBlob) throw new Error(`Blob file is empty: ${filepath.value}`);
-      console.log('Blob file:', newContentBlob);
+      newContentBlob = newDoc.getArray<IBlobVersion>('blobs').get(0);
+      if (!newContentBlob) toast.warning('Empty blob file opened');
     } else if (utils.isExtensionType(basename.value, 'code')) {
       // Text file content
       newDoc = await proj.value.getFile(filepath.value);
@@ -181,6 +180,10 @@ async function create() {
   } catch (err) {
     console.error(err);
     toast.error(`Failed to load file: ${err}`);
+
+    // Destroy the new doc if it was created
+    // This automatically destroys the children
+    newDoc?.destroy();
   } finally {
     loading.value = false;
   }
