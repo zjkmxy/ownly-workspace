@@ -120,6 +120,10 @@ async function create() {
   let newContentMilk: Y.XmlFragment | null = null;
   let newContentBlob: IBlobVersion | null = null;
 
+  // Always get rid of the blob when switching, otherwise it will
+  // flicker due to a change in basename
+  contentBlob.value = null;
+
   try {
     loading.value = true;
 
@@ -183,6 +187,7 @@ async function create() {
 function resetDoc() {
   contentCode.value = null;
   contentMilk.value = null;
+  contentBlob.value = null;
   awareness.value = null;
 
   contentDoc.value?.destroy();
