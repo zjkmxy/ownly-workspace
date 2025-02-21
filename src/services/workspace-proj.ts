@@ -5,6 +5,7 @@ import { GlobalBus } from '@/services/event-bus';
 import { SvsProvider } from '@/services/svs-provider';
 import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
+import { deserializeYxml } from '@/utils/yxml';
 
 import type { WorkspaceAPI } from './ndn';
 import type { IBlobVersion, IProject, IProjectFile } from './types';
@@ -293,7 +294,6 @@ export class WorkspaceProj {
         return toUtf8(doc.getText('text').toString());
       } else if (utils.isExtensionType(path, 'milkdown')) {
         // Get the milkdown XML content
-        // TODO: maybe change this to render the markdown
         return toUtf8(doc.getXmlFragment('milkdown').toJSON());
       }
     } finally {
@@ -325,12 +325,6 @@ export class WorkspaceProj {
     const isText = utils.isExtensionType(path, 'code');
     const isMilkdown = utils.isExtensionType(path, 'milkdown');
     const isBlob = !isText && !isMilkdown;
-
-    // This requires us to parse the XML document. A better way might be
-    // to export to markdown and then import it back.
-    if (isMilkdown) {
-      throw new Error('Format cannot be imported');
-    }
 
     // Get the existing file if present
     let meta = this.fileMap.get(path);
@@ -369,16 +363,24 @@ export class WorkspaceProj {
     }
 
     // Import text content
-    if (isText) {
+    if (isText || isMilkdown) {
       const buffer = await new Response(content).arrayBuffer();
       const strContent = new TextDecoder().decode(buffer);
       const doc = await this.getFile(path);
       try {
-        const text = doc.getText('text');
-        doc.transact(() => {
-          text.delete(0, text.length);
-          text.insert(0, strContent);
-        });
+        if (isText) {
+          const text = doc.getText('text');
+          doc.transact(() => {
+            text.delete(0, text.length);
+            text.insert(0, strContent);
+          });
+        } else if (isMilkdown) {
+          const frag = doc.getXmlFragment('milkdown');
+          doc.transact(() => {
+            frag.delete(0, frag.length);
+            deserializeYxml(strContent, frag);
+          });
+        }
       } finally {
         // TODO: if the doc is already open, we should not destroy it
         // Or use some better technique like reference counting
