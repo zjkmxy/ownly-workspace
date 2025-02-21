@@ -104,7 +104,7 @@ function destroy() {
 </script>
 
 <style scoped lang="scss">
-.container {
+.outer {
   height: 100%;
 }
 </style>

@@ -229,12 +229,14 @@ async function compileLatex() {
   flex-direction: row;
   width: 100%;
 
-  > .editor {
-    flex: 1;
+  .editor {
+    width: 100%;
   }
-
+  &:has(.result) > .editor {
+    width: 50%;
+  }
   > .result {
-    flex-basis: 50%;
+    width: calc(100% - 50%);
   }
 }
 </style>
