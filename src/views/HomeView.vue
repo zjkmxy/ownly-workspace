@@ -91,4 +91,10 @@ function open(ws: types.IWorkspace) {
     margin: 40px;
   }
 }
+
+@media (max-width: 1023px) {
+  .outer .spacelist {
+    margin: 20px;
+  }
+}
 </style>
