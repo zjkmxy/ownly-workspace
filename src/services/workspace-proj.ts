@@ -496,7 +496,7 @@ export class WorkspaceProj {
           }
         }
       } catch (err) {
-        GlobalBus.emit('wksp-error', new Error(`sync failed for ${path}: ${err}`));
+        GlobalBus.emit('wksp-error', new Error(`Sync failed for ${path}: ${err}`));
         continue;
       }
     }

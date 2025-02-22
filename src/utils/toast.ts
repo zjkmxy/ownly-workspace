@@ -10,7 +10,7 @@ class Handle {
 
   async success(message: string, timeout = 3000) {
     await this.update({
-      message,
+      message: message,
       type: 'success',
       loading: false,
       timeout: timeout,
@@ -18,9 +18,9 @@ class Handle {
     });
   }
 
-  async error(message: string) {
+  async error(message: any) {
     await this.update({
-      message,
+      message: String(message),
       type: 'error',
       loading: false,
       timeout: true,
@@ -30,7 +30,7 @@ class Handle {
 
   async warning(message: string) {
     await this.update({
-      message,
+      message: message,
       type: 'warning',
       loading: false,
       timeout: true,
@@ -78,8 +78,8 @@ export class Toast {
     return new Handle(toast.success(message, Toast.opts()));
   }
 
-  static error(message: string): Handle {
-    return new Handle(toast.error(message, Toast.opts()));
+  static error(message: any): Handle {
+    return new Handle(toast.error(String(message), Toast.opts()));
   }
 
   static warning(message: string): Handle {
@@ -105,11 +105,17 @@ export class Toast {
     return {
       theme: themeIsDark() ? 'dark' : 'light',
       position: 'bottom-right',
-      transition: 'flip',
+      transition: {
+        enter: 'fade-rtl-toast--enter',
+        exit: 'fade-rtl-toast--leave',
+      },
     } as {
       theme: 'dark' | 'light';
       position: 'bottom-right';
-      transition: 'flip';
+      transition: {
+        enter: string;
+        exit: string;
+      };
     };
   }
 }

@@ -28,6 +28,33 @@
   }
 }
 
+.fade-rtl-toast {
+  &--enter {
+    animation: fade-rtl-enter-frames 0.3s ease;
+    animation-direction: normal;
+  }
+  &--leave {
+    animation: fade-rtl-enter-frames 0.3s ease;
+    animation-direction: reverse;
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes fade-rtl-enter-frames {
+    0% {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+    33% {
+      opacity: 0;
+      transform: translateX(10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
+
 @keyframes fade90 {
   0% {
     opacity: 1;
