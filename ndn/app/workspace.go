@@ -16,10 +16,11 @@ import (
 	"github.com/named-data/ndnd/std/security"
 	sig "github.com/named-data/ndnd/std/security/signer"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
-	"github.com/named-data/ndnd/std/utils"
+	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
 
+// CreateWorkspace creates a new workspace with the given name.
 func (a *App) CreateWorkspace(nameStr string) (nameStrFinal string, err error) {
 	name, err := enc.NameFromStr(nameStr)
 	if err != nil {
@@ -52,7 +53,8 @@ func (a *App) CreateWorkspace(nameStr string) (nameStrFinal string, err error) {
 	return
 }
 
-func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
+// GetWorkspace returns a JS object representing the workspace with the given name.
+func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	group, err := enc.NameFromStr(groupStr)
 	if err != nil {
 		return
@@ -64,13 +66,16 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 		err = fmt.Errorf("no testbed key")
 		return
 	}
+
+	// Use testbed key to sign NFD management commands
 	a.SetCmdKey(key)
 	name := key.KeyName().Prefix(-2) // pop KeyId and KEY
 
 	// Create client object for this workspace
 	client := object.NewClient(a.engine, a.store, nil)
 
-	apiMap := map[string]any{
+	var workspaceJs map[string]any
+	workspaceJs = map[string]any{
 		// name: string;
 		"name": js.ValueOf(name.String()),
 
@@ -78,7 +83,7 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 		"group": js.ValueOf(group.String()),
 
 		// start(): Promise<void>;
-		"start": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"start": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			if err := client.Start(); err != nil {
 				return nil, err
 			}
@@ -86,16 +91,17 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 		}),
 
 		// stop(): Promise<void>;
-		"stop": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"stop": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			if err := client.Stop(); err != nil {
 				return nil, err
 			}
 
+			jsutil.ReleaseMap(workspaceJs)
 			return nil, nil
 		}),
 
 		// produce(name: string, data: Uint8Array): Promise<void>;
-		"produce": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"produce": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			name, err := enc.NameFromStr(p[0].String())
 			if err != nil {
 				return nil, err
@@ -103,14 +109,14 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 
 			_, err = client.Produce(ndn.ProduceArgs{
 				Name:    name,
-				Content: enc.Wire{utils.JsArrayToSlice(p[1])},
+				Content: enc.Wire{jsutil.JsArrayToSlice(p[1])},
 			})
 
 			return nil, err
 		}),
 
 		// consume(name: string): Promise<{ data: Uint8Array; name: string; }>;
-		"consume": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"consume": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			name, err := enc.NameFromStr(p[0].String())
 			if err != nil {
 				return nil, err
@@ -120,7 +126,7 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 			local, err := client.GetLocal(name)
 			if err == nil {
 				return js.ValueOf(map[string]any{
-					"data": utils.SliceToJsArray(local.Join()),
+					"data": jsutil.SliceToJsArray(local.Join()),
 					"name": js.ValueOf(name.String()),
 				}), nil
 			}
@@ -134,13 +140,13 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 			}
 
 			return js.ValueOf(map[string]any{
-				"data": utils.SliceToJsArray(state.Content().Join()),
+				"data": jsutil.SliceToJsArray(state.Content().Join()),
 				"name": js.ValueOf(state.Name().String()),
 			}), nil
 		}),
 
 		// svs_alo(group: string): Promise<SvsAloApi>;
-		"svs_alo": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"svs_alo": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			svsAloGroup, err := enc.NameFromStr(p[0].String())
 			if err != nil {
 				return nil, err
@@ -167,49 +173,21 @@ func (a *App) MakeWorkspace(groupStr string) (api js.Value, err error) {
 		}),
 
 		// awareness(group: string): Promise<AwarenessApi>;
-		"awareness": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"awareness": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			awarenessGroup, err := enc.NameFromStr(p[0].String())
 			if err != nil {
 				return nil, err
 			}
 
 			// Create new Awareness instance
-			awareness := &Awareness{
+			return a.AwarenessJs(&Awareness{
 				Name:   awarenessGroup,
 				Client: client,
-			}
-
-			// Create JS API for Awareness
-			return js.ValueOf(map[string]any{
-				// start(): Promise<void>;
-				"start": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-					awareness.Start()
-					return nil, nil
-				}),
-
-				// stop(): Promise<void>;
-				"stop": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-					awareness.Stop()
-					return nil, nil
-				}),
-
-				// publish(data: Uint8Array): Promise<void>;
-				"publish": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-					return nil, awareness.Publish(enc.Wire{utils.JsArrayToSlice(p[0])})
-				}),
-
-				// subscribe(cb: (pub: Uint8Array) => void): Promise<void>;
-				"subscribe": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-					awareness.OnData = func(wire enc.Wire) {
-						p[0].Invoke(utils.SliceToJsArray(wire.Join()))
-					}
-					return nil, nil
-				}),
 			}), nil
 		}),
 	}
 
-	return js.ValueOf(apiMap), nil
+	return js.ValueOf(workspaceJs), nil
 }
 
 func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
@@ -218,12 +196,13 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 		alo.DataPrefix(),
 	}
 
-	return js.ValueOf(map[string]any{
+	var svsAloJs map[string]any
+	svsAloJs = map[string]any{
 		"sync_prefix": js.ValueOf(alo.SyncPrefix().String()),
 		"data_prefix": js.ValueOf(alo.DataPrefix().String()),
 
 		// start(): Promise<void>;
-		"start": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"start": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			for _, route := range routes {
 				if err := a.engine.RegisterRoute(route); err != nil {
 					return nil, err
@@ -238,7 +217,7 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 		}),
 
 		// stop(): Promise<void>;
-		"stop": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"stop": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			if err := alo.Stop(); err != nil {
 				return nil, err
 			}
@@ -249,6 +228,7 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 				}
 			}
 
+			jsutil.ReleaseMap(svsAloJs)
 			return nil, nil
 		}),
 
@@ -261,11 +241,11 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 		}),
 
 		// pub_yjs_delta(binary: Uint8Array): Promise<void>;
-		"pub_yjs_delta": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"pub_yjs_delta": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			pub := &tlv.Message{
 				YjsDelta: &tlv.YjsDelta{
 					UUID:   p[0].String(),
-					Binary: utils.JsArrayToSlice(p[1]),
+					Binary: jsutil.JsArrayToSlice(p[1]),
 				},
 			}
 
@@ -279,7 +259,7 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 		}),
 
 		// subscribe(name: string, { on_yjs_delta }): Promise<void>;
-		"subscribe": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"subscribe": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			// Send a single publication to the subscriber
 			sendPub := func(pub ndn_sync.SvsPub) {
 				info := js.ValueOf(map[string]any{
@@ -299,7 +279,7 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 				case pmsg.YjsDelta != nil:
 					p[0].Get("on_yjs_delta").Invoke(info, js.ValueOf(map[string]any{
 						"uuid":   js.ValueOf(pmsg.YjsDelta.UUID),
-						"binary": utils.SliceToJsArray(pmsg.YjsDelta.Binary),
+						"binary": jsutil.SliceToJsArray(pmsg.YjsDelta.Binary),
 					}))
 				default:
 					log.Error(nil, "Unknown message type", "msg", pmsg)
@@ -331,5 +311,39 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 			})
 			return nil, nil
 		}),
-	})
+	}
+	return js.ValueOf(svsAloJs)
+}
+
+func (a *App) AwarenessJs(awareness *Awareness) (api js.Value) {
+	// Create JS API for Awareness
+	var awarenessJs map[string]any
+	awarenessJs = map[string]any{
+		// start(): Promise<void>;
+		"start": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			awareness.Start()
+			return nil, nil
+		}),
+
+		// stop(): Promise<void>;
+		"stop": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			awareness.Stop()
+			jsutil.ReleaseMap(awarenessJs)
+			return nil, nil
+		}),
+
+		// publish(data: Uint8Array): Promise<void>;
+		"publish": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			return nil, awareness.Publish(enc.Wire{jsutil.JsArrayToSlice(p[0])})
+		}),
+
+		// subscribe(cb: (pub: Uint8Array) => void): Promise<void>;
+		"subscribe": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			awareness.OnData = func(wire enc.Wire) {
+				p[0].Invoke(jsutil.SliceToJsArray(wire.Join()))
+			}
+			return nil, nil
+		}),
+	}
+	return js.ValueOf(awarenessJs)
 }

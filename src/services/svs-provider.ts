@@ -137,7 +137,7 @@ export class SvsProvider {
     });
 
     // Cleanup on document destroy
-    doc.on('destroy', () => {
+    doc.once('destroy', () => {
       this.docs.delete(uuid);
       this.aware.delete(uuid);
     });
@@ -327,9 +327,10 @@ class NdnAwareness extends awareProto.Awareness {
     const me = new NdnAwareness(doc);
 
     // Unhook on document destroy
-    doc.on('destroy', async () => {
-      await ndnAwareness.stop();
+    doc.once('destroy', async () => {
+      window.clearTimeout(me.throttle);
       me.destroy();
+      await ndnAwareness.stop();
     });
 
     // Make our own color here based on username

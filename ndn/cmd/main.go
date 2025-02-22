@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"syscall/js"
 
-	"github.com/named-data/ndnd/std/utils"
+	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app"
 )
 
@@ -15,17 +15,17 @@ func main() {
 
 	api := map[string]any{
 		// setup_keychain(keychain: KeyChainJS): Promise<void>
-		"setup_keychain": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"setup_keychain": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return nil, me.SetupKeyChain(p[0])
 		}),
 
 		// has_testbed_key(): Promise<boolean>;
-		"has_testbed_key": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"has_testbed_key": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return me.GetTestbedKey() != nil, nil
 		}),
 
 		// connect_testbed(): Promise<void>;
-		"connect_testbed": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"connect_testbed": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return nil, me.ConnectTestbed()
 		}),
 
@@ -36,9 +36,9 @@ func main() {
 		}),
 
 		// ndncert_email(email: string, code: (status: string) => Promise<string>): Promise<void>;
-		"ndncert_email": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"ndncert_email": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return nil, me.NdncertEmail(p[0].String(), func(status string) string {
-				code, err := utils.Await(p[1].Invoke(status))
+				code, err := jsutil.Await(p[1].Invoke(status))
 				if err != nil {
 					return ""
 				}
@@ -47,13 +47,13 @@ func main() {
 		}),
 
 		// create_workspace(name: string): Promise<string>;
-		"create_workspace": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+		"create_workspace": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return me.CreateWorkspace(p[0].String())
 		}),
 
 		// get_workspace(name: string): Promise<WorkspaceAPI>;
-		"get_workspace": utils.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			return me.MakeWorkspace(p[0].String())
+		"get_workspace": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			return me.GetWorkspace(p[0].String())
 		}),
 	}
 
