@@ -116,8 +116,8 @@ export class Toast {
       transition: {
         // Disable the enter animation because it's buggy during updates.
         // Each update will cause the toast to flicker.
-        enter: 'fade-rtl-toast--enter--disabled',
-        exit: 'fade-rtl-toast--leave',
+        enter: 'fade-toast--enter--disabled',
+        exit: 'fade-toast--leave',
       },
     } as {
       theme: 'dark' | 'light';
