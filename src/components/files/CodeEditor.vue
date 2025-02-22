@@ -110,23 +110,21 @@ function destroy() {
 </style>
 
 <style lang="scss">
-:root {
-  --default-y-selection-color: 255, 165, 0;
-}
 .yRemoteSelection {
-  background-color: rgba(var(--default-y-selection-color), 0.4);
+  background-color: orange;
+  opacity: 0.4;
 }
 .yRemoteSelectionHead {
   position: absolute;
   border-left: 2px solid black;
-  border-color: rgb(var(--default-y-selection-color));
+  border-color: orange;
   height: 100%;
   transition: opacity 0.1s ease;
 }
 .yRemoteSelectionHead::after {
   position: absolute;
   content: '';
-  background-color: rgb(var(--default-y-selection-color));
+  background-color: orange;
   transform: translateY(-100%) translateX(-2px);
   border-radius: 3px;
   padding: 0 3px;

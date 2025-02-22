@@ -343,8 +343,7 @@ class NdnAwareness extends awareProto.Awareness {
     // Set the local user state
     const userState: AwarenessLocalState['user'] = {
       name: username, // common
-      color: `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`, // milkdown
-      rgb: [r, g, b], // monaco
+      color: `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`, // milkdown+monaco
     };
     me.setLocalStateField('user', userState);
 
@@ -391,22 +390,18 @@ class NdnAwareness extends awareProto.Awareness {
     if (awarenessHaveStyles.has(client)) return;
     awarenessHaveStyles.add(client);
 
-    let rgb = `${user.rgb[0]},${user.rgb[1]},${user.rgb[2]}`;
-    if (utils.themeIsDark()) {
-      rgb = `${255 - user.rgb[0]},${255 - user.rgb[1]},${255 - user.rgb[2]}`;
-    }
-
     // Monaco editor colors (see CodeEditor.vue)
     awarenessStyles.textContent += `
-      .yRemoteSelection-${client} {
-        background-color: rgba(${rgb}, 0.5) !important;
+      .yRemoteSelection.yRemoteSelection-${client} {
+        background-color: ${user.color};
       }
-      .yRemoteSelectionHead-${client} {
-        border-color: rgb(${rgb}) !important;
+      .yRemoteSelectionHead.yRemoteSelectionHead-${client} {
+        border-color: ${user.color};
       }
-      .yRemoteSelectionHead-${client}::after {
-        content: "${user.name}" !important;
-        background-color: rgb(${rgb}) !important;
+      .yRemoteSelectionHead.yRemoteSelectionHead-${client}::after {
+        content: "${user.name}";
+        background-color: ${user.color};
+        color: black;
       }
     `;
   }

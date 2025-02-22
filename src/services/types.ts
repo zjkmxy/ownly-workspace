@@ -46,7 +46,6 @@ export type AwarenessLocalState = {
   user: {
     name: string;
     color: string;
-    rgb: [number, number, number];
   };
 };
 
