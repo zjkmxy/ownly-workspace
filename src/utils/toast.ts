@@ -94,7 +94,15 @@ export class Toast {
     promise: Promise<any>,
     opts: { pending: string; success: string; error: string },
   ): Promise<Handle> {
-    return new Handle(await toast.promise(promise, opts, Toast.opts()));
+    const handle = this.loading(opts.pending);
+    try {
+      await promise;
+      await handle.success(opts.success);
+    } catch (err) {
+      await handle.error(opts.error ?? String(err));
+      throw err;
+    }
+    return handle;
   }
 
   static loading(message: string): Handle {
