@@ -78,7 +78,7 @@ main.router-view {
   display: flex;
   flex-direction: row;
   width: 100vw;
-  height: 100vh;
+  height: 100dvh;
   overflow-x: hidden;
 
   > .router-view-inner {
@@ -86,7 +86,7 @@ main.router-view {
     overflow: hidden;
 
     .router-view-content {
-      height: 100vh;
+      height: 100dvh;
     }
   }
 }
@@ -118,7 +118,7 @@ main.router-view {
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: 100dvh;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: var(--z-navbar);
     touch-action: manipulation;
@@ -142,7 +142,7 @@ main.router-view {
     }
 
     .router-view-content {
-      height: calc(100vh - #{$top-bar-height});
+      height: calc(100dvh - #{$top-bar-height});
     }
   }
 }

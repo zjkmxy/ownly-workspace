@@ -16,14 +16,14 @@ const emit = defineEmits(['login']);
 main {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
 }
 
 @media (min-width: 1024px) {
   main {
     flex-direction: row;
-    height: 100vh;
+    height: 100dvh;
   }
 
   .login {

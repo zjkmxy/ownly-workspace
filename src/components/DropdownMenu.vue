@@ -43,6 +43,11 @@ function close() {
   left: 0;
   height: 100vh;
   width: 100vw;
+  z-index: var(--z-dropdown);
+
+  .dropdown {
+    z-index: calc(var(--z-dropdown) + 1);
+  }
 
   .dropdown-content {
     user-select: none;

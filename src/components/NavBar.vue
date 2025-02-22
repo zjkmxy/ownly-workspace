@@ -161,7 +161,7 @@ function linkDiscuss(channel: IChatChannel) {
 
   width: 230px;
   min-width: 230px;
-  height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
 
   .logo {
