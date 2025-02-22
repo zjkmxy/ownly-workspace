@@ -4,6 +4,7 @@ Secure decentralized workspace built over the [Named Data Networking](https://na
 
 [![ci](https://github.com/pulsejet/ownly/actions/workflows/ci.yml/badge.svg)](https://github.com/pulsejet/ownly/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+![Website](https://img.shields.io/website?url=https%3A%2F%2Fownly.work)
 
 ## Development Setup
 
