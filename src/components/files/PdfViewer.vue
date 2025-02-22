@@ -172,7 +172,6 @@ async function download() {
 
     :deep(.vue-pdf-embed) {
       display: inline-block;
-      height: 100%;
 
       .vue-pdf-embed__page {
         margin-bottom: 10px;
