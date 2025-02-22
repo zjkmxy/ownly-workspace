@@ -74,6 +74,10 @@ main.router-view {
   > .router-view-inner {
     flex: 1;
     overflow: hidden;
+
+    .router-view-content {
+      height: 100vh;
+    }
   }
 }
 
@@ -85,15 +89,6 @@ main.router-view {
 
 /** Mobile styling - hide the navbar and show with button */
 @media (max-width: 1023px) {
-  .router-view-inner {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .router-view-content {
-    flex: 1;
-  }
-
   .nav-bar {
     position: fixed;
     z-index: 100000;
@@ -119,14 +114,25 @@ main.router-view {
     touch-action: manipulation;
   }
 
-  .top-bar {
+  main.router-view > .router-view-inner {
+    $top-bar-height: 44px;
     display: block;
-    padding: 6px 4px 2px 4px;
-    touch-action: manipulation;
-    .logo {
-      height: 26px;
-      margin-left: 2px;
-      margin-top: 5px;
+    flex-direction: column;
+
+    .top-bar {
+      height: $top-bar-height;
+      display: block;
+      padding: 6px 4px 2px 4px;
+      touch-action: manipulation;
+      .logo {
+        height: 26px;
+        margin-left: 2px;
+        margin-top: 5px;
+      }
+    }
+
+    .router-view-content {
+      height: calc(100vh - #{$top-bar-height});
     }
   }
 }

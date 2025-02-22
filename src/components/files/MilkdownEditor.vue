@@ -67,7 +67,7 @@ async function destroy() {
 
 <style scoped lang="scss">
 .outer :deep(.milkdown) {
-  height: 100vh;
+  height: 100%;
   overflow-y: scroll;
   overflow-x: hidden;
 }
@@ -77,6 +77,14 @@ async function destroy() {
 // Fix overlap with side panel
 milkdown-toolbar {
   z-index: 1000;
+}
+
+@media (max-width: 1023px) {
+  .milkdown .ProseMirror {
+    touch-action: manipulation;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
 }
 
 // Taken from the example at https://milkdown.dev/docs/guide/collaborative-editing

@@ -221,7 +221,7 @@ function onChatMessage(channel: string, message: IChatMessage) {
   position: relative;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
 
   .scroller {
     flex: 1;
