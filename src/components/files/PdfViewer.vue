@@ -13,6 +13,7 @@
           v-if="hasCompile"
           @click="$emit('compile')"
           class="button is-primary is-small soft-if-dark"
+          :disabled="compiling"
         >
           Compile
         </button>
