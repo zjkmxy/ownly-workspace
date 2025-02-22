@@ -56,7 +56,6 @@ import {
   watch,
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useToast } from 'vue-toast-notification';
 
 import * as Y from 'yjs';
 import * as awareProto from 'y-protocols/awareness.js';
@@ -76,16 +75,16 @@ const PdfViewer = defineAsyncComponent({
 });
 import BlobView from '@/components/files/BlobView.vue';
 
+import { Workspace } from '@/services/workspace';
 import * as latex from '@/services/latex/index';
 import * as utils from '@/utils';
-import { Workspace } from '@/services/workspace';
+import { Toast } from '@/utils/toast';
 
 import type { WorkspaceProj } from '@/services/workspace-proj';
 import type { IBlobVersion } from '@/services/types';
 
 const route = useRoute();
 const router = useRouter();
-const toast = useToast();
 
 const loading = ref(true);
 const filename = computed(() => route.params.filename as string[]);
@@ -140,7 +139,7 @@ async function create() {
       // Blob file, the doc contains the version list
       newDoc = await proj.value.getFile(filepath.value);
       newContentBlob = newDoc.getArray<IBlobVersion>('blobs').get(0);
-      if (!newContentBlob) toast.warning('Empty blob file opened');
+      if (!newContentBlob) Toast.warning('Empty blob file opened');
     } else if (utils.isExtensionType(basename.value, 'code')) {
       // Text file content
       newDoc = await proj.value.getFile(filepath.value);
@@ -174,7 +173,7 @@ async function create() {
     isLatex.value = utils.isExtensionType(basename.value, 'latex');
   } catch (err) {
     console.error(err);
-    toast.error(`Failed to load file: ${err}`);
+    Toast.error(`Failed to load file: ${err}`);
 
     // Destroy the new doc if it was created
     // This automatically destroys the children

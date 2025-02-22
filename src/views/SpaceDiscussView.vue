@@ -86,7 +86,6 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue';
 
 import { useRoute, useRouter } from 'vue-router';
-import { useToast } from 'vue-toast-notification';
 
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -94,14 +93,14 @@ import { faPaperPlane, faArrowDown } from '@fortawesome/free-solid-svg-icons';
 
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 
-import * as utils from '@/utils';
 import { Workspace } from '@/services/workspace';
+import * as utils from '@/utils';
+import { Toast } from '@/utils/toast';
 
 import type { IChatMessage } from '@/services/types';
 
 const route = useRoute();
 const router = useRouter();
-const toast = useToast();
 
 // Route state
 const channelName = computed(() => route.params.channel as string);
@@ -144,7 +143,7 @@ async function setup() {
     items.value = await wksp.value.chat.getMessages(channelName.value);
   } catch (e) {
     console.error(e);
-    toast.error(`Failed to load channel: ${e}`);
+    Toast.error(`Failed to load channel: ${e}`);
     return;
   }
 

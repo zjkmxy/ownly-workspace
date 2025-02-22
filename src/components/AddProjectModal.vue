@@ -35,7 +35,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
@@ -43,6 +42,7 @@ import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 import ModalComponent from './ModalComponent.vue';
 
 import { Workspace } from '@/services/workspace';
+import { Toast } from '@/utils/toast';
 
 defineProps({
   show: {
@@ -52,7 +52,6 @@ defineProps({
 });
 const emit = defineEmits(['close']);
 const router = useRouter();
-const $toast = useToast();
 
 const name = ref(String());
 
@@ -60,13 +59,13 @@ async function create() {
   try {
     // 1-40 characters
     if (name.value.length < 1 || name.value.length > 40) {
-      $toast.error('Project name must be between 1 and 40 characters');
+      Toast.error('Project name must be between 1 and 40 characters');
       return;
     }
 
     // Validate characters are only alphanumeric, hyphen, and underscore
     if (!/^[a-zA-Z0-9_-]+$/.test(name.value)) {
-      $toast.error('Project name can only contain letters, numbers, hyphens, and underscores');
+      Toast.error('Project name can only contain letters, numbers, hyphens, and underscores');
       return;
     }
 
@@ -77,18 +76,18 @@ async function create() {
     // Check if project already exists
     const projs = await wksp.proj.getProjects();
     if (projs.some((c) => c.name === name.value)) {
-      $toast.error('Project with this name already exists');
+      Toast.error('Project with this name already exists');
       return;
     }
 
     // Create channel
     await wksp.proj.newProject(name.value);
 
-    $toast.success(`Project ${name.value} created`);
+    Toast.success(`Project ${name.value} created`);
     emit('close');
   } catch (err) {
     console.error(err);
-    $toast.error(`Error creating project: ${err}`);
+    Toast.error(`Error creating project: ${err}`);
   }
 }
 </script>

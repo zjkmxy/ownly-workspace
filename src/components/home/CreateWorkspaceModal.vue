@@ -40,11 +40,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useToast } from 'vue-toast-notification';
+
+import ModalComponent from '../ModalComponent.vue';
 
 import storage from '@/services/storage';
 import ndn from '@/services/ndn';
-import ModalComponent from '../ModalComponent.vue';
+import { Toast } from '@/utils/toast';
 
 defineProps({
   show: {
@@ -54,7 +55,6 @@ defineProps({
 });
 
 const emit = defineEmits(['close', 'create']);
-const $toast = useToast();
 
 const loading = ref(false);
 
@@ -78,10 +78,10 @@ async function create() {
     emit('create');
     emit('close');
 
-    $toast.success('Workspace created');
+    Toast.success('Workspace created');
   } catch (err) {
     console.error(err);
-    $toast.error(`Error creating workspace: ${err}`);
+    Toast.error(`Error creating workspace: ${err}`);
   } finally {
     loading.value = false;
   }

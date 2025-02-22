@@ -28,7 +28,6 @@
 
 <script setup lang="ts">
 import { defineAsyncComponent, onMounted, onUnmounted, ref, shallowRef } from 'vue';
-import { useToast } from 'vue-toast-notification';
 import { useRouter } from 'vue-router';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -43,10 +42,10 @@ const PdfViewer = defineAsyncComponent({
 import { Workspace } from '@/services/workspace';
 import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
+import { Toast } from '@/utils/toast';
 
 import type { IBlobVersion } from '@/services/types';
 
-const toast = useToast();
 const router = useRouter();
 
 const previewLoading = ref(false);
@@ -100,7 +99,7 @@ async function exportFile() {
     await proj.download(props.path);
   } catch (err) {
     console.error(err);
-    toast.error(`Error exporting ${props.path}: ${err}`);
+    Toast.error(`Error exporting ${props.path}: ${err}`);
   }
 }
 </script>

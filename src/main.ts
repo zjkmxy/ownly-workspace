@@ -3,8 +3,8 @@ import App from './App.vue';
 import router from './router';
 
 import './assets/main.scss';
-import 'vue-toast-notification/dist/theme-default.css';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
+import 'vue3-toastify/dist/index.css';
 
 const app = createApp(App);
 

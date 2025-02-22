@@ -18,14 +18,13 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { RouterView } from 'vue-router';
-import { useToast } from 'vue-toast-notification';
 
 import NavBar from '@/components/NavBar.vue';
 import LandingView from '@/views/LandingView.vue';
 
-import { GlobalBus } from './services/event-bus';
+import { GlobalBus } from '@/services/event-bus';
+import { Toast } from '@/utils/toast';
 
-const toast = useToast();
 const showLogin = ref(true);
 
 onMounted(() => {
@@ -37,7 +36,7 @@ onUnmounted(() => {
 });
 
 function wkspErrorListener(error: Error) {
-  toast.error(error.toString());
+  Toast.error(error.toString());
 }
 </script>
 

@@ -22,7 +22,6 @@
 <script setup lang="ts">
 import { computed, onMounted, shallowRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
@@ -30,11 +29,12 @@ import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 
 import { Workspace } from '@/services/workspace';
+import { Toast } from '@/utils/toast';
+
 import type { WorkspaceProj } from '@/services/workspace-proj';
 
 const route = useRoute();
 const router = useRouter();
-const toast = useToast();
 
 const projName = computed(() => route.params.project as string);
 const proj = shallowRef(null as WorkspaceProj | null);
@@ -53,7 +53,7 @@ async function setup() {
     await proj.value.activate();
   } catch (err) {
     console.error(err);
-    toast.error(`Failed to load project: ${err}`);
+    Toast.error(`Failed to load project: ${err}`);
   }
 }
 </script>

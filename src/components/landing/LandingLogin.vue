@@ -81,7 +81,6 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useToast } from 'vue-toast-notification';
 
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -94,9 +93,9 @@ import {
 
 import * as utils from '@/utils/index';
 import ndn from '@/services/ndn';
+import { Toast } from '@/utils/toast';
 
 const emit = defineEmits(['login']);
-const $toast = useToast();
 
 const showLoading = ref(true);
 const showEmail = ref(false);
@@ -182,7 +181,7 @@ async function startChallenge() {
     showSuccess.value = true;
     setTimeout(() => emit('login'), 1500);
   } catch (err) {
-    $toast.error('Failed to complete challenge');
+    Toast.error('Failed to complete challenge');
     console.error(err);
     showLoading.value = false;
     showEmail.value = true;

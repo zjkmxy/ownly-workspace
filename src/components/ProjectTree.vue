@@ -62,7 +62,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch, type PropType } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useToast } from 'vue-toast-notification';
 
 import * as zip from '@zip.js/zip.js';
 
@@ -84,6 +83,7 @@ import ProjectTreeMenu from './ProjectTreeMenu.vue';
 
 import { Workspace } from '@/services/workspace';
 import * as utils from '@/utils';
+import { Toast } from '@/utils/toast';
 
 import type { IProject, IProjectFile } from '@/services/types';
 
@@ -120,7 +120,6 @@ const props = defineProps({
 
 const route = useRoute();
 const router = useRouter();
-const toast = useToast();
 
 const subtrees = ref<InstanceType<any>>();
 
@@ -287,12 +286,12 @@ async function newHere(type: 'file' | 'folder', ext?: string) {
 /** Create a new file or folder */
 async function executeNew(name: string) {
   if (name.length < 1 || name.length > 40) {
-    toast.error('File and folder name must be between 1 and 40 characters');
+    Toast.error('File and folder name must be between 1 and 40 characters');
     return;
   }
 
   if (name.includes('/')) {
-    toast.error('File and folder name cannot contain slashes');
+    Toast.error('File and folder name cannot contain slashes');
     return;
   }
 
@@ -311,11 +310,9 @@ async function executeNew(name: string) {
     await proj.newFile(path);
   } catch (err) {
     console.error(err);
-    toast.error(`Error creating ${name}: ${err}`);
+    Toast.error(`Error creating ${name}: ${err}`);
     return;
   }
-
-  toast.success(`Created ${name}`);
 
   newFile.value.show = false;
 }
@@ -331,7 +328,7 @@ async function executeDelete(entry: TreeEntry) {
     await proj.deleteFile(path);
   } catch (err) {
     console.error(err);
-    toast.error(`Error deleting ${path}: ${err}`);
+    Toast.error(`Error deleting ${path}: ${err}`);
   }
 }
 
@@ -347,10 +344,10 @@ async function importHere() {
     try {
       const path = `${props.path}${file.name}`;
       await proj.importFile(path, file.stream());
-      toast.success(`Imported ${file.name}`);
+      Toast.success(`Imported ${file.name}`);
     } catch (err) {
       console.warn(err);
-      toast.warning(`Could not import ${file.name}: ${err}`);
+      Toast.warning(`Could not import ${file.name}: ${err}`);
     }
   }
 }
@@ -385,14 +382,14 @@ async function importZipHere() {
       importedCount++;
     } catch (err) {
       console.warn(err);
-      toast.warning(`Could not import ${entry.filename}: ${err}`);
+      Toast.warning(`Could not import ${entry.filename}: ${err}`);
     }
   }
 
   if (importedCount > 0) {
-    toast.success(`Imported ${importedCount} files from ${zipFile.name}`);
+    Toast.success(`Imported ${importedCount} files from ${zipFile.name}`);
   } else {
-    toast.warning(`No files imported from ${zipFile.name}`);
+    Toast.warning(`No files imported from ${zipFile.name}`);
   }
 }
 
@@ -405,7 +402,7 @@ async function executeExport(entry: TreeEntry | null) {
     await proj.download(path);
   } catch (err) {
     console.error(err);
-    toast.error(`Error exporting ${path}: ${err}`);
+    Toast.error(`Error exporting ${path}: ${err}`);
   }
 }
 
@@ -423,7 +420,7 @@ async function executeRename(name: string) {
     renameEntry.value = null;
   } catch (err) {
     console.error(err);
-    toast.error(`Error renaming ${renameEntry.value!.name}: ${err}`);
+    Toast.error(`Error renaming ${renameEntry.value!.name}: ${err}`);
   }
 }
 </script>

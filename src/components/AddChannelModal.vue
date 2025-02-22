@@ -25,7 +25,7 @@
 
     <div class="field has-text-right">
       <div class="control">
-        <button class="button is-light mr-2" @click="emit('close')">Cancel</button>
+        <button class="button mr-2" @click="emit('close')">Cancel</button>
         <button class="button is-primary soft-if-dark" @click="create">Create</button>
       </div>
     </div>
@@ -35,7 +35,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useToast } from 'vue-toast-notification';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faHashtag } from '@fortawesome/free-solid-svg-icons';
@@ -43,6 +42,7 @@ import { faHashtag } from '@fortawesome/free-solid-svg-icons';
 import ModalComponent from './ModalComponent.vue';
 
 import { Workspace } from '@/services/workspace';
+import { Toast } from '@/utils/toast';
 
 defineProps({
   show: {
@@ -52,7 +52,6 @@ defineProps({
 });
 const emit = defineEmits(['close']);
 const router = useRouter();
-const $toast = useToast();
 
 const name = ref(String());
 
@@ -60,13 +59,13 @@ async function create() {
   try {
     // 1-40 characters
     if (name.value.length < 1 || name.value.length > 40) {
-      $toast.error('Channel name must be between 1 and 40 characters');
+      Toast.error('Channel name must be between 1 and 40 characters');
       return;
     }
 
     // Validate characters are only alphanumeric, hyphen, and underscore
     if (!/^[a-zA-Z0-9_-]+$/.test(name.value)) {
-      $toast.error('Channel name can only contain letters, numbers, hyphens, and underscores');
+      Toast.error('Channel name can only contain letters, numbers, hyphens, and underscores');
       return;
     }
 
@@ -77,7 +76,7 @@ async function create() {
     // Check if channel already exists
     const channels = await wksp.chat.getChannels();
     if (channels.some((c) => c.name === name.value)) {
-      $toast.error('Channel with this name already exists');
+      Toast.error('Channel with this name already exists');
       return;
     }
 
@@ -87,11 +86,12 @@ async function create() {
       name: name.value,
     });
 
-    $toast.success(`Channel #${name.value} created`);
+    Toast.success(`Channel #${name.value} created`);
     emit('close');
+    name.value = String();
   } catch (err) {
     console.error(err);
-    $toast.error(`Error creating channel: ${err}`);
+    Toast.error(`Error creating channel: ${err}`);
   }
 }
 </script>

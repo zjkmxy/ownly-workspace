@@ -36,6 +36,17 @@ main.full-h {
   font-variant: small-caps;
 }
 
+.Toastify__toast-container {
+  --toastify-toast-width: 300px;
+  width: auto !important;
+  min-width: 300px;
+  max-width: min(400px, 96vw);
+  font-size: 0.95em;
+}
+.Toastify__toast-body {
+  padding: 1px 3px;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
