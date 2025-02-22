@@ -63,15 +63,12 @@ import * as awareProto from 'y-protocols/awareness.js';
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 const CodeEditor = defineAsyncComponent({
   loader: () => import('@/components/files/CodeEditor.vue'),
-  loadingComponent: LoadingSpinner,
 });
 const MilkdownEditor = defineAsyncComponent({
   loader: () => import('@/components/files/MilkdownEditor.vue'),
-  loadingComponent: LoadingSpinner,
 });
 const PdfViewer = defineAsyncComponent({
   loader: () => import('@/components/files/PdfViewer.vue'),
-  loadingComponent: LoadingSpinner,
 });
 import BlobView from '@/components/files/BlobView.vue';
 

@@ -3,7 +3,14 @@
     <LoadingSpinner v-if="previewLoading" class="absolute-center" text="Loading preview ..." />
 
     <img v-else-if="previewImage" class="img-preview" :alt="basename" :src="previewImage" />
-    <PdfViewer v-else-if="previewPdf" :basename="basename" :pdf="previewPdf" />
+
+    <Suspense v-else-if="previewPdf">
+      <PdfViewer :basename="basename" :pdf="previewPdf" />
+
+      <template #fallback>
+        <LoadingSpinner class="absolute-center" text="Loading PDF viewer ..." />
+      </template>
+    </Suspense>
 
     <div v-else class="card no-preview">
       <div class="card-content">
@@ -36,7 +43,6 @@ import { faFile } from '@fortawesome/free-solid-svg-icons';
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 const PdfViewer = defineAsyncComponent({
   loader: () => import('@/components/files/PdfViewer.vue'),
-  loadingComponent: LoadingSpinner,
 });
 
 import { Workspace } from '@/services/workspace';
