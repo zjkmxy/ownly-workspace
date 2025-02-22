@@ -11,7 +11,7 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
-    "go": "cd ndn/cmd && cross-env GOOS=js GOARCH=wasm go build -o ../../public/main.wasm main.go"
+    "go": "cd ndn/cmd && cross-env GOOS=js GOARCH=wasm go build -ldflags \"-s -w\" -o ../../public/main.wasm main.go"
   },
   "dependencies": {
     "@dicebear/collection": "^9.2.2",
