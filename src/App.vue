@@ -48,7 +48,14 @@ const showNav = ref(false);
 
 watch(
   () => route.path,
-  () => (showNav.value = false),
+  () => {
+    // When activating the project, we don't display anything useful.
+    // In that case keep the nav open.
+    if (route.name === 'project') return;
+
+    // Close the nav when changing routes
+    showNav.value = false;
+  },
 );
 
 onMounted(() => {
