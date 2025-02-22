@@ -96,7 +96,7 @@ import { GlobalBus } from '@/services/event-bus';
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
 
 const route = useRoute();
-const routeIsDashboard = computed(() => route.name === 'home');
+const routeIsDashboard = computed(() => route.name === 'dashboard');
 const routeIsWorkspace = computed(() =>
   ['space-home', 'project', 'discuss', 'project-file'].includes(String(route.name)),
 );
