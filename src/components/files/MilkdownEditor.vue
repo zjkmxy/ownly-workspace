@@ -74,6 +74,13 @@ async function destroy() {
 </style>
 
 <style lang="scss">
+// Fix overlap with side panel of milkdown itself (strange)
+// If you select text the + button will overlap with the toolbar
+milkdown-toolbar,
+milkdown-latex-inline-edit {
+  z-index: 20;
+}
+
 @media (max-width: 1023px) {
   .milkdown .ProseMirror {
     touch-action: manipulation;
