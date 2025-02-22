@@ -106,7 +106,9 @@ export class Toast {
       theme: themeIsDark() ? 'dark' : 'light',
       position: 'bottom-right',
       transition: {
-        enter: 'fade-rtl-toast--enter',
+        // Disable the enter animation because it's buggy during updates.
+        // Each update will cause the toast to flicker.
+        enter: 'fade-rtl-toast--enter--disabled',
         exit: 'fade-rtl-toast--leave',
       },
     } as {
