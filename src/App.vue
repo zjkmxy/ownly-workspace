@@ -101,7 +101,7 @@ main.router-view {
 @media (max-width: 1023px) {
   .nav-bar {
     position: fixed;
-    z-index: 100000;
+    z-index: calc(var(--z-navbar) + 10);
     will-change: transform;
     transform: translateX(-100%);
     transition: transform 0.2s ease-in-out;
@@ -120,7 +120,7 @@ main.router-view {
     width: 100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 10000;
+    z-index: var(--z-navbar);
     touch-action: manipulation;
   }
 

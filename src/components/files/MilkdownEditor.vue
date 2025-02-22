@@ -74,11 +74,6 @@ async function destroy() {
 </style>
 
 <style lang="scss">
-// Fix overlap with side panel
-milkdown-toolbar {
-  z-index: 1000;
-}
-
 @media (max-width: 1023px) {
   .milkdown .ProseMirror {
     touch-action: manipulation;

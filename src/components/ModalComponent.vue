@@ -53,4 +53,7 @@ watch(
 .modal-content {
   padding: 20px;
 }
+.modal {
+  --bulma-modal-z: var(--z-modal);
+}
 </style>
