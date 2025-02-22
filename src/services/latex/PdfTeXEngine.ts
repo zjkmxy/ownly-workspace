@@ -69,7 +69,11 @@ export class PdfTeXEngine {
     }
   }
 
-  public async compileLaTeX(workdir: string, mainfile: string): Promise<CompileResult> {
+  public async compileLaTeX(
+    workdir: string,
+    mainfile: string,
+    progress: (status: string | null) => void,
+  ): Promise<CompileResult> {
     this.checkEngineStatus();
     this.latexWorkerStatus = EngineStatus.Busy;
 
@@ -77,21 +81,28 @@ export class PdfTeXEngine {
       this.latexWorker!.onmessage = (ev: any) => {
         const data: any = ev.data;
         const cmd: string = data.cmd;
-        if (cmd !== 'compile') return;
 
-        const result: string = data.result;
-        const log: string = data.log;
-        const status: number = data.status;
+        if (cmd === 'progress') {
+          progress(data.status);
+          return;
+        }
 
-        this.latexWorkerStatus = EngineStatus.Ready;
+        if (cmd === 'compile') {
+          const result: string = data.result;
+          const log: string = data.log;
+          const status: number = data.status;
 
-        resolve({
-          pdf: result === 'ok' ? new Uint8Array(data.pdf) : undefined,
-          status: status,
-          log: log,
-        });
+          this.latexWorkerStatus = EngineStatus.Ready;
 
-        this.latexWorker!.onmessage = () => {};
+          resolve({
+            pdf: result === 'ok' ? new Uint8Array(data.pdf) : undefined,
+            status: status,
+            log: log,
+          });
+
+          this.latexWorker!.onmessage = () => {};
+          return;
+        }
       };
 
       this.latexWorker!.postMessage({

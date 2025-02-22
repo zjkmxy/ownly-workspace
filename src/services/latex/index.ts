@@ -32,8 +32,11 @@ export async function compile(project: WorkspaceProj): Promise<Uint8Array> {
 
     // Compile the project
     // TODO: show progress for individual steps in compilation
-    await progress.msg('Compiling LaTeX project');
-    const res = await activeEngine.compileLaTeX(root, 'main.tex');
+    const defaultStatus = 'Compiling LaTeX project';
+    await progress.msg(defaultStatus);
+    const res = await activeEngine.compileLaTeX(root, 'main.tex', (status) => {
+      progress?.msg(status ?? defaultStatus);
+    });
     if (res.status == EngineStatus.Error) {
       throw new Error('Engine Error');
     } else if (res.pdf === undefined) {
