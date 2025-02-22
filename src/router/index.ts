@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomeView from '@/views/HomeView.vue';
+import DashboardView from '@/views/DashboardView.vue';
 import SpaceHomeView from '@/views/SpaceHomeView.vue';
 import SpaceDiscussView from '@/views/SpaceDiscussView.vue';
 import SpaceProjectView from '@/views/SpaceProjectView.vue';
@@ -10,8 +10,8 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
+      name: 'dashboard',
+      component: DashboardView,
     },
     {
       path: '/:space/',
