@@ -17,6 +17,7 @@
           <button class="button is-primary soft-if-dark" @click="showNav = true">
             <FontAwesomeIcon :icon="faBars" />
           </button>
+          <img alt="logo" class="logo" src="@/assets/logo-white.svg" />
         </div>
 
         <!-- Main content -->
@@ -76,6 +77,7 @@ main.router-view {
   }
 }
 
+/** Hide elements only for mobile */
 .top-bar,
 .nav-backdrop {
   display: none;
@@ -119,9 +121,13 @@ main.router-view {
 
   .top-bar {
     display: block;
-    padding: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 6px 4px 2px 4px;
     touch-action: manipulation;
+    .logo {
+      height: 26px;
+      margin-left: 2px;
+      margin-top: 5px;
+    }
   }
 }
 </style>
