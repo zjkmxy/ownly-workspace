@@ -119,6 +119,7 @@ export class Toast {
         enter: 'fade-toast--enter--disabled',
         exit: 'fade-toast--leave',
       },
+      clearOnUrlChange: false,
     } as {
       theme: 'dark' | 'light';
       position: 'bottom-right';
@@ -126,6 +127,7 @@ export class Toast {
         enter: string;
         exit: string;
       };
+      clearOnUrlChange: boolean;
     };
   }
 }
