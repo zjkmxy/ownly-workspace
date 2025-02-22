@@ -1,5 +1,5 @@
 <template>
-  <main class="full-h has-background-primary is-fullwidth p-2">
+  <main class="has-background-primary p-2">
     <LandingLeft class="left" />
     <LandingLogin class="login" @login="emit('login')" />
   </main>
@@ -16,6 +16,8 @@ const emit = defineEmits(['login']);
 main {
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  width: 100vw;
 }
 
 @media (min-width: 1024px) {

@@ -48,3 +48,9 @@ watch(
   },
 );
 </script>
+
+<style scoped lang="scss">
+.modal-content {
+  padding: 20px;
+}
+</style>

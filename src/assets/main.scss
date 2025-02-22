@@ -6,45 +6,11 @@
 @use 'bulma/sass';
 
 @use 'animations.scss';
+@use 'toastify.scss';
+@use 'utils.scss';
 
 html {
   overflow: auto;
-}
-
-main.full-h {
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-.modal-content {
-  padding: 20px;
-}
-
-.absolute-center,
-.fixed-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-}
-.fixed-center {
-  position: fixed !important;
-}
-
-.is-small-caps {
-  font-variant: small-caps;
-}
-
-.Toastify__toast-container {
-  --toastify-toast-width: 300px;
-  width: auto !important;
-  min-width: 300px;
-  max-width: min(400px, 96vw);
-  font-size: 0.95em;
-}
-.Toastify__toast-body {
-  padding: 1px 3px;
 }
 
 * {

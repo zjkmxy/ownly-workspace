@@ -4,7 +4,7 @@
     <LandingView v-if="showLogin" @login="showLogin = false" />
 
     <!-- This view will show the main app -->
-    <main v-else-if="!showLogin" class="full-h is-fullwidth router-view">
+    <main v-else-if="!showLogin" class="router-view">
       <!-- Main navigation menu ("bar" for historical reasons) -->
       <NavBar class="nav-bar" :class="{ show: showNav }"></NavBar>
 
@@ -70,6 +70,7 @@ main.router-view {
   flex-direction: row;
   width: 100vw;
   height: 100vh;
+  overflow-x: hidden;
 
   > .router-view-inner {
     flex: 1;
