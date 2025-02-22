@@ -9,16 +9,16 @@
         <CodeEditor
           class="editor"
           :ytext="contentCode"
-          :basename="basename"
+          :basename="contentBasename"
           :awareness="awareness!"
         />
         <PdfViewer
+          v-if="contentIsLatex"
           class="result"
-          v-if="isLatex"
-          :basename="resultPdfName"
+          :basename="`${proj?.name}.pdf`"
           :pdf="resultPdf"
-          :hasCompile="true"
-          :compiling="isPdfCompiling"
+          has-compile
+          :compiling="resultIsCompiling"
           :error="resultError"
           @compile="compileLatex"
         />
@@ -39,10 +39,10 @@
 
     <BlobView
       v-else-if="contentBlob"
-      :key="filepath"
+      :key="contentBlob.name"
       :version="contentBlob"
       :path="filepath"
-      :basename="basename"
+      :basename="contentBasename"
     />
   </div>
 </template>
@@ -88,7 +88,6 @@ const router = useRouter();
 const loading = ref(true);
 const filename = computed(() => route.params.filename as string[]);
 const filepath = computed(() => '/' + filename.value.join('/'));
-const basename = computed(() => filename.value[filename.value.length - 1]);
 
 const proj = shallowRef(null as WorkspaceProj | null);
 
@@ -99,10 +98,12 @@ const contentCode = shallowRef<Y.Text | null>(null);
 const contentMilk = shallowRef<Y.XmlFragment | null>(null);
 const contentBlob = shallowRef<IBlobVersion | null>(null);
 
-const isLatex = ref<boolean>(false); // ref to prevent ui glitch
-const resultPdfName = computed(() => `${proj.value?.name}.pdf`);
+// These are refs to prevent ui glitch when switching views
+const contentBasename = ref<string>(String());
+const contentIsLatex = ref<boolean>(false);
+
 const resultPdf = shallowRef<Uint8Array | null>(null);
-const isPdfCompiling = ref(false);
+const resultIsCompiling = ref(false);
 const resultError = ref(String());
 
 onMounted(create);
@@ -118,10 +119,6 @@ async function create() {
   let newContentMilk: Y.XmlFragment | null = null;
   let newContentBlob: IBlobVersion | null = null;
 
-  // Always get rid of the blob when switching, otherwise it will
-  // flicker due to a change in basename
-  contentBlob.value = null;
-
   try {
     loading.value = true;
 
@@ -133,25 +130,32 @@ async function create() {
     const metadata = proj.value.getFileMeta(filepath.value);
     if (!metadata) throw new Error(`File not found: ${filepath.value}`);
 
+    // Get file path attributes
+    const basename = filename.value[filename.value.length - 1];
+
     // Load file content
     if (metadata.is_blob) {
       // Blob file, the doc contains the version list
       newDoc = await proj.value.getFile(filepath.value);
       newContentBlob = newDoc.getArray<IBlobVersion>('blobs').get(0);
       if (!newContentBlob) Toast.warning('Empty blob file opened');
-    } else if (utils.isExtensionType(basename.value, 'code')) {
+    } else if (utils.isExtensionType(basename, 'code')) {
       // Text file content
       newDoc = await proj.value.getFile(filepath.value);
       newAwareness = await proj.value.getAwareness(filepath.value);
       newContentCode = newDoc.getText('text');
-    } else if (utils.isExtensionType(basename.value, 'milkdown')) {
+    } else if (utils.isExtensionType(basename, 'milkdown')) {
       // Milkdown XML fragment content
       newDoc = await proj.value.getFile(filepath.value);
       newAwareness = await proj.value.getAwareness(filepath.value);
       newContentMilk = newDoc.getXmlFragment('milkdown');
     } else {
-      throw new Error(`Unsupported content extension: ${basename.value}`);
+      throw new Error(`Unsupported content extension: ${basename}`);
     }
+
+    // Always update these, since the filename might have changed
+    contentBasename.value = basename;
+    contentIsLatex.value = utils.isExtensionType(basename, 'latex');
 
     // If the content doc is the same, then do not reset the doc
     // The provider returns the same doc if the file is already loaded
@@ -169,7 +173,6 @@ async function create() {
     contentCode.value = newContentCode;
     contentMilk.value = newContentMilk;
     contentBlob.value = newContentBlob;
-    isLatex.value = utils.isExtensionType(basename.value, 'latex');
   } catch (err) {
     console.error(err);
     Toast.error(`Failed to load file: ${err}`);
@@ -194,21 +197,21 @@ function resetDoc() {
 
 async function destroy() {
   resetDoc();
-  isPdfCompiling.value = false;
+  resultIsCompiling.value = false;
   resultPdf.value = null;
   resultError.value = String();
 }
 
 async function compileLatex() {
-  if (isPdfCompiling.value) return;
+  if (resultIsCompiling.value) return;
   try {
-    isPdfCompiling.value = true;
+    resultIsCompiling.value = true;
     resultPdf.value = await latex.compile(proj.value!);
     resultError.value = String();
   } catch (err) {
     resultError.value = `Failed to compile LaTeX\n\n ${err}`;
   } finally {
-    isPdfCompiling.value = false;
+    resultIsCompiling.value = false;
   }
 }
 </script>
