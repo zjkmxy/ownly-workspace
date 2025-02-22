@@ -1,5 +1,5 @@
 <template>
-  <main class="has-background-primary p-2">
+  <main class="has-background-primary soft-if-dark p-2">
     <LandingLeft class="left" />
     <LandingLogin class="login" @login="emit('login')" />
   </main>
