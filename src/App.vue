@@ -22,7 +22,9 @@
 
         <!-- Main content -->
         <RouterView v-slot="{ Component }">
-          <component class="router-view-content" :is="Component" />
+          <Transition name="fade-2" mode="out-in">
+            <component class="router-view-content" :is="Component" />
+          </Transition>
         </RouterView>
       </div>
     </main>

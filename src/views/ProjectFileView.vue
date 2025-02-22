@@ -1,5 +1,7 @@
 <template>
   <div class="outer">
+    <!-- Do not kill other components even during loading
+    They can likely be reused if the user is switching files. -->
     <LoadingSpinner v-if="loading" class="absolute-center" text="Loading your file ..." />
 
     <Suspense v-if="contentCode">
@@ -49,7 +51,7 @@
 import {
   computed,
   defineAsyncComponent,
-  onBeforeUnmount,
+  onUnmounted,
   onMounted,
   ref,
   shallowRef,
@@ -106,7 +108,7 @@ const resultError = ref(String());
 onMounted(create);
 watch(filename, create);
 watch(() => route.params.project, create);
-onBeforeUnmount(destroy);
+onUnmounted(destroy);
 
 async function create() {
   // If something fails, we should destroy these
