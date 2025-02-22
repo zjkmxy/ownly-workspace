@@ -1,7 +1,79 @@
 import { toast } from 'vue3-toastify';
 import { themeIsDark } from './theme';
 
+class Handle {
+  constructor(private id: string | number) {}
+
+  async msg(message: string) {
+    await this.update({ message });
+  }
+
+  async success(message: string, timeout = 3000) {
+    await this.update({
+      message,
+      type: 'success',
+      loading: false,
+      timeout: timeout,
+      closeOnClick: true,
+    });
+  }
+
+  async error(message: string) {
+    await this.update({
+      message,
+      type: 'error',
+      loading: false,
+      timeout: true,
+      closeOnClick: true,
+    });
+  }
+
+  async warning(message: string) {
+    await this.update({
+      message,
+      type: 'warning',
+      loading: false,
+      timeout: true,
+      closeOnClick: true,
+    });
+  }
+
+  dismiss() {
+    toast.remove(this.id);
+  }
+
+  async update(opts: {
+    message?: string;
+    type?: 'success' | 'error' | 'warning' | 'info';
+    loading?: boolean;
+    timeout?: boolean | number;
+    closeOnClick?: boolean;
+  }) {
+    // Due to a bug in vue3-toastify, we need to wait
+    // for the next tick before updating the toast
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const toastOpts: any = {
+      render: opts.message,
+      type: opts.type,
+      isLoading: opts.loading,
+      autoClose: opts.timeout,
+      closeOnClick: opts.closeOnClick,
+    };
+
+    // Remove undefined values
+    Object.entries(toastOpts).forEach(
+      ([key, value]) => value === undefined && delete toastOpts[key],
+    );
+
+    // console.log('update', this.id, tOpts);
+    toast.update(this.id, toastOpts);
+  }
+}
+
 export class Toast {
+  static Handle = new Handle(0);
+
   static success(message: string): Handle {
     return new Handle(toast.success(message, Toast.opts()));
   }
@@ -39,71 +111,5 @@ export class Toast {
       position: 'bottom-right';
       transition: 'flip';
     };
-  }
-}
-
-class Handle {
-  constructor(private id: string | number) {}
-
-  async msg(message: string) {
-    await this.update({ message });
-  }
-
-  async success(message: string) {
-    await this.update({
-      message,
-      type: 'success',
-      loading: false,
-      autoClose: true,
-      closeOnClick: true,
-    });
-  }
-
-  async error(message: string) {
-    await this.update({
-      message,
-      type: 'error',
-      loading: false,
-      autoClose: true,
-      closeOnClick: true,
-    });
-  }
-
-  async warning(message: string) {
-    await this.update({
-      message,
-      type: 'warning',
-      loading: false,
-      autoClose: true,
-      closeOnClick: true,
-    });
-  }
-
-  async update(opts: {
-    message?: string;
-    type?: 'success' | 'error' | 'warning' | 'info';
-    loading?: boolean;
-    autoClose?: boolean;
-    closeOnClick?: boolean;
-  }) {
-    // Due to a bug in vue3-toastify, we need to wait
-    // for the next tick before updating the toast
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const toastOpts: any = {
-      render: opts.message,
-      type: opts.type,
-      isLoading: opts.loading,
-      autoClose: opts.autoClose,
-      closeOnClick: opts.closeOnClick,
-    };
-
-    // Remove undefined values
-    Object.entries(toastOpts).forEach(
-      ([key, value]) => value === undefined && delete toastOpts[key],
-    );
-
-    // console.log('update', this.id, tOpts);
-    toast.update(this.id, toastOpts);
   }
 }

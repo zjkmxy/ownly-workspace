@@ -369,7 +369,7 @@ async function importZipHere() {
   const reader = new zip.ZipReader(new zip.BlobReader(zipFile));
 
   // Show progress of import
-  const ptoast = Toast.loading(`Importing files from ${zipFile.name}`);
+  const progress = Toast.loading(`Importing files from ${zipFile.name}`);
 
   let importedCount = 0;
   for await (const entry of reader.getEntriesGenerator()) {
@@ -378,7 +378,7 @@ async function importZipHere() {
       if (entry.directory) continue;
 
       // Show progress of import
-      await ptoast.msg(`Importing ${entry.filename}`);
+      await progress.msg(`Importing ${entry.filename} from ${zipFile.name}`);
 
       // Read the entry to buffer
       const writer = new zip.BlobWriter();
@@ -396,9 +396,9 @@ async function importZipHere() {
   }
 
   if (importedCount > 0) {
-    ptoast.success(`Imported ${importedCount} files from ${zipFile.name}`);
+    progress.success(`Imported ${importedCount} files from ${zipFile.name}`);
   } else {
-    ptoast.warning(`No files imported from ${zipFile.name}`);
+    progress.warning(`No files imported from ${zipFile.name}`);
   }
 }
 

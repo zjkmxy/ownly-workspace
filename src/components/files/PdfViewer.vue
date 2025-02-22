@@ -1,11 +1,7 @@
 <template>
   <div class="pdfviewer" ref="pdfviewer">
     <!-- Loading / Compiling Spinner -->
-    <LoadingSpinner
-      v-if="(!loaded && pdf) || compiling"
-      class="absolute-center"
-      text="Rendering PDF ..."
-    />
+    <LoadingSpinner v-if="!loaded && pdf" class="absolute-center" />
 
     <!-- Watermark logo -->
     <img alt="logo" class="logo invert-if-dark" src="@/assets/logo-white.svg" />
