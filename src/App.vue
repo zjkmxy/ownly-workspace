@@ -5,10 +5,23 @@
 
     <!-- This view will show the main app -->
     <main v-else-if="!showLogin" class="full-h is-fullwidth router-view">
-      <NavBar></NavBar>
+      <!-- Main navigation menu ("bar" for historical reasons) -->
+      <NavBar class="nav-bar" :class="{ show: showNav }"></NavBar>
+
+      <!-- Backdrop for navigation on mobile -->
+      <div v-if="showNav" class="nav-backdrop" @click="showNav = false"></div>
+
       <div class="router-view-inner">
+        <!-- Top bar for mobile -->
+        <div class="top-bar has-background-primary soft-if-dark">
+          <button class="button is-primary soft-if-dark" @click="showNav = true">
+            <FontAwesomeIcon :icon="faBars" />
+          </button>
+        </div>
+
+        <!-- Main content -->
         <RouterView v-slot="{ Component }">
-          <component :is="Component" />
+          <component class="router-view-content" :is="Component" />
         </RouterView>
       </div>
     </main>
@@ -16,8 +29,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
-import { RouterView } from 'vue-router';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { RouterView, useRoute } from 'vue-router';
+
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import { faBars } from '@fortawesome/free-solid-svg-icons';
 
 import NavBar from '@/components/NavBar.vue';
 import LandingView from '@/views/LandingView.vue';
@@ -25,7 +41,14 @@ import LandingView from '@/views/LandingView.vue';
 import { GlobalBus } from '@/services/event-bus';
 import { Toast } from '@/utils/toast';
 
+const route = useRoute();
 const showLogin = ref(true);
+const showNav = ref(false);
+
+watch(
+  () => route.path,
+  () => (showNav.value = false),
+);
 
 onMounted(() => {
   GlobalBus.addListener('wksp-error', wkspErrorListener);
@@ -50,6 +73,55 @@ main.router-view {
   > .router-view-inner {
     flex: 1;
     overflow: hidden;
+  }
+}
+
+.top-bar,
+.nav-backdrop {
+  display: none;
+}
+
+/** Mobile styling - hide the navbar and show with button */
+@media (max-width: 1023px) {
+  .router-view-inner {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .router-view-content {
+    flex: 1;
+  }
+
+  .nav-bar {
+    position: fixed;
+    z-index: 100000;
+    will-change: transform;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease-in-out;
+    touch-action: manipulation;
+
+    &.show {
+      transform: translateX(0);
+    }
+  }
+
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    touch-action: manipulation;
+  }
+
+  .top-bar {
+    display: block;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    touch-action: manipulation;
   }
 }
 </style>
