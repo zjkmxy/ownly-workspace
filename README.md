@@ -1,10 +1,8 @@
-<div align="center">
-    <img height=90 src="./src/assets/logo.svg" alt="Ownly" />
-</div>
-
-[![ci](https://github.com/pulsejet/ownly/actions/workflows/ci.yml/badge.svg)](https://github.com/pulsejet/ownly/actions/workflows/ci.yml)
+<img height=90 src="./src/assets/logo.svg" alt="Ownly" />
 
 Secure decentralized workspace built over the [Named Data Networking](https://named-data.net) stack.
+
+[![ci](https://github.com/pulsejet/ownly/actions/workflows/ci.yml/badge.svg)](https://github.com/pulsejet/ownly/actions/workflows/ci.yml)
 
 ## Development Setup
 
