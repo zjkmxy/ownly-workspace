@@ -122,18 +122,13 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 				return nil, err
 			}
 
-			// Attempt to get the content from the local store
-			local, err := client.GetLocal(name)
-			if err == nil {
-				return js.ValueOf(map[string]any{
-					"data": jsutil.SliceToJsArray(local.Join()),
-					"name": js.ValueOf(name.String()),
-				}), nil
-			}
-
 			// Fetch the content from the network
 			ch := make(chan ndn.ConsumeState)
-			client.Consume(name, func(state ndn.ConsumeState) { ch <- state })
+			client.ConsumeExt(ndn.ConsumeExtArgs{
+				Name:     name,
+				TryStore: true,
+				Callback: func(state ndn.ConsumeState) { ch <- state },
+			})
 			state := <-ch
 			if err := state.Error(); err != nil {
 				return nil, err

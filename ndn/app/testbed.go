@@ -47,7 +47,12 @@ func (a *App) GetTestbedKey() ndn.Signer {
 				}
 
 				notBefore, notAfter := cert.Signature().Validity()
-				if notBefore.Before(now) && notAfter.After(now) {
+				if !notBefore.IsSet() || !notAfter.IsSet() {
+					log.Error(nil, "Certificate validity not set", "name", cert.Name())
+					continue
+				}
+
+				if notBefore.Unwrap().Before(now) && notAfter.Unwrap().After(now) {
 					log.Info(nil, "Found valid testbed cert", "name", cert.Name())
 					return key.Signer()
 				}
