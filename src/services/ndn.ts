@@ -1,6 +1,6 @@
 /// <reference types="golang-wasm-exec" />
 
-import { KeyChainJS } from './keychain';
+import { KeyChainDexie, type KeyChainJS } from './keychain_js';
 
 declare global {
   interface Window {
@@ -129,7 +129,7 @@ class NDNService {
     this.api = await ndnPromise;
 
     // Provide JS APIs
-    await this.api.setup_keychain(new KeyChainJS());
+    await this.api.setup_keychain(new KeyChainDexie());
   }
 }
 
