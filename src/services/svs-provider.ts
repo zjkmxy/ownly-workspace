@@ -404,7 +404,7 @@ class NdnAwareness extends awareProto.Awareness {
         me.throttleSet.add(client);
       }
       if (!me.throttle) {
-        me.throttle = window.setTimeout(() => me.flush(ndnAwareness), 500);
+        me.throttle = window.setTimeout(() => me.flush(ndnAwareness), 250);
       }
     });
 
