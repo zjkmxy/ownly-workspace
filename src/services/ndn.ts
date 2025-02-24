@@ -1,9 +1,13 @@
 /// <reference types="golang-wasm-exec" />
 
+import { StoreDexie, type StoreJS } from './store_js';
 import { KeyChainDexie, type KeyChainJS } from './keychain_js';
 
 declare global {
   interface Window {
+    _ndnd_store_js: StoreJS;
+    _ndnd_keychain_js: KeyChainJS;
+
     Go: typeof Go;
     set_ndn?: (ndn: NDNAPI) => void;
     ndn_api: NDNAPI;
@@ -11,9 +15,6 @@ declare global {
 }
 
 interface NDNAPI {
-  /** Setup the keychain */
-  setup_keychain(keychain: KeyChainJS): Promise<void>;
-
   /** Check if there is a valid testbed key in the keychain */
   has_testbed_key(): Promise<boolean>;
 
@@ -111,6 +112,11 @@ class NDNService {
   async setup() {
     if (this.api) return;
 
+    // Provide JS APIs
+    window._ndnd_store_js = new StoreDexie('store');
+    window._ndnd_keychain_js = new KeyChainDexie();
+
+    // Load the Go WASM module
     const go = new window.Go();
     const result = await WebAssembly.instantiateStreaming(fetch('/main.wasm'), go.importObject);
 
@@ -127,9 +133,6 @@ class NDNService {
 
     go.run(result.instance);
     this.api = await ndnPromise;
-
-    // Provide JS APIs
-    await this.api.setup_keychain(new KeyChainDexie());
   }
 }
 

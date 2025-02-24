@@ -14,11 +14,6 @@ func main() {
 	me := app.NewApp()
 
 	api := map[string]any{
-		// setup_keychain(keychain: KeyChainJS): Promise<void>
-		"setup_keychain": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			return nil, me.SetupKeyChain(p[0])
-		}),
-
 		// has_testbed_key(): Promise<boolean>;
 		"has_testbed_key": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return me.GetTestbedKey() != nil, nil

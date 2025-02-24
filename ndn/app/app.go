@@ -6,7 +6,6 @@ import (
 	"syscall/js"
 
 	"github.com/named-data/ndnd/std/engine/face"
-	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security/keychain"
@@ -20,15 +19,17 @@ type App struct {
 }
 
 func NewApp() *App {
-	return &App{
-		store: object.NewMemoryStore(),
-	}
-}
+	sjs := js.Global().Get("_ndnd_store_js")
+	store := object.NewJsStore(sjs)
 
-func (a *App) SetupKeyChain(api js.Value) (err error) {
-	a.keychain, err = keychain.NewKeyChainJS(api, a.store)
+	kjs := js.Global().Get("_ndnd_keychain_js")
+	keychain, err := keychain.NewKeyChainJS(kjs, store)
 	if err != nil {
-		log.Error(nil, "app.SetupKeyChain: %+v", err)
+		panic(err)
 	}
-	return err
+
+	return &App{
+		store:    store,
+		keychain: keychain,
+	}
 }
