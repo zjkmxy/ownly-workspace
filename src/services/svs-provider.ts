@@ -135,7 +135,7 @@ export class SvsProvider {
               for (const update of applyList) {
                 Y.applyUpdateV2(doc, update, this);
               }
-            });
+            }, this);
           }
         } catch (e) {
           console.error('Failed to apply update', e);
@@ -193,7 +193,7 @@ export class SvsProvider {
       for (const update of updates) {
         Y.applyUpdateV2(doc, update.update, this);
       }
-    });
+    }, this);
   }
 
   /**
