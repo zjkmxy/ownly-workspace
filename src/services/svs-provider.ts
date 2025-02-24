@@ -170,12 +170,12 @@ export class SvsProvider {
    * @param uuid UUID of the document
    */
   public async readInto(doc: Y.Doc, uuid: string): Promise<void> {
-    await this.db.updates
-      .where('uuid')
-      .equals(uuid)
-      .each((update) => {
+    const updates = await this.db.updates.where('uuid').equals(uuid).sortBy('id');
+    doc.transact(() => {
+      for (const update of updates) {
         Y.applyUpdateV2(doc, update.update, this);
-      });
+      }
+    });
   }
 
   /**
