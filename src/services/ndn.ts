@@ -2,6 +2,7 @@
 
 import { StoreDexie, type StoreJS } from './store_js';
 import { KeyChainDexie, type KeyChainJS } from './keychain_js';
+import { GlobalBus } from './event-bus';
 
 declare global {
   interface Window {
@@ -135,7 +136,12 @@ class NDNService {
       };
     });
 
-    go.run(result.instance);
+    go.run(result.instance).then(() => {
+      GlobalBus.emit(
+        'wksp-error',
+        new Error('WASM backend crashed. Check JS console for logs and refresh the page.'),
+      );
+    });
     this.api = await ndnPromise;
   }
 }
