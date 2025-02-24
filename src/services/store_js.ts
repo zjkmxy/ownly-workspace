@@ -12,10 +12,19 @@ export interface StoreJS {
   ): Promise<[Uint8Array, Uint8Array][]>;
 
   /** Put stores a packet in the storage */
-  put(name: Uint8Array, version: number, blob: Uint8Array): Promise<void>;
+  put(name: Uint8Array, version: number, blob: Uint8Array, tx: number): Promise<void>;
 
   /** Remove removes packets from the storage */
   remove(name: Uint8Array, prefix: boolean): Promise<void>;
+
+  /** Starts a bulk transaction */
+  begin(): number;
+
+  /** Commit a bulk transaction */
+  commit(tx: number): Promise<void>;
+
+  /** Rollback a bulk transaction */
+  rollback(tx: number): Promise<void>;
 }
 
 import Dexie from 'dexie';
@@ -37,7 +46,8 @@ export class StoreDexie implements StoreJS {
     >;
   };
 
-  // private cache: Map<string, Uint8Array> = new Map();
+  private bulkTxns: Map<number, TxnEntry[]> = new Map();
+  private txId = 0;
 
   constructor(name: string) {
     this.db = new Dexie(name) as any;
@@ -65,13 +75,49 @@ export class StoreDexie implements StoreJS {
     return [[pkt.name, pkt.blob]];
   }
 
-  public async put(name: Uint8Array, version: number, blob: Uint8Array) {
+  public async put(name: Uint8Array, version: number, blob: Uint8Array, bulkId: number) {
+    if (bulkId) {
+      this.txPush(bulkId, { op: 'put', name, version, blob });
+      return;
+    }
+
     await this.db.packets.put({ name, version, blob });
   }
 
   public async remove(name: Uint8Array, prefix: boolean) {
     const range = await this.range(name, prefix, undefined);
     await range.delete();
+  }
+
+  public begin() {
+    this.txId++;
+    return this.txId;
+  }
+
+  public async commit(tx: number) {
+    const ops = this.bulkTxns.get(tx);
+    if (!ops) return;
+    this.bulkTxns.delete(tx);
+
+    await this.db.packets.bulkPut(
+      ops
+        .filter((op) => op.op === 'put')
+        .map((op) => ({
+          name: op.name,
+          version: op.version,
+          blob: op.blob,
+        })),
+    );
+  }
+
+  public async rollback(tx: number) {
+    this.bulkTxns.delete(tx);
+  }
+
+  private txPush(tx: number, val: TxnEntry) {
+    const ops = this.bulkTxns.get(tx) ?? [];
+    ops.push(val);
+    this.bulkTxns.set(tx, ops);
   }
 
   private async range(name: Uint8Array, prefix: boolean, last: Uint8Array | undefined) {
@@ -90,3 +136,10 @@ export class StoreDexie implements StoreJS {
       .between([name, Dexie.minKey], [last, Dexie.maxKey], true, true);
   }
 }
+
+type TxnEntry = {
+  op: 'put';
+  name: Uint8Array;
+  version: number;
+  blob: Uint8Array;
+};
