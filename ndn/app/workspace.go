@@ -171,6 +171,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 				Snapshot: &ndn_sync.SnapshotNodeHistory{
 					Client:    client,
 					Threshold: 100,
+					Compress:  CompressSnapshotYjs,
 				},
 			})
 

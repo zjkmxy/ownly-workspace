@@ -18,12 +18,13 @@ type App struct {
 	keychain ndn.KeyChain
 }
 
-func NewApp() *App {
-	sjs := js.Global().Get("_ndnd_store_js")
-	store := object.NewJsStore(sjs)
+var _ndnd_store_js = js.Global().Get("_ndnd_store_js")
+var _ndnd_keychain_js = js.Global().Get("_ndnd_keychain_js")
 
-	kjs := js.Global().Get("_ndnd_keychain_js")
-	keychain, err := keychain.NewKeyChainJS(kjs, store)
+func NewApp() *App {
+	store := object.NewJsStore(_ndnd_store_js)
+
+	keychain, err := keychain.NewKeyChainJS(_ndnd_keychain_js, store)
 	if err != nil {
 		panic(err)
 	}

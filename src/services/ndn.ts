@@ -1,5 +1,7 @@
 /// <reference types="golang-wasm-exec" />
 
+import * as Y from 'yjs';
+
 import { StoreDexie, type StoreJS } from './store_js';
 import { KeyChainDexie, type KeyChainJS } from './keychain_js';
 import { GlobalBus } from './event-bus';
@@ -8,6 +10,7 @@ declare global {
   interface Window {
     _ndnd_store_js: StoreJS;
     _ndnd_keychain_js: KeyChainJS;
+    _yjs_merge_updates: (updates: Uint8Array[]) => Uint8Array;
 
     Go: typeof Go;
     set_ndn?: (ndn: NDNAPI) => void;
@@ -120,6 +123,7 @@ class NDNService {
     // Provide JS APIs
     window._ndnd_store_js = new StoreDexie('store');
     window._ndnd_keychain_js = new KeyChainDexie();
+    window._yjs_merge_updates = Y.mergeUpdatesV2;
 
     // Load the Go WASM module
     const go = new window.Go();
