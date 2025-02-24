@@ -16,7 +16,6 @@ import (
 	"github.com/named-data/ndnd/std/security"
 	sig "github.com/named-data/ndnd/std/security/signer"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
-	"github.com/named-data/ndnd/std/utils"
 	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
@@ -149,7 +148,10 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			}
 
 			// Parse initial state
-			stateWire := utils.If(p[1].IsUndefined(), nil, enc.Wire{jsutil.JsArrayToSlice(p[1])})
+			var stateWire enc.Wire = nil
+			if !p[1].IsUndefined() {
+				stateWire = enc.Wire{jsutil.JsArrayToSlice(p[1])}
+			}
 			initialState, err := ndn_sync.ParseInitialState(stateWire)
 			if err != nil {
 				// Start from scratch, this might be okay ... but is painful
