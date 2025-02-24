@@ -51,7 +51,11 @@ export interface WorkspaceAPI {
   consume(name: string): Promise<{ data: Uint8Array; name: string }>;
 
   /** SVS ALO instance */
-  svs_alo(group: string): Promise<SvsAloApi>;
+  svs_alo(
+    group: string,
+    state: Uint8Array | undefined,
+    persist_state: (state: Uint8Array) => Promise<void>,
+  ): Promise<SvsAloApi>;
   /** Awareness instance */
   awareness(group: string): Promise<AwarenessApi>;
 }
@@ -80,7 +84,7 @@ export interface SvsAloApi {
 }
 
 /** Subscription to SVS ALO */
-export type SvsAloSub<T> = (info: SvsAloPubInfo, pub: T) => void;
+export type SvsAloSub<T> = (info: SvsAloPubInfo, pub: T) => Promise<void>;
 
 /** Metadata of received publication */
 export type SvsAloPubInfo = {

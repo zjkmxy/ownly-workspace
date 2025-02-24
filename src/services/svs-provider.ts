@@ -30,6 +30,21 @@ type FsSyncEntry = {
 };
 
 /**
+ * IndexedDB schema to store arbitrary state.
+ * We could use local storage for this, but IndexedDB for consistency.
+ */
+type StateEntry = {
+  type: string;
+  state: Uint8Array;
+};
+
+type SvsDb = Dexie & {
+  updates: Dexie.Table<UpdateEntry, number>;
+  fs_sync: Dexie.Table<FsSyncEntry, string>;
+  state: Dexie.Table<StateEntry, string>;
+};
+
+/**
  * Yjs documents backed by an SVS sync group.
  * Persists to IndexedDB.
  */
@@ -41,23 +56,11 @@ export class SvsProvider {
   private lastCompaction = 0;
   private isCompacting = false;
 
-  private db: Dexie & {
-    updates: Dexie.Table<UpdateEntry, number>;
-    fs_sync: Dexie.Table<FsSyncEntry, string>;
-  };
-
   private constructor(
+    private db: SvsDb,
     private readonly wksp: WorkspaceAPI,
-    private readonly project: string,
     private readonly svs: SvsAloApi,
-  ) {
-    const slug = utils.escapeUrlName(wksp.group);
-    this.db = new Dexie(`${slug}-${project}`) as typeof this.db;
-    this.db.version(1).stores({
-      updates: '++id, uuid',
-      fs_sync: 'uuid',
-    });
-  }
+  ) {}
 
   /**
    * Create a new SVS provider for a project.
@@ -66,9 +69,24 @@ export class SvsProvider {
    * @param project Project name
    */
   public static async create(wksp: WorkspaceAPI, project: string): Promise<SvsProvider> {
-    const svs = await wksp.svs_alo(`${wksp.group}/${project}`);
+    const slug = utils.escapeUrlName(wksp.group);
+    const db = new Dexie(`${slug}-${project}`) as SvsDb;
+    db.version(1).stores({
+      updates: '++id, uuid',
+      fs_sync: 'uuid',
+      state: 'type',
+    });
 
-    const provider = new SvsProvider(wksp, project, svs);
+    const state = await db.state.get('svs');
+    const svs = await wksp.svs_alo(
+      `${wksp.group}/${project}`,
+      state?.state,
+      async (state: Uint8Array) => {
+        await db.state.put({ type: 'svs', state: state });
+      },
+    );
+
+    const provider = new SvsProvider(db, wksp, svs);
     await provider.start();
 
     return provider;
@@ -186,7 +204,7 @@ export class SvsProvider {
    * Strictly speaking, this has nothing to do with SVS, it's a pure network operation.
    */
   public async consumeBlob(name: string) {
-    return this.wksp.consume(name);
+    return await this.wksp.consume(name);
   }
 
   /**

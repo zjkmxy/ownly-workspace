@@ -16,6 +16,7 @@ import (
 	"github.com/named-data/ndnd/std/security"
 	sig "github.com/named-data/ndnd/std/security/signer"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
+	"github.com/named-data/ndnd/std/utils"
 	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
@@ -140,17 +141,25 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			}), nil
 		}),
 
-		// svs_alo(group: string): Promise<SvsAloApi>;
+		// svs_alo(group: string, state: Uint8Array | undefined, persist_state: (state: Uint8Array) => Promise<void>): Promise<SvsAloApi>;
 		"svs_alo": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			svsAloGroup, err := enc.NameFromStr(p[0].String())
 			if err != nil {
 				return nil, err
 			}
 
+			// Parse initial state
+			stateWire := utils.If(p[1].IsUndefined(), nil, enc.Wire{jsutil.JsArrayToSlice(p[1])})
+			initialState, err := ndn_sync.ParseInitialState(stateWire)
+			if err != nil {
+				// Start from scratch, this might be okay ... but is painful
+				log.Error(nil, "Failed to parse initial state", "err", err)
+			}
+
 			// Create new SVS ALO instance
 			svsAlo := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
-				Name: name,
-				// InitialState: readState(),
+				Name:         name,
+				InitialState: initialState,
 
 				Svs: ndn_sync.SvSyncOpts{
 					Client:      client,
@@ -164,7 +173,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			})
 
 			// Create JS API for SVS ALO
-			return a.SvsAloJs(svsAlo), nil
+			return a.SvsAloJs(svsAlo, p[2]), nil
 		}),
 
 		// awareness(group: string): Promise<AwarenessApi>;
@@ -185,7 +194,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	return js.ValueOf(workspaceJs), nil
 }
 
-func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
+func (a *App) SvsAloJs(alo *ndn_sync.SvsALO, persistState js.Value) (api js.Value) {
 	routes := []enc.Name{
 		alo.SyncPrefix(),
 		alo.DataPrefix(),
@@ -244,11 +253,13 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 				},
 			}
 
-			name, _, err := alo.Publish(pub.Encode())
+			name, state, err := alo.Publish(pub.Encode())
 			if err != nil {
 				return nil, err
 			}
-			// TODO: persist state
+
+			// Persist state
+			jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(state.Bytes())))
 
 			return js.ValueOf(name.String()), nil
 		}),
@@ -272,10 +283,10 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 				// All possible message type conversions listed here
 				switch {
 				case pmsg.YjsDelta != nil:
-					p[0].Get("on_yjs_delta").Invoke(info, js.ValueOf(map[string]any{
+					jsutil.Await(p[0].Get("on_yjs_delta").Invoke(info, js.ValueOf(map[string]any{
 						"uuid":   js.ValueOf(pmsg.YjsDelta.UUID),
 						"binary": jsutil.SliceToJsArray(pmsg.YjsDelta.Binary),
-					}))
+					})))
 				default:
 					log.Error(nil, "Unknown message type", "msg", pmsg)
 				}
@@ -300,7 +311,8 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO) (api js.Value) {
 					}
 				}
 
-				// TODO: persist state
+				// Persist state
+				jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(pub.State.Bytes())))
 
 				return
 			})
