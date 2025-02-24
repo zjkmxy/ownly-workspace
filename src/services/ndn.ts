@@ -85,7 +85,7 @@ export interface SvsAloApi {
 }
 
 /** Subscription to SVS ALO */
-export type SvsAloSub<T> = (info: SvsAloPubInfo, pub: T) => Promise<void>;
+export type SvsAloSub<T> = (pub: T[]) => Promise<void>;
 
 /** Metadata of received publication */
 export type SvsAloPubInfo = {

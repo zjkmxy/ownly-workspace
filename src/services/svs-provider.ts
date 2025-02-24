@@ -109,15 +109,33 @@ export class SvsProvider {
    */
   private async start() {
     await this.svs.subscribe({
-      on_yjs_delta: async (info, pub) => {
+      on_yjs_delta: async (pubs) => {
         try {
-          // Persist the update to IndexedDB
-          await this.persist(pub.uuid, pub.binary);
+          // List of updates to apply in transaction
+          const apply = new Map<string, Uint8Array[]>();
 
-          // Apply the update to the Yjs document if loaded
-          const doc = this.docs.get(pub.uuid);
-          if (doc) {
-            Y.applyUpdateV2(doc, pub.binary, this);
+          // Persist the updates to IndexedDB
+          await this.db.transaction('rw', this.db.updates, async () => {
+            for (const pub of pubs) {
+              await this.persist(pub.uuid, pub.binary);
+
+              // Check if this document is loaded
+              if (this.docs.has(pub.uuid)) {
+                const applyList = apply.get(pub.uuid) || [];
+                applyList.push(pub.binary);
+                apply.set(pub.uuid, applyList);
+              }
+            }
+          });
+
+          // Apply updates to loaded documents in transaction
+          for (const [uuid, applyList] of apply) {
+            const doc = this.docs.get(uuid);
+            doc?.transact(() => {
+              for (const update of applyList) {
+                Y.applyUpdateV2(doc, update, this);
+              }
+            });
           }
         } catch (e) {
           console.error('Failed to apply update', e);
@@ -273,13 +291,17 @@ export class SvsProvider {
     this.persistDirty.add(uuid);
 
     // Compact the database every few updates
-    if (id - this.lastCompaction < 100) return;
-    if (this.isCompacting) return;
+    if (this.isCompacting || id - this.lastCompaction < 500) return;
+    this.isCompacting = true;
+    window.setTimeout(() => this.compact(id), 10); // background
+  }
 
-    // Compact the database
+  /**
+   * Compact the database.
+   * The caller MUST set isCompacting to true before calling this.
+   */
+  private async compact(id: number) {
     try {
-      this.isCompacting = true;
-
       // For the first compaction, check all documents
       if (this.lastCompaction === 0) {
         await this.db.updates

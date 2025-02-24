@@ -170,7 +170,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 				Snapshot: &ndn_sync.SnapshotNodeHistory{
 					Client:    client,
-					Threshold: 10,
+					Threshold: 100,
 				},
 			})
 
@@ -268,49 +268,54 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO, persistState js.Value) (api js.Valu
 
 		// subscribe(name: string, { on_yjs_delta }): Promise<void>;
 		"subscribe": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			// Send a single publication to the subscriber
-			sendPub := func(pub ndn_sync.SvsPub) {
-				info := js.ValueOf(map[string]any{
-					"publisher": js.ValueOf(pub.Publisher.String()),
-					"boot_time": js.ValueOf(pub.BootTime),
-					"seq_num":   js.ValueOf(pub.SeqNum),
-				})
+			// Send a list of publications to the JS callback
+			sendPub := func(pubs []ndn_sync.SvsPub) {
+				yjsDeltas := js.Global().Get("Array").New()
 
-				pmsg, err := tlv.ParseMessage(enc.NewWireView(pub.Content), true)
-				if err != nil {
-					log.Error(nil, "Failed to parse publication", "err", err)
-					return
+				for _, pub := range pubs {
+					pmsg, err := tlv.ParseMessage(enc.NewWireView(pub.Content), true)
+					if err != nil {
+						log.Error(nil, "Failed to parse publication", "err", err)
+						continue
+					}
+
+					// All possible message type conversions listed here
+					switch {
+					case pmsg.YjsDelta != nil:
+						yjsDeltas.Call("push", js.ValueOf(map[string]any{
+							"uuid":   pmsg.YjsDelta.UUID,
+							"binary": jsutil.SliceToJsArray(pmsg.YjsDelta.Binary),
+						}))
+					default:
+						log.Error(nil, "Unknown message type", "msg", pmsg)
+					}
 				}
 
-				// All possible message type conversions listed here
-				switch {
-				case pmsg.YjsDelta != nil:
-					jsutil.Await(p[0].Get("on_yjs_delta").Invoke(info, js.ValueOf(map[string]any{
-						"uuid":   js.ValueOf(pmsg.YjsDelta.UUID),
-						"binary": jsutil.SliceToJsArray(pmsg.YjsDelta.Binary),
-					})))
-				default:
-					log.Error(nil, "Unknown message type", "msg", pmsg)
+				if yjsDeltas.Get("length").Int() > 0 {
+					jsutil.Await(p[0].Get("on_yjs_delta").Invoke(yjsDeltas))
 				}
 			}
 
 			// Subscribe to the SVS instance
 			alo.SubscribePublisher(enc.Name{}, func(pub ndn_sync.SvsPub) {
 				if !pub.IsSnapshot {
-					sendPub(pub)
+					sendPub([]ndn_sync.SvsPub{pub})
 				} else {
 					snapshot, err := svs_ps.ParseHistorySnap(enc.NewWireView(pub.Content), true)
 					if err != nil {
 						panic(err) // we encode this, so this never happens
 					}
+
+					pubs := make([]ndn_sync.SvsPub, 0, len(snapshot.Entries))
 					for _, entry := range snapshot.Entries {
-						sendPub(ndn_sync.SvsPub{
+						pubs = append(pubs, ndn_sync.SvsPub{
 							Publisher: pub.Publisher,
 							Content:   entry.Content,
 							BootTime:  pub.BootTime,
 							SeqNum:    entry.SeqNo,
 						})
 					}
+					sendPub(pubs)
 				}
 
 				// Persist state
