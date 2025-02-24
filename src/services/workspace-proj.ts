@@ -6,6 +6,7 @@ import { SvsProvider } from '@/services/svs-provider';
 import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
 import { deserializeYxml } from '@/utils/yxml';
+import { nanoid } from 'nanoid';
 
 import type { WorkspaceAPI } from './ndn';
 import type { IBlobVersion, IProject, IProjectFile } from './types';
@@ -162,7 +163,7 @@ export class WorkspaceProj {
 
     // Create the file
     path = utils.normalizePath(path);
-    const uuid = window.crypto.randomUUID();
+    const uuid = nanoid();
     const file: IProjectFile = { uuid, path, is_blob };
     this.fileMap.set(path, file);
     return file;
