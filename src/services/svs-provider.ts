@@ -5,7 +5,7 @@ import Dexie from 'dexie';
 
 import * as utils from '@/utils';
 
-import type { SvsAloApi, WorkspaceAPI } from './ndn';
+import type { AwarenessApi, SvsAloApi, WorkspaceAPI } from './ndn';
 import type { AwarenessLocalState } from './types';
 
 /**
@@ -368,8 +368,9 @@ class NdnAwareness extends awareProto.Awareness {
 
     // Unhook on document destroy
     doc.once('destroy', async () => {
-      window.clearTimeout(me.throttle);
       me.destroy();
+      window.clearTimeout(me.throttle);
+      await me.flush(ndnAwareness); // last update
       await ndnAwareness.stop();
     });
 
@@ -403,13 +404,7 @@ class NdnAwareness extends awareProto.Awareness {
         me.throttleSet.add(client);
       }
       if (!me.throttle) {
-        me.throttle = window.setTimeout(() => {
-          const updates = Array.from(me.throttleSet);
-          const updatesBin = awareProto.encodeAwarenessUpdate(me, updates);
-          me.throttle = 0;
-          me.throttleSet.clear();
-          ndnAwareness.publish(updatesBin);
-        }, 250);
+        me.throttle = window.setTimeout(() => me.flush(ndnAwareness), 500);
       }
     });
 
@@ -423,6 +418,14 @@ class NdnAwareness extends awareProto.Awareness {
     });
 
     return me;
+  }
+
+  private async flush(ndnAwareness: AwarenessApi) {
+    const updates = Array.from(this.throttleSet);
+    const updatesBin = awareProto.encodeAwarenessUpdate(this, updates);
+    this.throttle = 0;
+    this.throttleSet.clear();
+    await ndnAwareness.publish(updatesBin);
   }
 
   private injectStyles(client: number, user: AwarenessLocalState['user'] | undefined) {
