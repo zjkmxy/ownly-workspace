@@ -130,6 +130,6 @@ function destroy() {
   padding: 0 3px;
   font-size: 10pt;
   color: var(--bulma-text-strong);
-  animation: fade90 2s forwards;
+  animation: fade90 4s forwards;
 }
 </style>

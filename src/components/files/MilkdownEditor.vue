@@ -104,8 +104,10 @@ milkdown-latex-inline-edit {
 }
 
 .ProseMirror-yjs-cursor {
-  position: absolute;
+  position: relative;
   border-left: 2px solid black;
+  margin-left: -1px !important;
+  margin-right: -1px !important;
   border-color: orange;
   word-break: normal;
   pointer-events: none;
@@ -126,6 +128,6 @@ milkdown-latex-inline-edit {
   user-select: none;
   color: black;
   white-space: nowrap;
-  animation: fade90 2s forwards;
+  animation: fade90 4s forwards;
 }
 </style>
