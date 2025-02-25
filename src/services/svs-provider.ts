@@ -299,6 +299,8 @@ export class SvsProvider {
   /**
    * Compact the database.
    * The caller MUST set isCompacting to true before calling this.
+   *
+   * @todo Move this to a web worker
    */
   private async compact(id: number) {
     try {
