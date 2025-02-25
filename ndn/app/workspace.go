@@ -152,16 +152,11 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			if !p[1].IsUndefined() {
 				stateWire = enc.Wire{jsutil.JsArrayToSlice(p[1])}
 			}
-			initialState, err := ndn_sync.ParseInitialState(stateWire)
-			if err != nil {
-				// Start from scratch, this might be okay ... but is painful
-				log.Error(nil, "Failed to parse initial state", "err", err)
-			}
 
 			// Create new SVS ALO instance
-			svsAlo := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
+			svsAlo, err := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
 				Name:         name,
-				InitialState: initialState,
+				InitialState: stateWire,
 
 				Svs: ndn_sync.SvSyncOpts{
 					Client:      client,
@@ -174,6 +169,9 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 					Compress:  CompressSnapshotYjs,
 				},
 			})
+			if err != nil {
+				return nil, err
+			}
 
 			// Create JS API for SVS ALO
 			return a.SvsAloJs(svsAlo, p[2]), nil
@@ -262,7 +260,7 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO, persistState js.Value) (api js.Valu
 			}
 
 			// Persist state
-			jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(state.Bytes())))
+			jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(state.Join())))
 
 			return js.ValueOf(name.String()), nil
 		}),
@@ -320,7 +318,7 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO, persistState js.Value) (api js.Valu
 				}
 
 				// Persist state
-				jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(pub.State.Bytes())))
+				jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(pub.State.Join())))
 
 				return
 			})
