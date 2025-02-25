@@ -16,6 +16,8 @@ export interface StoreJS {
 
   /** Remove removes packets from the storage */
   remove(name: Uint8Array, prefix: boolean): Promise<void>;
+  /** RemoveFlatRange removes a flat range from the storage */
+  remove_flat_range(first: Uint8Array, last: Uint8Array): Promise<void>;
 
   /** Starts a bulk transaction */
   begin(): number;
@@ -62,7 +64,7 @@ export class StoreDexie implements StoreJS {
     last: Uint8Array | undefined,
   ): Promise<[Uint8Array, Uint8Array][]> {
     // Get the range of packets
-    const range = await this.range(name, prefix, last);
+    const range = this.range(name, prefix, last);
 
     // Fetch entire range if hint was provided
     if (last) {
@@ -85,8 +87,11 @@ export class StoreDexie implements StoreJS {
   }
 
   public async remove(name: Uint8Array, prefix: boolean) {
-    const range = await this.range(name, prefix, undefined);
-    await range.delete();
+    await this.range(name, prefix, undefined).delete();
+  }
+
+  public async remove_flat_range(first: Uint8Array, last: Uint8Array) {
+    await this.range(first, false, last).delete();
   }
 
   public begin() {
@@ -120,7 +125,7 @@ export class StoreDexie implements StoreJS {
     this.bulkTxns.set(tx, ops);
   }
 
-  private async range(name: Uint8Array, prefix: boolean, last: Uint8Array | undefined) {
+  private range(name: Uint8Array, prefix: boolean, last: Uint8Array | undefined) {
     last = last ?? name;
 
     // Prefix always overwrites last
