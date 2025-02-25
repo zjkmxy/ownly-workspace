@@ -8,11 +8,23 @@ Secure decentralized workspace built over the [Named Data Networking](https://na
 
 ## Development Setup
 
-It is recommended to use [VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar).
+It is recommended to use [VSCode](https://code.visualstudio.com/) with the following extensions:
+
+- [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) for Vue 3 support.
+- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) for TypeScript linting.
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) for code formatting.
+- [Go](https://marketplace.visualstudio.com/items?itemName=golang.Go) for Go language support.
+
+For debugging, install the [NDN-Play Devtools](https://chromewebstore.google.com/detail/ndn-play-devtools/iknhkednlmhmcooifnplndiahiopfmnh?hl=en) and [OPFS Explorer](https://chromewebstore.google.com/detail/opfs-explorer/acndjpgkpaclldomagafnognkcgjignd?hl=en) extensions.
+
+To build the WebAssembly module, install [Go 1.23](https://go.dev/doc/install)
 
 ```sh
-npm install
-npm run dev    # vite dev server (HMR)
-npm run build  # vite prod build
-npm run lint   # eslint
+npm install     # install dependencies
+
+npm run dev     # vite dev server (HMR)
+npm run build   # vite prod build
+npm run lint    # eslint
+
+npm run go:wasm # build Go WebAssembly module
 ```
