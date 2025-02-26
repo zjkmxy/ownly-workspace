@@ -15,6 +15,9 @@ html {
   --z-navbar: 500;
   --z-dropdown: 550;
   --z-modal: 800;
+
+  // This color is white on light mode and primary on dark mode
+  --highlight-on-primary-color: var(--bulma-body-background-color);
 }
 
 * {
@@ -26,6 +29,7 @@ html {
 /** Override background color to be darker on dark mode */
 @include cv.system-theme($name: 'dark') {
   --theme-is-dark: 1;
+  --highlight-on-primary-color: var(--bulma-primary);
 
   .has-background-primary.soft-if-dark,
   .is-primary.soft-if-dark {
