@@ -89,20 +89,6 @@ milkdown-latex-inline-edit {
   }
 }
 
-// Taken from the example at https://milkdown.dev/docs/guide/collaborative-editing
-.ProseMirror > .ProseMirror-yjs-cursor:first-child {
-  margin-top: 16px;
-}
-.ProseMirror p:first-child,
-.ProseMirror h1:first-child,
-.ProseMirror h2:first-child,
-.ProseMirror h3:first-child,
-.ProseMirror h4:first-child,
-.ProseMirror h5:first-child,
-.ProseMirror h6:first-child {
-  margin-top: 16px;
-}
-
 .ProseMirror-yjs-cursor {
   position: relative;
   border-left: 2px solid black;
@@ -115,13 +101,12 @@ milkdown-latex-inline-edit {
 
 .ProseMirror-yjs-cursor > div {
   position: absolute;
-  top: -1em;
-  left: -2px;
+  top: calc(-1rem - 1px);
+  left: -3px;
   font-size: 10pt;
   background-color: orange;
-  border-radius: 2px;
   border-radius: 3px;
-  padding: 1px 3px;
+  padding: 1px 4px;
   font-style: normal;
   font-weight: normal;
   line-height: normal;
