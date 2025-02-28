@@ -432,6 +432,11 @@ class NdnAwareness extends awareProto.Awareness {
 
   private injectStyles(client: number, user: AwarenessLocalState['user'] | undefined) {
     if (!user?.color) return;
+    if (!/^#[0-9a-f]{6}$/i.test(user.color)) {
+      console.error('Invalid color', user.name, user.color);
+      return;
+    }
+
     if (awarenessHaveStyles.has(client)) return;
     awarenessHaveStyles.add(client);
 
