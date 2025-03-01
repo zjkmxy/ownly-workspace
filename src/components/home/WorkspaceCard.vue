@@ -1,10 +1,16 @@
 <template>
   <div class="workspace card">
     <div class="card-content">
-      <div class="block">
+      <div class="media">
+        <div class="media-left">
+          <figure class="image is-64x64 mr-1">
+            <img :src="avatar" alt="Placeholder image" />
+          </figure>
+        </div>
+
         <div class="media-content">
-          <p class="title is-4 has-text-weight-bold">{{ name }}</p>
-          <p class="subtitle is-5 mt-1">{{ subtitle }}</p>
+          <p class="title is-4 has-text-weight-semibold">{{ name }}</p>
+          <p class="subtitle is-6 mt-1">{{ subtitle }}</p>
         </div>
       </div>
 
@@ -18,12 +24,17 @@
 </template>
 
 <script setup lang="ts">
-defineProps({
+import { ref } from 'vue';
+import * as utils from '@/utils';
+
+const props = defineProps({
   name: String,
   subtitle: String,
 });
 
 const emit = defineEmits(['open']);
+
+const avatar = ref<string>(utils.makeAvatar(props.name ?? 'wksp', 'shapes'));
 
 function launch() {
   emit('open');
@@ -40,5 +51,9 @@ function launch() {
 .card-content,
 .media-content {
   overflow: hidden;
+}
+
+.media img {
+  border-radius: 4px;
 }
 </style>
