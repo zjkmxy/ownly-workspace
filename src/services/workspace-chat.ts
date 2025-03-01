@@ -6,6 +6,7 @@ import { GlobalBus } from '@/services/event-bus';
 import { SvsProvider } from '@/services/svs-provider';
 
 import type TypedEmitter from 'typed-emitter';
+import type { WorkspaceAPI } from './ndn';
 
 export class WorkspaceChat {
   private readonly chatChannels: Y.Array<IChatChannel>;
@@ -18,9 +19,13 @@ export class WorkspaceChat {
   /**
    * Private constructor for the chat module
    *
+   * @param api WorkspaceAPI instance
    * @param doc Y.Doc instance
    */
-  private constructor(private readonly doc: Y.Doc) {
+  private constructor(
+    private readonly api: WorkspaceAPI,
+    private readonly doc: Y.Doc,
+  ) {
     this.chatChannels = doc.getArray<IChatChannel>('_chan_');
     this.chatMessages = doc.getMap<Y.Array<IChatMessage>>('_msg_');
 
@@ -44,9 +49,9 @@ export class WorkspaceChat {
   /**
    * Create the chat module
    */
-  public static async create(provider: SvsProvider): Promise<WorkspaceChat> {
+  public static async create(api: WorkspaceAPI, provider: SvsProvider): Promise<WorkspaceChat> {
     const doc = await provider.getDoc('chat');
-    return new WorkspaceChat(doc);
+    return new WorkspaceChat(api, doc);
   }
 
   /**
@@ -71,8 +76,22 @@ export class WorkspaceChat {
    * @param channel Chat channel
    */
   public async newChannel(channel: IChatChannel) {
+    const channels = await this.getChannels();
+    if (channels.some((c) => c.name === channel.name)) {
+      throw new Error('Channel already exists');
+    }
+
+    channel.id ||= Math.random() * 1e16;
     this.chatChannels.push([channel]);
     this.chatMessages.set(channel.name, new Y.Array<IChatMessage>());
+
+    // Push initial message
+    await this.sendMessage(channel.name, {
+      uuid: 0, // auto
+      user: 'ownly-bot',
+      ts: Date.now(),
+      message: `#${channel.name} was created by ${this.api.name}`,
+    });
   }
 
   /**
@@ -103,6 +122,7 @@ export class WorkspaceChat {
    * @param message Chat message
    */
   public async sendMessage(channel: string, message: IChatMessage) {
+    message.uuid ||= Math.random() * 1e16;
     (await this.getMsgArray(channel)).push([message]);
   }
 }

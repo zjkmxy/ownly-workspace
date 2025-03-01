@@ -82,7 +82,7 @@ async function create() {
 
     // Create channel
     await wksp.chat.newChannel({
-      id: Math.random() * 1e16,
+      id: 0, // auto
       name: name.value,
     });
 

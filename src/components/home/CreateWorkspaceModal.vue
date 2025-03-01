@@ -54,7 +54,10 @@ defineProps({
   },
 });
 
-const emit = defineEmits(['close', 'create']);
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'create', name: string): void;
+}>();
 
 const loading = ref(false);
 
@@ -73,9 +76,10 @@ async function create() {
       label: opts.value.label,
       name: name,
       owner: true,
+      pendingSetup: true,
     });
 
-    emit('create');
+    emit('create', name);
     emit('close');
 
     Toast.success('Workspace created');

@@ -5,6 +5,10 @@ export type IWkspStats = {
   name: string;
   /** Is the current user the owner */
   owner: boolean;
+  /** Workspace is pending initial setup */
+  pendingSetup?: boolean;
+  /** Last access time */
+  lastAccess?: number;
 };
 
 export type IChatMessage = {

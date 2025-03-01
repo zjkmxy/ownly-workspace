@@ -40,12 +40,12 @@
       </div>
     </div>
 
-    <CreateWorkspaceModal :show="showCreate" @close="showCreate = false" @create="refreshList" />
+    <CreateWorkspaceModal :show="showCreate" @close="showCreate = false" @create="created" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import CreateWorkspaceModal from '@/components/home/CreateWorkspaceModal.vue';
@@ -63,8 +63,14 @@ const workspaces = ref([] as IWkspStats[]);
 
 async function refreshList() {
   workspaces.value = await stats.db.workspaces.toArray();
+  workspaces.value.sort((a, b) => {
+    return (b.lastAccess ?? 0) - (a.lastAccess ?? 0);
+  });
 }
-refreshList();
+
+onMounted(() => {
+  refreshList();
+});
 
 function open(ws: IWkspStats) {
   router.push({
@@ -73,6 +79,12 @@ function open(ws: IWkspStats) {
       space: utils.escapeUrlName(ws.name),
     },
   });
+}
+
+async function created(name: string) {
+  await refreshList();
+  const ws = workspaces.value.find((w) => w.name === name);
+  if (ws) open(ws);
 }
 </script>
 

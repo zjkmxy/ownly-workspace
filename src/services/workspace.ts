@@ -50,7 +50,7 @@ export class Workspace {
     const provider = await SvsProvider.create(api, 'root');
 
     // Create general modules
-    const chat = await WorkspaceChat.create(provider);
+    const chat = await WorkspaceChat.create(api, provider);
     const proj = await WorkspaceProjManager.create(api, provider);
 
     // Create workspace object
@@ -94,6 +94,11 @@ export class Workspace {
     if (!metadata) {
       throw new Error(`Workspace not found, have you joined it? <br/> [${space}]`);
     }
+
+    // Store last access time
+    stats.db.workspaces.update(space, {
+      lastAccess: Date.now(),
+    }); // background
 
     // Start workspace if not already active
     if (window.ActiveWorkspace?.metadata.name !== metadata.name) {
