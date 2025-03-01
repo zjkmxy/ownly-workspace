@@ -3,14 +3,14 @@ import { WorkspaceProj, WorkspaceProjManager } from './workspace-proj';
 
 import { SvsProvider } from '@/services/svs-provider';
 
-import storage from '@/services/storage';
+import stats from '@/services/stats';
 import ndn from '@/services/ndn';
 import { GlobalBus } from '@/services/event-bus';
 import * as utils from '@/utils/index';
 
 import type { WorkspaceAPI } from '@/services/ndn';
 import type { Router } from 'vue-router';
-import type { IWorkspace } from '@/services/types';
+import type { IWkspStats } from '@/services/types';
 
 /**
  * We keep an active instance of the open workspace.
@@ -27,7 +27,7 @@ declare global {
  */
 export class Workspace {
   private constructor(
-    public readonly metadata: IWorkspace,
+    public readonly metadata: IWkspStats,
     private readonly api: WorkspaceAPI,
     private readonly provider: SvsProvider,
     public readonly chat: WorkspaceChat,
@@ -38,7 +38,7 @@ export class Workspace {
    * Start the workspace.
    * This will connect to the testbed and start the SVS instance.
    */
-  private static async create(metadata: IWorkspace): Promise<Workspace> {
+  private static async create(metadata: IWkspStats): Promise<Workspace> {
     // Start connection to testbed
     await ndn.api.connect_testbed();
 
@@ -90,7 +90,7 @@ export class Workspace {
     space = utils.unescapeUrlName(space);
 
     // Get workspace configuration from storage
-    const metadata = await storage.db.workspaces.get(space);
+    const metadata = await stats.db.workspaces.get(space);
     if (!metadata) {
       throw new Error(`Workspace not found, have you joined it? <br/> [${space}]`);
     }

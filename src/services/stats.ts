@@ -1,12 +1,13 @@
 import Dexie from 'dexie';
-import type * as types from './types';
+
+import type { IWkspStats } from './types';
 
 /**
  * IndexedDB storage service
  */
-class StorageService {
+class StatsService {
   public db = new Dexie('ownly') as Dexie & {
-    workspaces: Dexie.Table<types.IWorkspace, string>;
+    workspaces: Dexie.Table<IWkspStats, string>;
   };
 
   constructor() {
@@ -16,4 +17,4 @@ class StorageService {
   }
 }
 
-export default new StorageService();
+export default new StatsService();

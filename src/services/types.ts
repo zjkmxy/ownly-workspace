@@ -1,4 +1,4 @@
-export type IWorkspace = {
+export type IWkspStats = {
   /** Readable label for the space */
   label: string;
   /** Data prefix of the space */

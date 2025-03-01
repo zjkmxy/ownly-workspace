@@ -51,22 +51,22 @@ import { useRouter } from 'vue-router';
 import CreateWorkspaceModal from '@/components/home/CreateWorkspaceModal.vue';
 import WorkspaceCard from '@/components/home/WorkspaceCard.vue';
 
-import storage from '@/services/storage';
+import stats from '@/services/stats';
 import * as utils from '@/utils/index';
 
-import type * as types from '@/services/types';
+import type { IWkspStats } from '@/services/types';
 
 const router = useRouter();
 
 const showCreate = ref(false);
-const workspaces = ref([] as types.IWorkspace[]);
+const workspaces = ref([] as IWkspStats[]);
 
 async function refreshList() {
-  workspaces.value = await storage.db.workspaces.toArray();
+  workspaces.value = await stats.db.workspaces.toArray();
 }
 refreshList();
 
-function open(ws: types.IWorkspace) {
+function open(ws: IWkspStats) {
   router.push({
     name: 'space-home',
     params: {
