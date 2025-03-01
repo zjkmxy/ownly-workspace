@@ -12,7 +12,7 @@ export interface StoreJS {
   ): Promise<[Uint8Array, Uint8Array][]>;
 
   /** Put stores a packet in the storage */
-  put(name: Uint8Array, version: number, blob: Uint8Array, tx: number): Promise<void>;
+  put(name: Uint8Array, blob: Uint8Array, tx: number): Promise<void>;
 
   /** Remove removes packets from the storage */
   remove(name: Uint8Array, prefix: boolean): Promise<void>;
@@ -31,6 +31,13 @@ export interface StoreJS {
 
 import Dexie from 'dexie';
 
+type PacketEntry = {
+  name: Uint8Array;
+  blob: Uint8Array;
+};
+
+type TxnEntry = { op: 'put'; entry: PacketEntry };
+
 /**
  * StoreJS implementation using Dexie.
  *
@@ -38,14 +45,7 @@ import Dexie from 'dexie';
  */
 export class StoreDexie implements StoreJS {
   private db: Dexie & {
-    packets: Dexie.Table<
-      {
-        name: Uint8Array;
-        version: number;
-        blob: Uint8Array;
-      },
-      Uint8Array
-    >;
+    packets: Dexie.Table<PacketEntry, Uint8Array>;
   };
 
   private bulkTxns: Map<number, TxnEntry[]> = new Map();
@@ -54,7 +54,7 @@ export class StoreDexie implements StoreJS {
   constructor(name: string) {
     this.db = new Dexie(name) as any;
     this.db.version(1).stores({
-      packets: '[name+version]',
+      packets: 'name',
     });
   }
 
@@ -77,13 +77,13 @@ export class StoreDexie implements StoreJS {
     return [[pkt.name, pkt.blob]];
   }
 
-  public async put(name: Uint8Array, version: number, blob: Uint8Array, bulkId: number) {
+  public async put(name: Uint8Array, blob: Uint8Array, bulkId: number) {
     if (bulkId) {
-      this.txPush(bulkId, { op: 'put', name, version, blob });
+      this.txPush(bulkId, { op: 'put', entry: { name, blob } });
       return;
     }
 
-    await this.db.packets.put({ name, version, blob });
+    await this.db.packets.put({ name, blob });
   }
 
   public async remove(name: Uint8Array, prefix: boolean) {
@@ -104,15 +104,8 @@ export class StoreDexie implements StoreJS {
     if (!ops) return;
     this.bulkTxns.delete(tx);
 
-    await this.db.packets.bulkPut(
-      ops
-        .filter((op) => op.op === 'put')
-        .map((op) => ({
-          name: op.name,
-          version: op.version,
-          blob: op.blob,
-        })),
-    );
+    const entries = ops.filter((op) => op.op === 'put').map((op) => op.entry);
+    await this.db.packets.bulkPut(entries);
   }
 
   public async rollback(tx: number) {
@@ -136,15 +129,6 @@ export class StoreDexie implements StoreJS {
       last[name.length] = 255;
     }
 
-    return this.db.packets
-      .where('[name+version]')
-      .between([name, Dexie.minKey], [last, Dexie.maxKey], true, true);
+    return this.db.packets.where('name').between(name, last, true, true);
   }
 }
-
-type TxnEntry = {
-  op: 'put';
-  name: Uint8Array;
-  version: number;
-  blob: Uint8Array;
-};
