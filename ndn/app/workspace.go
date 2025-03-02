@@ -174,7 +174,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			}
 
 			// Create JS API for SVS ALO
-			return a.SvsAloJs(svsAlo, p[2]), nil
+			return a.SvsAloJs(client, svsAlo, p[2]), nil
 		}),
 
 		// awareness(group: string): Promise<AwarenessApi>;
@@ -195,7 +195,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	return js.ValueOf(workspaceJs), nil
 }
 
-func (a *App) SvsAloJs(alo *ndn_sync.SvsALO, persistState js.Value) (api js.Value) {
+func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.Value) (api js.Value) {
 	routes := []enc.Name{
 		alo.SyncPrefix(),
 		alo.DataPrefix(),
@@ -209,9 +209,13 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO, persistState js.Value) (api js.Valu
 		// start(): Promise<void>;
 		"start": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			for _, route := range routes {
-				if err := a.engine.RegisterRoute(route); err != nil {
-					return nil, err
-				}
+				client.AnnouncePrefix(ndn.Announcement{
+					Name:   route,
+					Expose: true,
+					OnError: func(err error) {
+						log.Error(nil, "Failed to announce prefix", "prefix", route, "err", err)
+					},
+				})
 			}
 
 			if err := alo.Start(); err != nil {
@@ -228,9 +232,7 @@ func (a *App) SvsAloJs(alo *ndn_sync.SvsALO, persistState js.Value) (api js.Valu
 			}
 
 			for _, route := range routes {
-				if err := a.engine.UnregisterRoute(route); err != nil {
-					return nil, err
-				}
+				client.WithdrawPrefix(route, nil)
 			}
 
 			jsutil.ReleaseMap(svsAloJs)

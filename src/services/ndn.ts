@@ -12,6 +12,9 @@ declare global {
     _ndnd_keychain_js: KeyChainJS;
     _yjs_merge_updates: (updates: Uint8Array[]) => Uint8Array;
 
+    _ndnd_conn_change_js: (connected: boolean, router: string) => void;
+    _ndnd_conn_state: { connected: boolean; router: string };
+
     Go: typeof Go;
     set_ndn?: (ndn: NDNAPI) => void;
     ndn_api: NDNAPI;
@@ -24,9 +27,6 @@ interface NDNAPI {
 
   /** Connect to the global NDN testbed */
   connect_testbed(): Promise<void>;
-
-  /** Callback on connectivity change */
-  on_conn_change(callback: (connected: boolean, router: string) => void): void;
 
   /** NDNCERT email verfication challenge */
   ndncert_email(email: string, code: (status: string) => Promise<string>): Promise<void>;
@@ -124,6 +124,8 @@ class NDNService {
     window._ndnd_store_js = new StoreDexie('store');
     window._ndnd_keychain_js = new KeyChainDexie();
     window._yjs_merge_updates = Y.mergeUpdatesV2;
+    window._ndnd_conn_change_js = _ndnd_conn_change_js;
+    window._ndnd_conn_state = { connected: false, router: String() };
 
     // Load the Go WASM module
     const go = new window.Go();
@@ -148,6 +150,16 @@ class NDNService {
     });
     this.api = await ndnPromise;
   }
+}
+
+function _ndnd_conn_change_js(connected: boolean, router: string) {
+  try {
+    router = new URL(router).host;
+  } catch {}
+  try {
+    window._ndnd_conn_state = { connected, router };
+    GlobalBus.emit('conn-change');
+  } catch {}
 }
 
 export default new NDNService();

@@ -34,4 +34,10 @@ export const GlobalBus = new EventEmitter() as TypedEmitter<{
    * 2. FS Sync failures.
    */
   'wksp-error': (error: Error) => void;
+
+  /**
+   * Event when connectivity changes.
+   * The state is stored in window._ndnd_conn_state
+   */
+  'conn-change': () => void;
 }>;

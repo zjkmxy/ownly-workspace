@@ -3,7 +3,6 @@
 package main
 
 import (
-	"fmt"
 	"syscall/js"
 
 	jsutil "github.com/named-data/ndnd/std/utils/js"
@@ -22,12 +21,6 @@ func main() {
 		// connect_testbed(): Promise<void>;
 		"connect_testbed": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return nil, me.ConnectTestbed()
-		}),
-
-		// on_conn_change(callback: (connected: boolean, router: string) => void): void;
-		"on_conn_change": js.FuncOf(func(this js.Value, p []js.Value) any {
-			fmt.Println("onConnectivityChange")
-			return nil
 		}),
 
 		// ndncert_email(email: string, code: (status: string) => Promise<string>): Promise<void>;

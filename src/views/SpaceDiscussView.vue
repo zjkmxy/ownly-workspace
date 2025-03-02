@@ -72,7 +72,7 @@
         <div
           class="new-unread tag is-primary"
           v-if="unreadCount > 0"
-          @click="(scroller.scrollToBottom(), (unreadCount = 0))"
+          @click="(scroller?.scrollToBottom(), (unreadCount = 0))"
         >
           <span class="mr-2">{{ unreadCount }} Unread Messages</span>
           <FontAwesomeIcon :icon="faArrowDown" />
@@ -148,9 +148,9 @@ async function setup() {
   }
 
   // Scroll to the end of the chat
-  nextTick(() => scroller.value.scrollToBottom());
-  window.setTimeout(() => scroller.value.scrollToBottom(), 100); // why
-  window.setTimeout(() => scroller.value.scrollToBottom(), 500); // uhh
+  nextTick(() => scroller.value?.scrollToBottom());
+  window.setTimeout(() => scroller.value?.scrollToBottom(), 100); // why
+  window.setTimeout(() => scroller.value?.scrollToBottom(), 500); // uhh
 }
 
 /** Skip the header if the user is the same and the message is within a minute */

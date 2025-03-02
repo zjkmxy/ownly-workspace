@@ -75,8 +75,18 @@ func (a *App) ConnectTestbed() error {
 		return nil
 	}
 
-	// TODO: fch and connectivity changes
-	a.face = face.NewWasmWsFace("wss://suns.cs.ucla.edu/ws/", false)
+	// TODO: fch
+	endpoint := "wss://suns.cs.ucla.edu/ws/"
+
+	face := face.NewWasmWsFace(endpoint, false)
+	face.OnUp(func() {
+		_ndnd_conn_change_js.Invoke(true, endpoint)
+	})
+	face.OnDown(func() {
+		_ndnd_conn_change_js.Invoke(false, endpoint)
+	})
+
+	a.face = face
 	a.engine = engine.NewBasicEngine(a.face)
 	err := a.engine.Start()
 	if err != nil {
