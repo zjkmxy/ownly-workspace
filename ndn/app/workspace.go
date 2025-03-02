@@ -213,7 +213,7 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 					Name:   route,
 					Expose: true,
 					OnError: func(err error) {
-						log.Error(nil, "Failed to announce prefix", "prefix", route, "err", err)
+						// TODO: show error to the user, use a global bus hook
 					},
 				})
 			}
