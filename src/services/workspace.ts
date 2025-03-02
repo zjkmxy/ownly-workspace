@@ -17,9 +17,8 @@ import type { IWkspStats } from '@/services/types';
  * This always runs in the background collecting data.
  */
 declare global {
-  interface Window {
-    ActiveWorkspace: Workspace | null;
-  }
+  // eslint-disable-next-line no-var
+  var ActiveWorkspace: Workspace | null;
 }
 
 /**
@@ -101,17 +100,17 @@ export class Workspace {
     }); // background
 
     // Start workspace if not already active
-    if (window.ActiveWorkspace?.metadata.name !== metadata.name) {
+    if (globalThis.ActiveWorkspace?.metadata.name !== metadata.name) {
       try {
-        await window.ActiveWorkspace?.destroy();
+        await globalThis.ActiveWorkspace?.destroy();
       } catch (e) {
         console.error(e);
         GlobalBus.emit('wksp-error', new Error(`Failed to stop workspace: ${e}`));
       }
-      window.ActiveWorkspace = await Workspace.create(metadata);
+      globalThis.ActiveWorkspace = await Workspace.create(metadata);
     }
 
-    return window.ActiveWorkspace;
+    return globalThis.ActiveWorkspace;
   }
 
   /**

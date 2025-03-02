@@ -6,20 +6,18 @@ import { StoreDexie, type StoreJS } from './store_js';
 import { KeyChainDexie, type KeyChainJS } from './keychain_js';
 import { GlobalBus } from './event-bus';
 
+/* eslint-disable no-var */
 declare global {
-  interface Window {
-    _ndnd_store_js: StoreJS;
-    _ndnd_keychain_js: KeyChainJS;
-    _yjs_merge_updates: (updates: Uint8Array[]) => Uint8Array;
+  var _ndnd_store_js: StoreJS;
+  var _ndnd_keychain_js: KeyChainJS;
+  var _yjs_merge_updates: (updates: Uint8Array[]) => Uint8Array;
+  var _ndnd_conn_change_js: (connected: boolean, router: string) => void;
+  var _ndnd_conn_state: { connected: boolean; router: string };
 
-    _ndnd_conn_change_js: (connected: boolean, router: string) => void;
-    _ndnd_conn_state: { connected: boolean; router: string };
-
-    Go: typeof Go;
-    set_ndn?: (ndn: NDNAPI) => void;
-    ndn_api: NDNAPI;
-  }
+  var set_ndn: undefined | ((ndn: NDNAPI) => void);
+  var ndn_api: NDNAPI;
 }
+/* eslint-enable no-var */
 
 interface NDNAPI {
   /** Check if there is a valid testbed key in the keychain */
@@ -121,22 +119,22 @@ class NDNService {
     if (this.api) return;
 
     // Provide JS APIs
-    window._ndnd_store_js = new StoreDexie('store');
-    window._ndnd_keychain_js = new KeyChainDexie();
-    window._yjs_merge_updates = Y.mergeUpdatesV2;
-    window._ndnd_conn_change_js = _ndnd_conn_change_js;
-    window._ndnd_conn_state = { connected: false, router: String() };
+    globalThis._ndnd_store_js = new StoreDexie('store');
+    globalThis._ndnd_keychain_js = new KeyChainDexie();
+    globalThis._yjs_merge_updates = Y.mergeUpdatesV2;
+    globalThis._ndnd_conn_change_js = _ndnd_conn_change_js;
+    globalThis._ndnd_conn_state = { connected: false, router: String() };
 
     // Load the Go WASM module
-    const go = new window.Go();
+    const go = new Go();
     const result = await WebAssembly.instantiateStreaming(fetch('/main.wasm'), go.importObject);
 
     // Callback given by WebAssembly to set the NDN API
     const ndnPromise = new Promise<NDNAPI>((resolve, reject) => {
       const cancel = setTimeout(() => reject(new Error('NDN API not set')), 5000);
-      window.set_ndn = (ndn: NDNAPI) => {
-        window.set_ndn = undefined;
-        window.ndn_api = ndn;
+      globalThis.set_ndn = (ndn: NDNAPI) => {
+        globalThis.set_ndn = undefined;
+        globalThis.ndn_api = ndn;
         resolve(ndn);
         clearTimeout(cancel);
       };
@@ -157,7 +155,7 @@ function _ndnd_conn_change_js(connected: boolean, router: string) {
     router = new URL(router).host;
   } catch {}
   try {
-    window._ndnd_conn_state = { connected, router };
+    globalThis._ndnd_conn_state = { connected, router };
     GlobalBus.emit('conn-change');
   } catch {}
 }

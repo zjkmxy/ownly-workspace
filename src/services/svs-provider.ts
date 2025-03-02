@@ -293,7 +293,7 @@ export class SvsProvider {
     // Compact the database every few updates
     if (this.isCompacting || id - this.lastCompaction < 500) return;
     this.isCompacting = true;
-    window.setTimeout(() => this.compact(id), 10); // background
+    globalThis.setTimeout(() => this.compact(id), 10); // background
   }
 
   /**
@@ -371,7 +371,7 @@ class NdnAwareness extends awareProto.Awareness {
     // Unhook on document destroy
     doc.once('destroy', async () => {
       me.destroy();
-      window.clearTimeout(me.throttle);
+      globalThis.clearTimeout(me.throttle);
       await me.flush(ndnAwareness); // last update
       await ndnAwareness.stop();
     });
@@ -406,7 +406,7 @@ class NdnAwareness extends awareProto.Awareness {
         me.throttleSet.add(client);
       }
       if (!me.throttle) {
-        me.throttle = window.setTimeout(() => me.flush(ndnAwareness), 250);
+        me.throttle = globalThis.setTimeout(() => me.flush(ndnAwareness), 250);
       }
     });
 

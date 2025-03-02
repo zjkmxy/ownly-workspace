@@ -37,7 +37,7 @@ export const GlobalBus = new EventEmitter() as TypedEmitter<{
 
   /**
    * Event when connectivity changes.
-   * The state is stored in window._ndnd_conn_state
+   * The state is stored in _ndnd_conn_state
    */
   'conn-change': () => void;
 }>;

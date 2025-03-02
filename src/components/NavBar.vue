@@ -126,7 +126,7 @@ const showProjectModal = ref(false);
 const activeProjectName = ref(null as string | null);
 const projectFiles = ref([] as IProjectFile[]);
 
-const connState = ref(window._ndnd_conn_state);
+const connState = ref(globalThis._ndnd_conn_state);
 
 const busListeners = {
   'project-list': (projs: IProject[]) => (projects.value = projs),
@@ -136,7 +136,7 @@ const busListeners = {
   },
   'chat-channels': (chans: IChatChannel[]) => (channels.value = chans),
   'conn-change': () => {
-    connState.value = window._ndnd_conn_state;
+    connState.value = globalThis._ndnd_conn_state;
     if (!connState.value.connected) {
       Toast.info('Disconnected - you are offline');
     }
