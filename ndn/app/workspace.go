@@ -8,6 +8,7 @@ import (
 	"syscall/js"
 	"time"
 
+	spec_repo "github.com/named-data/ndnd/repo/tlv"
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
@@ -19,6 +20,10 @@ import (
 	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
+
+const SnapshotThreshold = 100
+
+var repoName, _ = enc.NameFromStr("/ndnd/ucla/repo")
 
 // CreateWorkspace creates a new workspace with the given name.
 func (a *App) CreateWorkspace(nameStr string) (nameStrFinal string, err error) {
@@ -165,7 +170,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 				Snapshot: &ndn_sync.SnapshotNodeHistory{
 					Client:    client,
-					Threshold: 100,
+					Threshold: SnapshotThreshold,
 					Compress:  CompressSnapshotYjs,
 				},
 			})
@@ -208,6 +213,7 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 
 		// start(): Promise<void>;
 		"start": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			// Announce prefixes to the network
 			for _, route := range routes {
 				client.AnnouncePrefix(ndn.Announcement{
 					Name:   route,
@@ -217,6 +223,9 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 					},
 				})
 			}
+
+			// Notify repo to start
+			a.NotifyRepo(client, alo.GroupPrefix())
 
 			if err := alo.Start(); err != nil {
 				return nil, err
@@ -361,4 +370,37 @@ func (a *App) AwarenessJs(awareness *Awareness) (api js.Value) {
 		}),
 	}
 	return js.ValueOf(awarenessJs)
+}
+
+func (a *App) NotifyRepo(client ndn.Client, group enc.Name) {
+	// If the face is not running, wait for it to come up
+	if !a.face.IsRunning() {
+		var cancel func()
+		cancel = a.face.OnUp(func() {
+			go a.NotifyRepo(client, group)
+			cancel()
+		})
+		return
+	}
+
+	// Notify repo to join SVS group
+	repoCmd := spec_repo.RepoCmd{
+		SyncJoin: &spec_repo.SyncJoin{
+			Protocol: spec_repo.SyncProtocolSvsV3,
+			Group:    group,
+			HistorySnapshot: &spec_repo.HistorySnapshotConfig{
+				Threshold: SnapshotThreshold,
+			},
+		},
+	}
+	client.ExpressCommand(
+		repoName.Append(enc.NewKeywordComponent("cmd")),
+		repoCmd.Encode(),
+		func(w enc.Wire, err error) {
+			if err != nil {
+				log.Warn(nil, "Repo sync join command failed", "group", group, "err", err)
+			} else {
+				log.Info(nil, "Repo joined SVS group", "group", group)
+			}
+		})
 }
