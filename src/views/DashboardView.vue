@@ -31,7 +31,10 @@
               <button class="button mr-2 mb-2 is-small-caps" @click="showCreate = true">
                 Create a new workspace
               </button>
-              <button class="button mr-2 is-primary is-small-caps soft-if-dark">
+              <button
+                class="button mr-2 is-primary is-small-caps soft-if-dark"
+                @click="showJoin = true"
+              >
                 Join a workspace
               </button>
             </div>
@@ -40,7 +43,8 @@
       </div>
     </div>
 
-    <CreateWorkspaceModal :show="showCreate" @close="showCreate = false" @create="created" />
+    <CreateWorkspaceModal :show="showCreate" @close="showCreate = false" @create="openByName" />
+    <JoinWorkspaceModal :show="showJoin" @close="showJoin = false" @join="openByName" />
   </div>
 </template>
 
@@ -55,10 +59,12 @@ import stats from '@/services/stats';
 import * as utils from '@/utils/index';
 
 import type { IWkspStats } from '@/services/types';
+import JoinWorkspaceModal from '@/components/home/JoinWorkspaceModal.vue';
 
 const router = useRouter();
 
 const showCreate = ref(false);
+const showJoin = ref(false);
 const workspaces = ref([] as IWkspStats[]);
 
 async function refreshList() {
@@ -81,7 +87,7 @@ function open(ws: IWkspStats) {
   });
 }
 
-async function created(name: string) {
+async function openByName(name: string) {
   await refreshList();
   const ws = workspaces.value.find((w) => w.name === name);
   if (ws) open(ws);
