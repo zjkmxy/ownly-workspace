@@ -209,7 +209,7 @@ function linkDiscuss(channel: IChatChannel) {
       transition: background-color 0.2s ease;
       background-color: rgba(255, 255, 255, 0.05);
       &:hover {
-        background-color: rgba(255, 255, 255, 0.15);
+        background-color: rgba(255, 255, 255, 0.1);
       }
     }
   }
