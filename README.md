@@ -15,7 +15,7 @@ It is recommended to use [VSCode](https://code.visualstudio.com/) with the follo
 - [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) for code formatting.
 - [Go](https://marketplace.visualstudio.com/items?itemName=golang.Go) for Go language support.
 
-For debugging, install the [NDN-Play Devtools](https://chromewebstore.google.com/detail/ndn-play-devtools/iknhkednlmhmcooifnplndiahiopfmnh?hl=en) and [OPFS Explorer](https://chromewebstore.google.com/detail/opfs-explorer/acndjpgkpaclldomagafnognkcgjignd?hl=en) extensions.
+For debugging, install the [NDN-Play Devtools](https://chromewebstore.google.com/detail/ndn-play-devtools/iknhkednlmhmcooifnplndiahiopfmnh?hl=en) and [OPFS Viewer](https://chromewebstore.google.com/detail/opfs-viewer/bebjgdnmkhibekhoijhhbdpfdddpefci) extensions.
 
 To build the WebAssembly module, install [Go 1.23](https://go.dev/doc/install)
 
