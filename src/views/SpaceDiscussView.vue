@@ -185,7 +185,7 @@ async function send(event: Event) {
 
   // Send the message to the workspace
   const message = {
-    uuid: 0, // auto
+    uuid: String(), // auto
     user: wksp.value!.username,
     ts: Date.now(),
     message: outMessage.value,

@@ -27,7 +27,7 @@ export class WorkspaceProjManager {
   ) {
     this.list = this.root.getMap<IProject>('list');
 
-    const listObserver = async () => GlobalBus.emit('project-list', await this.getProjects());
+    const listObserver = async () => GlobalBus.emit('project-list', this.getProjects());
     this.list.observe(listObserver);
     listObserver();
   }
@@ -55,7 +55,7 @@ export class WorkspaceProjManager {
   }
 
   /** Get the list of projects */
-  public async getProjects(): Promise<IProject[]> {
+  public getProjects(): IProject[] {
     return Array.from(this.list.values());
   }
 
@@ -63,20 +63,21 @@ export class WorkspaceProjManager {
   public async newProject(name: string) {
     if (!name) throw new Error('Project name is required');
     if (this.list.has(name)) throw new Error('Project already exists');
-    this.list.set(name, { name });
+    const uuid = nanoid();
+    this.list.set(uuid, { uuid, name });
   }
 
   /** Get a project instance */
   public async get(name: string): Promise<WorkspaceProj> {
-    let proj = this.instances.get(name);
+    const pid = this.getProjects().find((p) => p.name === name)?.uuid;
+    if (!pid) throw new Error('Project not found');
+
+    let proj = this.instances.get(pid);
     if (proj) return proj;
 
-    // Get metadata from project list
-    if (!this.list.has(name)) throw new Error('Project not found');
-
     // Create project instance
-    proj = await WorkspaceProj.create(name, this.wksp, this);
-    this.instances.set(name, proj);
+    proj = await WorkspaceProj.create(pid, this.wksp, this);
+    this.instances.set(pid, proj);
     return proj;
   }
 }
@@ -102,23 +103,23 @@ export class WorkspaceProj {
   /**
    * Create a new project instance
    *
-   * @param name Project name (slug)
+   * @param uuid Project uuid (slug)
    * @param wksp Workspace API
    * @param manager Project manager instance
    */
   public static async create(
-    name: string,
+    uuid: string,
     wksp: WorkspaceAPI,
     manager: WorkspaceProjManager,
   ): Promise<WorkspaceProj> {
     // Start SVS for project
-    const provider = await SvsProvider.create(wksp, name);
+    const provider = await SvsProvider.create(wksp, uuid);
 
     // Create root document
     const root = await provider.getDoc('root');
 
     // Create project object
-    return new WorkspaceProj(name, root, provider, manager);
+    return new WorkspaceProj(uuid, root, provider, manager);
   }
 
   /** Destroy the project instance */

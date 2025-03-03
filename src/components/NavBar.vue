@@ -16,7 +16,7 @@
       <template v-if="routeIsWorkspace">
         <p class="menu-label">Projects</p>
         <ul class="menu-list">
-          <li v-for="proj in projects" :key="proj.name">
+          <li v-for="proj in projects" :key="proj.uuid">
             <router-link :to="linkProject(proj)">
               <div class="link-inner">
                 <FontAwesomeIcon class="mr-1" :icon="faLayerGroup" size="sm" />
@@ -24,7 +24,7 @@
               </div>
 
               <ProjectTreeMenu
-                v-if="activeProjectName === proj.name"
+                v-if="activeProjectName === proj.uuid"
                 class="link-button"
                 :allow-new="true"
                 :allow-delete="false"
@@ -37,7 +37,7 @@
             </router-link>
 
             <ProjectTree
-              v-if="activeProjectName == proj.name"
+              v-if="activeProjectName == proj.uuid"
               class="outermost"
               ref="projectTree"
               :project="proj"
@@ -55,7 +55,7 @@
 
         <p class="menu-label">Discussion</p>
         <ul class="menu-list">
-          <li v-for="chan in channels" :key="chan.id">
+          <li v-for="chan in channels" :key="chan.uuid">
             <router-link :to="linkDiscuss(chan)">
               <FontAwesomeIcon class="mr-1" :icon="faHashtag" size="sm" />
               {{ chan.name }}

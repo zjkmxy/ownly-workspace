@@ -74,7 +74,7 @@ async function create() {
     if (!wksp) return;
 
     // Check if project already exists
-    const projs = await wksp.proj.getProjects();
+    const projs = wksp.proj.getProjects();
     if (projs.some((c) => c.name === name.value)) {
       Toast.error('Project with this name already exists');
       return;

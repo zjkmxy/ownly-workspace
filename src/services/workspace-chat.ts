@@ -1,10 +1,11 @@
 import { EventEmitter } from 'events';
 import * as Y from 'yjs';
+import { nanoid } from 'nanoid';
 
-import type { IChatChannel, IChatMessage } from '@/services/types';
 import { GlobalBus } from '@/services/event-bus';
 import { SvsProvider } from '@/services/svs-provider';
 
+import type { IChatChannel, IChatMessage } from '@/services/types';
 import type TypedEmitter from 'typed-emitter';
 import type { WorkspaceAPI } from './ndn';
 
@@ -81,13 +82,13 @@ export class WorkspaceChat {
       throw new Error('Channel already exists');
     }
 
-    channel.id ||= Math.random() * 1e16;
+    channel.uuid = nanoid();
     this.chatChannels.push([channel]);
     this.chatMessages.set(channel.name, new Y.Array<IChatMessage>());
 
     // Push initial message
     await this.sendMessage(channel.name, {
-      uuid: 0, // auto
+      uuid: String(), // auto
       user: 'ownly-bot',
       ts: Date.now(),
       message: `#${channel.name} was created by ${this.api.name}`,
@@ -122,7 +123,7 @@ export class WorkspaceChat {
    * @param message Chat message
    */
   public async sendMessage(channel: string, message: IChatMessage) {
-    message.uuid ||= Math.random() * 1e16;
+    message.uuid = nanoid();
     (await this.getMsgArray(channel)).push([message]);
   }
 }

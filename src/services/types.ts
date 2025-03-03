@@ -13,7 +13,7 @@ export type IWkspStats = {
 
 export type IChatMessage = {
   /** Unique ID for each message */
-  uuid: number;
+  uuid: string;
   /** User who sent the message */
   user: string;
   /** Timestamp when the message was sent */
@@ -27,12 +27,14 @@ export type IChatMessage = {
 
 export type IChatChannel = {
   /** Channel ID */
-  id: number;
+  uuid: string;
   /** Channel name */
   name: string;
 };
 
 export type IProject = {
+  /** Project ID */
+  uuid: string;
   /** Project name */
   name: string;
 };

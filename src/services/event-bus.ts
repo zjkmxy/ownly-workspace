@@ -21,10 +21,10 @@ export const GlobalBus = new EventEmitter() as TypedEmitter<{
 
   /**
    * Event when the list of files in the active project is updated.
-   * @param project Name of the project that is active
+   * @param uuid UUID of the project that is active
    * @param files List of files in the project
    */
-  'project-files': (project: string, files: IProjectFile[]) => void;
+  'project-files': (uuid: string, files: IProjectFile[]) => void;
 
   /**
    * Various informational errors may be received here.

@@ -61,7 +61,7 @@ async function setup() {
     for (const name of ['general', 'random']) {
       try {
         await wksp.value.chat.newChannel({
-          id: 0, // auto
+          uuid: String(), // auto
           name: name,
         });
       } catch (err) {
