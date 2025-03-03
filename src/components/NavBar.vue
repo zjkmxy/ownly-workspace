@@ -197,12 +197,12 @@ function linkDiscuss(channel: IChatChannel) {
     overflow-y: auto;
   }
   .bottom-sheet {
-    padding: 8px 5px;
+    padding: 8px 10px;
     font-size: 0.9rem;
 
     .connection {
       border-radius: 50px;
-      padding: 5px 15px;
+      padding: 5px 12px;
       color: #ddd;
       cursor: pointer;
 
