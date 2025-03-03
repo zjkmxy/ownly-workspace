@@ -11,35 +11,33 @@
       </section>
 
       <div class="spacelist">
-        <WorkspaceCard
-          v-for="ws in workspaces"
-          :key="ws.name"
-          :name="ws.label"
-          :subtitle="ws.name"
-          @open="open(ws)"
-        />
+        <template v-for="ws in workspaces" :key="ws.name">
+          <!-- Create workspace card -->
+          <div class="workspace card" v-if="ws.name === '__create__'">
+            <div class="card-content">
+              <div class="block">
+                <div class="media-content">
+                  <p class="subtitle is-5">Don't see what you are looking for?</p>
+                </div>
+              </div>
 
-        <div class="workspace card">
-          <div class="card-content">
-            <div class="block">
-              <div class="media-content">
-                <p class="subtitle is-5">Don't see what you are looking for?</p>
+              <div class="content has-text-right">
+                <button class="button mr-2 mb-2 is-small-caps" @click="showCreate = true">
+                  Create a new workspace
+                </button>
+                <button
+                  class="button mr-2 is-primary is-small-caps soft-if-dark"
+                  @click="showJoin = true"
+                >
+                  Join a workspace
+                </button>
               </div>
             </div>
-
-            <div class="content has-text-right">
-              <button class="button mr-2 mb-2 is-small-caps" @click="showCreate = true">
-                Create a new workspace
-              </button>
-              <button
-                class="button mr-2 is-primary is-small-caps soft-if-dark"
-                @click="showJoin = true"
-              >
-                Join a workspace
-              </button>
-            </div>
           </div>
-        </div>
+
+          <!-- Normal workspace card -->
+          <WorkspaceCard v-else :name="ws.label" :subtitle="ws.name" @open="open(ws)" />
+        </template>
       </div>
     </div>
 
@@ -72,6 +70,11 @@ async function refreshList() {
   workspaces.value.sort((a, b) => {
     return (b.lastAccess ?? 0) - (a.lastAccess ?? 0);
   });
+
+  // Insert a create workspace card
+  workspaces.value.splice(1, 0, {
+    name: '__create__',
+  } as IWkspStats);
 }
 
 onMounted(() => {
