@@ -51,6 +51,7 @@ function launch() {
 .card-content,
 .media-content {
   overflow: hidden;
+  box-shadow: none;
 }
 
 .media img {

@@ -13,7 +13,7 @@
       <div class="spacelist">
         <template v-for="ws in workspaces" :key="ws.name">
           <!-- Create workspace card -->
-          <div class="workspace card" v-if="ws.name === '__create__'">
+          <div class="create card" v-if="ws.name === '__create__'">
             <div class="card-content">
               <div class="block">
                 <div class="media-content">
@@ -111,6 +111,10 @@ async function openByName(name: string) {
   .spacelist {
     margin: 40px;
   }
+}
+
+.card.create {
+  box-shadow: none;
 }
 
 @media (max-width: 1023px) {
