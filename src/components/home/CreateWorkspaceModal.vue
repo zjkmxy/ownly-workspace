@@ -82,7 +82,7 @@ async function create() {
     emit('create', name);
     emit('close');
 
-    Toast.success('Workspace created');
+    Toast.success('Created workspace successfully!');
   } catch (err) {
     console.error(err);
     Toast.error(`Error creating workspace: ${err}`);

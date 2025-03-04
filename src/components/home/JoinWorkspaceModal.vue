@@ -81,7 +81,7 @@ async function join() {
     emit('join', opts.value.name);
     emit('close');
 
-    Toast.success('Workspace created');
+    Toast.success('Joined workspace successfully!');
   } catch (err) {
     console.error(err);
     Toast.error(`Error joining workspace: ${err}`);
