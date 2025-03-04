@@ -25,8 +25,8 @@ func (a *App) NdncertEmail(email string, CodeCb func(status string) string) (err
 
 	// Request a certificate from NDNCERT
 	certRes, err := certClient.RequestCert(ndncert.RequestCertArgs{
-		Challenge: &ndncert.ChallengePin{
-			// Email: email,
+		Challenge: &ndncert.ChallengeEmail{
+			Email:        email,
 			CodeCallback: CodeCb,
 		},
 		OnProfile: func(profile *spec_ndncert.CaProfile) error {
