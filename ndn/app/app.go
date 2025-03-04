@@ -6,7 +6,7 @@ import (
 	"syscall/js"
 
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/object/storage"
 	"github.com/named-data/ndnd/std/security/keychain"
 )
 
@@ -24,7 +24,7 @@ var _ndnd_keychain_js = js.Global().Get("_ndnd_keychain_js")
 var _ndnd_conn_change_js = js.Global().Get("_ndnd_conn_change_js")
 
 func NewApp() *App {
-	store := object.NewJsStore(_ndnd_store_js)
+	store := storage.NewJsStore(_ndnd_store_js)
 
 	keychain, err := keychain.NewKeyChainJS(_ndnd_keychain_js, store)
 	if err != nil {
