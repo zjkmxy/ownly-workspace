@@ -102,13 +102,13 @@ const showEmail = ref(false);
 const showCode = ref(false);
 const showSuccess = ref(false);
 
-const loadStatus = ref('');
+const loadStatus = ref(String());
 
-const emailAddress = ref('varunpatil@ucla.edu');
-const emailError = ref('');
+const emailAddress = ref(String());
+const emailError = ref(String());
 
-const codeInput = ref('');
-const codeError = ref('');
+const codeInput = ref(String());
+const codeError = ref(String());
 const codeSubmit = ref(() => {});
 
 /** Validate email and move to step 2 */
