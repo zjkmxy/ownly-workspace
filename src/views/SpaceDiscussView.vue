@@ -1,5 +1,5 @@
 <template>
-  <div class="outer py-4">
+  <div class="outer pb-4">
     <LoadingSpinner v-if="!items" class="absolute-center" text="Loading your messages ..." />
 
     <template v-else>
