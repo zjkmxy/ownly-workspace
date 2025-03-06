@@ -84,15 +84,18 @@ export async function* walk(
  */
 export async function download(
   handle: FileSystemFileHandle | FileSystemDirectoryHandle,
+  opts?: {
+    name?: string;
+  },
 ): Promise<void> {
   if (handle instanceof FileSystemFileHandle) {
     // Stream file directly to the user
-    const fileStream = streamSaver.createWriteStream(handle.name);
+    const fileStream = streamSaver.createWriteStream(opts?.name ?? handle.name);
     const readable = await handle.getFile();
     await readable.stream().pipeTo(fileStream);
   } else if (handle instanceof FileSystemDirectoryHandle) {
     // Stream folder as a ZIP file
-    const fileStream = streamSaver.createWriteStream(handle.name + '.zip');
+    const fileStream = streamSaver.createWriteStream(opts?.name ?? handle.name + '.zip');
     const writer = new zip.ZipWriter(fileStream);
     for await (const [path, entry] of walk(handle, String())) {
       const readable = await entry.getFile();

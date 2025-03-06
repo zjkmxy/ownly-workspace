@@ -123,7 +123,7 @@ async function create() {
     loading.value = true;
 
     const newProj = await Workspace.setupAndGetActiveProj(router);
-    if (proj.value?.name !== newProj.name) await destroy();
+    if (proj.value?.uuid !== newProj.uuid) await destroy();
     proj.value = newProj;
 
     // Load file metadata

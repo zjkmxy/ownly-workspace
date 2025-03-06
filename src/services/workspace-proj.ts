@@ -69,15 +69,16 @@ export class WorkspaceProjManager {
 
   /** Get a project instance */
   public async get(name: string): Promise<WorkspaceProj> {
-    const pid = this.getProjects().find((p) => p.name === name)?.uuid;
-    if (!pid) throw new Error('Project not found');
+    const pmeta = this.getProjects().find((p) => p.name === name);
+    const puuid = pmeta?.uuid;
+    if (!puuid) throw new Error('Project not found');
 
-    let proj = this.instances.get(pid);
+    let proj = this.instances.get(puuid);
     if (proj) return proj;
 
     // Create project instance
-    proj = await WorkspaceProj.create(pid, this.wksp, this);
-    this.instances.set(pid, proj);
+    proj = await WorkspaceProj.create(puuid, pmeta.name, this.wksp, this);
+    this.instances.set(puuid, proj);
     return proj;
   }
 }
@@ -90,6 +91,7 @@ export class WorkspaceProj {
   private readonly fileMap: Y.Map<IProjectFile>;
 
   private constructor(
+    public readonly uuid: string,
     public readonly name: string,
     private readonly root: Y.Doc,
     private readonly provider: SvsProvider,
@@ -103,12 +105,14 @@ export class WorkspaceProj {
   /**
    * Create a new project instance
    *
-   * @param uuid Project uuid (slug)
+   * @param uuid Project uuid
+   * @param name Project name (slug)
    * @param wksp Workspace API
    * @param manager Project manager instance
    */
   public static async create(
     uuid: string,
+    name: string,
     wksp: WorkspaceAPI,
     manager: WorkspaceProjManager,
   ): Promise<WorkspaceProj> {
@@ -119,7 +123,7 @@ export class WorkspaceProj {
     const root = await provider.getDoc('root');
 
     // Create project object
-    return new WorkspaceProj(uuid, root, provider, manager);
+    return new WorkspaceProj(uuid, name, root, provider, manager);
   }
 
   /** Destroy the project instance */
@@ -142,7 +146,7 @@ export class WorkspaceProj {
   /** Callback when the list of files changes */
   private onListChange() {
     if (!this.fileMap || this.manager.active?.root.guid !== this.root.guid) return;
-    GlobalBus.emit('project-files', this.name, this.getFileList());
+    GlobalBus.emit('project-files', this.uuid, this.getFileList());
   }
 
   /** Check if a file or folder exists */
@@ -401,7 +405,10 @@ export class WorkspaceProj {
     const fsPath = await this.syncFs(path);
     if (fsPath.endsWith('/')) {
       const handle = await opfs.getDirectoryHandle(fsPath);
-      await opfs.download(handle);
+      await opfs.download(handle, {
+        // Use the project name as the folder name if root
+        name: path === '/' || path === '' ? `${this.name}.zip` : undefined,
+      });
     } else {
       const handle = await opfs.getFileHandle(fsPath);
       await opfs.download(handle);
@@ -435,7 +442,7 @@ export class WorkspaceProj {
 
     // Get the folder in the FS
     prefix = utils.normalizePath(prefix);
-    const basedir = `${this.manager.group}/${this.name}`;
+    const basedir = `${this.manager.group}/${this.uuid}`;
     const folder = await opfs.getDirectoryHandle(basedir + prefix, { create: true });
 
     // TODO: show progress
@@ -520,7 +527,7 @@ export class WorkspaceProj {
     if (!meta) throw new Error(`File not found: ${path}`);
 
     // Get the file in the FS
-    const basedir = `${this.manager.group}/${this.name}`;
+    const basedir = `${this.manager.group}/${this.uuid}`;
     const folder = await opfs.getDirectoryHandle(basedir, { create: true });
     const fileHandle = await opfs.getFileHandle(path, { create: true, root: folder });
     if (!fileHandle) throw new Error(`File could not be created: ${path}`);

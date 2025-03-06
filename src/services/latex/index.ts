@@ -21,13 +21,13 @@ export async function compile(project: WorkspaceProj): Promise<Uint8Array> {
     const root = await project.syncFs();
 
     // Load the engine if it's not already loaded
-    if (!activeEngine || activeProject !== project.name) {
+    if (!activeEngine || activeProject !== project.uuid) {
       await progress.msg('Loading LaTeX engine');
 
       activeEngine?.closeWorker();
       activeEngine = new PdfTeXEngine();
       await activeEngine.loadEngine();
-      activeProject = project.name;
+      activeProject = project.uuid;
     }
 
     // Compile the project
