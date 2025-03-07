@@ -9,7 +9,7 @@ import (
 )
 
 type MessageEncoder struct {
-	length uint
+	Length uint
 
 	YjsDelta_encoder YjsDeltaEncoder
 }
@@ -26,10 +26,10 @@ func (encoder *MessageEncoder) Init(value *Message) {
 	l := uint(0)
 	if value.YjsDelta != nil {
 		l += 1
-		l += uint(enc.TLNum(encoder.YjsDelta_encoder.length).EncodingLength())
-		l += encoder.YjsDelta_encoder.length
+		l += uint(enc.TLNum(encoder.YjsDelta_encoder.Length).EncodingLength())
+		l += encoder.YjsDelta_encoder.Length
 	}
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -44,10 +44,10 @@ func (encoder *MessageEncoder) EncodeInto(value *Message, buf []byte) {
 	if value.YjsDelta != nil {
 		buf[pos] = byte(200)
 		pos += 1
-		pos += uint(enc.TLNum(encoder.YjsDelta_encoder.length).EncodeInto(buf[pos:]))
-		if encoder.YjsDelta_encoder.length > 0 {
+		pos += uint(enc.TLNum(encoder.YjsDelta_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.YjsDelta_encoder.Length > 0 {
 			encoder.YjsDelta_encoder.EncodeInto(value.YjsDelta, buf[pos:])
-			pos += encoder.YjsDelta_encoder.length
+			pos += encoder.YjsDelta_encoder.Length
 		}
 	}
 }
@@ -55,7 +55,7 @@ func (encoder *MessageEncoder) EncodeInto(value *Message, buf []byte) {
 func (encoder *MessageEncoder) Encode(value *Message) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
@@ -143,7 +143,7 @@ func ParseMessage(reader enc.WireView, ignoreCritical bool) (*Message, error) {
 }
 
 type YjsDeltaEncoder struct {
-	length uint
+	Length uint
 }
 
 type YjsDeltaParsingContext struct {
@@ -160,7 +160,7 @@ func (encoder *YjsDeltaEncoder) Init(value *YjsDelta) {
 		l += uint(enc.TLNum(len(value.Binary)).EncodingLength())
 		l += uint(len(value.Binary))
 	}
-	encoder.length = l
+	encoder.Length = l
 
 }
 
@@ -191,7 +191,7 @@ func (encoder *YjsDeltaEncoder) EncodeInto(value *YjsDelta, buf []byte) {
 func (encoder *YjsDeltaEncoder) Encode(value *YjsDelta) enc.Wire {
 
 	wire := make(enc.Wire, 1)
-	wire[0] = make([]byte, encoder.length)
+	wire[0] = make([]byte, encoder.Length)
 	buf := wire[0]
 	encoder.EncodeInto(value, buf)
 
