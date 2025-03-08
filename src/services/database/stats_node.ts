@@ -28,7 +28,10 @@ export class NodeStatsDb implements StatsDb {
   }
 
   public async put(name: string, stats: IWkspStats): Promise<void> {
-    const sql = this.db.prepare(`INSERT INTO workspaces (name, stats) VALUES (?, ?)`);
+    const sql = this.db.prepare(`
+      INSERT INTO workspaces (name, stats) VALUES (?, ?)
+      ON CONFLICT(name) DO UPDATE SET stats = excluded.stats
+    `);
     sql.run(name, JSON.stringify(stats));
   }
 }

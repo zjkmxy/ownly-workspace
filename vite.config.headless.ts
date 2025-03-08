@@ -15,8 +15,19 @@ export default defineConfig({
       entry: ['src/node/headless.ts'],
       formats: ['es'],
     },
+    minify: false,
     rollupOptions: {
-      external: ['fs', 'util', 'crypto', './wasm_exec.js', 'node:sqlite'],
+      external: [
+        './wasm_exec.js',
+        /node:.*/,
+        'fs',
+        'fs/promises',
+        'worker_threads',
+        'buffer',
+        'util',
+        'crypto',
+        'path',
+      ],
     },
   },
 });

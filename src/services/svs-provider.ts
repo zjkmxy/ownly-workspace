@@ -214,6 +214,9 @@ export class SvsProvider {
    * @returns Last update time if sync is needed, or null if no sync is needed
    */
   public async needsSync(uuid: string, mtime: number): Promise<number | null> {
+    // Node can return fractional mtime
+    mtime = Math.round(mtime);
+
     // Get last update time for the document
     const lastUpdate = await this.db.updateLast(uuid);
     if (!lastUpdate) return null;
@@ -237,6 +240,10 @@ export class SvsProvider {
    * @param mtime Last modified time of the file
    */
   public async markSynced(uuid: string, utime: number, mtime: number): Promise<void> {
+    // Node can return fractional mtime
+    mtime = Math.round(mtime);
+
+    // Mark the document as synced
     await this.db.fsSyncPut({ uuid, utime, mtime });
   }
 

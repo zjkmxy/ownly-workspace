@@ -5,6 +5,9 @@ declare global {
   interface OwnlyServices {
     stats: StatsDb;
     ProjDb: ProjDbConstructor;
+
+    getStorageRoot(): Promise<FileSystemDirectoryHandle>;
+    streamSaver: typeof import('streamsaver'); // browser only
   }
 
   // eslint-disable-next-line no-var

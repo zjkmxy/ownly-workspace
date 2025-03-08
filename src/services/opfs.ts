@@ -48,7 +48,7 @@ export async function getDirectoryHandle(
     root?: FileSystemDirectoryHandle;
   },
 ): Promise<FileSystemDirectoryHandle> {
-  let folder = opts?.root ?? (await self.navigator.storage.getDirectory());
+  let folder = opts?.root ?? (await globalThis._o.getStorageRoot());
   const parts = path.split('/').filter(Boolean);
   for (const part of parts) {
     folder = await folder.getDirectoryHandle(part, {
@@ -68,10 +68,10 @@ export async function* walk(
   path: string,
 ): AsyncGenerator<[string, FileSystemFileHandle, FileSystemDirectoryHandle]> {
   for await (const [name, entry] of folder.entries()) {
-    if (entry instanceof FileSystemFileHandle) {
-      yield [`${path}${name}`, entry, folder];
-    } else if (entry instanceof FileSystemDirectoryHandle) {
-      yield* walk(entry, `${path}${name}/`);
+    if (entry.kind === 'file') {
+      yield [`${path}${name}`, entry as FileSystemFileHandle, folder];
+    } else if (entry.kind === 'directory') {
+      yield* walk(entry as FileSystemDirectoryHandle, `${path}${name}/`);
     }
   }
 }
@@ -87,17 +87,14 @@ export async function download(
     name?: string;
   },
 ): Promise<void> {
-  // streamsaver is not supported on Node.js
-  const streamSaver = await import('streamsaver');
-
-  if (handle instanceof FileSystemFileHandle) {
+  if (handle.kind === 'file') {
     // Stream file directly to the user
-    const fileStream = streamSaver.createWriteStream(opts?.name ?? handle.name);
+    const fileStream = _o.streamSaver.createWriteStream(opts?.name ?? handle.name);
     const readable = await handle.getFile();
     await readable.stream().pipeTo(fileStream);
-  } else if (handle instanceof FileSystemDirectoryHandle) {
+  } else if (handle.kind === 'directory') {
     // Stream folder as a ZIP file
-    const fileStream = streamSaver.createWriteStream(opts?.name ?? handle.name + '.zip');
+    const fileStream = _o.streamSaver.createWriteStream(opts?.name ?? handle.name + '.zip');
     const writer = new zip.ZipWriter(fileStream);
     for await (const [path, entry] of walk(handle, String())) {
       const readable = await entry.getFile();

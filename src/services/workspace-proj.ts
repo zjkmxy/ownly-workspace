@@ -269,6 +269,9 @@ export class WorkspaceProj {
    * @returns The file content as Uint8Array.
    */
   public async exportFile(path: string): Promise<Uint8Array | null> {
+    console.debug('Exporting file:', path);
+
+    // Validate the path
     if (path.endsWith('/')) {
       throw new Error('Cannot export folder as file');
     }

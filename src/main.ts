@@ -9,10 +9,14 @@ import 'vue3-toastify/dist/index.css';
 // Initialize browser services
 import { IDBStatsDb } from '@/services/database/stats_browser';
 import { IDBProjDb } from './services/database/proj_db_browser';
+import streamSaver from 'streamsaver';
 
 globalThis._o = {
   stats: new IDBStatsDb(),
   ProjDb: IDBProjDb,
+
+  getStorageRoot: globalThis.navigator.storage.getDirectory,
+  streamSaver: streamSaver,
 };
 
 // Initialize Vue app
