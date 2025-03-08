@@ -15,7 +15,7 @@ globalThis._o = {
   stats: new IDBStatsDb(),
   ProjDb: IDBProjDb,
 
-  getStorageRoot: globalThis.navigator.storage.getDirectory,
+  getStorageRoot: () => window.navigator.storage.getDirectory(),
   streamSaver: streamSaver,
 };
 
