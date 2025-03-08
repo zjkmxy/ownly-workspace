@@ -68,6 +68,24 @@
             </a>
           </li>
         </ul>
+        <p class="menu-label">
+          <a @click="showInvite = !showInvite">
+            <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm"/>
+            Invite Someone
+          </a>
+          <template v-if="showInvite">
+          <input
+            :class="{ input: true }"
+            inputmode="email"
+            autocomplete="email"
+            type="email"
+            placeholder="name@email.com"
+            v-model="inviteeEmail"
+            @keyup.enter="inviteEmail(inviteeEmail); showInvite=false"
+          />
+            <button class="button mt-1 is-fullwidth" @click="inviteEmail(inviteeEmail); showInvite=false">Invite</button>
+          </template>
+        </p>
       </template>
     </div>
 
@@ -112,6 +130,13 @@ import { Toast } from '@/utils/toast';
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
 
+const inviteeEmail = "";
+const showInvite = ref(false);
+
+function inviteEmail(email:string) {
+  console.log(email);
+  return true;
+}
 const route = useRoute();
 const routeIsDashboard = computed(() => route.name === 'dashboard');
 const routeIsWorkspace = computed(() =>
