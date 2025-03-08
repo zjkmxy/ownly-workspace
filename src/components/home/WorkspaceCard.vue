@@ -15,24 +15,38 @@
       </div>
 
       <div class="content has-text-right">
-        <button class="button is-primary is-small-caps soft-if-dark" @click="launch">
+        <button class="button is-warning mr-2 is-small-caps soft-if-dark" @click="showRemove = true">
+          Remove Workspace
+        </button>
+        <button class="button is-primary mr-2 mb-2 is-small-caps soft-if-dark" @click="launch">
           Launch Workspace
         </button>
       </div>
     </div>
+
+    <RemoveWorkspaceModal :show="showRemove" :target="subtitle" @close="showRemove = false" @remove="remove"/>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import * as utils from '@/utils';
+import RemoveWorkspaceModal from '@/components/home/RemoveWorkspaceModal.vue';
+
+const showRemove = ref(false);
 
 const props = defineProps({
-  name: String,
-  subtitle: String,
+  name: {
+    type: String,
+    required: true,
+  },
+  subtitle: {
+    type: String,
+    required: true,
+  },
 });
 
-const emit = defineEmits(['open']);
+const emit = defineEmits(['open', 'remove']);
 
 const avatar = ref<string>(utils.makeAvatar(props.name ?? 'wksp', 'shapes'));
 
@@ -43,6 +57,10 @@ function launch() {
   navigator.storage?.persist?.().then((persisted) => {
     console.log(`Storage persistance state: ${persisted}`);
   });
+}
+
+function remove() {
+  emit('remove');
 }
 </script>
 

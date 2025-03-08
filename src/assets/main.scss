@@ -1,6 +1,7 @@
 @use 'bulma/sass/utilities/derived-variables' with (
   $primary: hsl(261.6, 51.87%, 47.25%),
-  $link: hsl(261.6, 51.87%, 47.25%)
+  $link: hsl(261.6, 51.87%, 47.25%),
+  $warning: hsl(0, 52%, 47%)
 );
 @use 'bulma/sass/utilities/css-variables' as cv;
 @use 'bulma/sass';
@@ -34,6 +35,9 @@ html {
   .has-background-primary.soft-if-dark,
   .is-primary.soft-if-dark {
     background-color: var(--bulma-primary-soft) !important;
+  }
+  .is-warning.soft-if-dark {
+    background-color: var(--bulma-warning-soft) !important;
   }
 
   * {

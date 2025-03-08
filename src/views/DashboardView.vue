@@ -36,7 +36,7 @@
           </div>
 
           <!-- Normal workspace card -->
-          <WorkspaceCard v-else :name="ws.label" :subtitle="ws.name" @open="open(ws)" />
+          <WorkspaceCard v-else :name="ws.label" :subtitle="ws.name" @open="open(ws)" @remove="refreshList" />
         </template>
       </div>
     </div>
