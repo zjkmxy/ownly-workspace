@@ -1,3 +1,10 @@
+/**
+ * Ownly Headless Utility.
+ *
+ * This synchronizes an Ownly project to the filesystem.
+ * Requires Node.js 23 or later.
+ */
+
 /// <reference types="node" />
 /// <reference types="../services.d.ts" />
 
@@ -54,16 +61,27 @@ async function setupWorkspace(wkspName: string): Promise<Workspace> {
 }
 
 async function main() {
+  if (process.argv.length < 3) {
+    console.error('Usage: node dist/headless.js </workspace/name> <project-name>');
+    process.exit(1);
+  }
+
+  const wkspName = process.argv[2];
+  const projName = process.argv[3];
+
   try {
     await loadServices();
     await loadGoEnvironment();
     await ndn.setup();
 
-    // TODO: get name from CLI instead
-    const wksp = await setupWorkspace('/test/space1');
-    const proj = await wksp.proj.get('documents');
+    // Setup the workspace
+    const wksp = await setupWorkspace(wkspName);
 
-    // TODO: need a hook to wait for sync to complete instead of this
+    // TODO: hook to wait for sync
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const proj = await wksp.proj.get(projName);
+
+    // TODO: hook to wait for sync
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
     // Sychronize the filesystem
