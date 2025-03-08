@@ -32,6 +32,7 @@ export async function getFileHandle(
  */
 export async function write(handle: FileSystemFileHandle, content: Uint8Array): Promise<void> {
   const writable = await handle.createWritable();
+  await writable.truncate(0);
   await writable.write(content);
   await writable.close();
 }

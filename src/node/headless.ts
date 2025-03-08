@@ -66,8 +66,10 @@ async function main() {
     // TODO: need a hook to wait for sync to complete instead of this
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
-    // Synchornize the filesystem
-    await proj.syncFs();
+    // Sychronize the filesystem
+    await proj.syncFs({
+      useProjectName: true,
+    });
     process.exit(0);
   } catch (e) {
     console.error('FATAL:', e);
