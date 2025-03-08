@@ -81,9 +81,9 @@
             type="email"
             placeholder="name@email.com"
             v-model="inviteeEmail"
-            @keyup.enter="inviteEmail(inviteeEmail); showInvite=false"
+            @keyup.enter="inviteEmail"
           />
-            <button class="button mt-1 is-fullwidth" @click="inviteEmail(inviteeEmail); showInvite=false">Invite</button>
+            <button class="button mt-1 is-fullwidth" @click="inviteEmail">Invite</button>
           </template>
         </p>
       </template>
@@ -127,14 +127,31 @@ import AddProjectModal from './AddProjectModal.vue';
 
 import { GlobalBus } from '@/services/event-bus';
 import { Toast } from '@/utils/toast';
+import {validateEmail, convertEmailToName} from "@/utils";
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
 
-const inviteeEmail = "";
+const inviteeEmail = ref(String());
 const showInvite = ref(false);
 
-function inviteEmail(email:string) {
-  console.log(email);
+function inviteEmail() {
+  console.log(inviteeEmail.value);
+  if (!showInvite.value) {
+    return;
+  }
+
+  if (!inviteeEmail.value) {
+    console.error("Email invite submitted without value");
+    return;
+  }
+
+  if (!validateEmail(inviteeEmail.value)) {
+    console.error("invited email is not valid");
+    return;
+  }
+  const converted = convertEmailToName(inviteeEmail.value);
+  console.log(converted);
+  showInvite.value = false;
   return true;
 }
 const route = useRoute();
