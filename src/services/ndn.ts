@@ -127,7 +127,17 @@ class NDNService {
 
     // Load the Go WASM module
     const go = new Go();
-    const result = await WebAssembly.instantiateStreaming(fetch('/main.wasm'), go.importObject);
+    let result: WebAssembly.WebAssemblyInstantiatedSource;
+
+    if (typeof window !== 'undefined') {
+      result = await WebAssembly.instantiateStreaming(fetch('/main.wasm'), go.importObject);
+    } else {
+      // @ts-expect-error - node.js dynamic import
+      const fs = await import('fs');
+      // @ts-expect-error - relative path to wasm
+      const buffer = fs.readFileSync(import.meta.dirname + '/main.wasm');
+      result = await WebAssembly.instantiate(buffer, go.importObject);
+    }
 
     // Callback given by WebAssembly to set the NDN API
     const ndnPromise = new Promise<NDNAPI>((resolve, reject) => {

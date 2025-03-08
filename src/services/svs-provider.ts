@@ -440,6 +440,8 @@ class NdnAwareness extends awareProto.Awareness {
     if (awarenessHaveStyles.has(client)) return;
     awarenessHaveStyles.add(client);
 
+    if (!awarenessStyles) return;
+
     // Monaco editor colors (see CodeEditor.vue)
     awarenessStyles.textContent += `
       .yRemoteSelection.yRemoteSelection-${client} {
@@ -459,5 +461,8 @@ class NdnAwareness extends awareProto.Awareness {
 
 // Awareness styles go to the head
 const awarenessHaveStyles = new Set<number>();
-const awarenessStyles = document.createElement('style');
-document.head.appendChild(awarenessStyles);
+let awarenessStyles: HTMLStyleElement;
+if (globalThis.document) {
+  awarenessStyles = document.createElement('style');
+  globalThis.document.head.appendChild(awarenessStyles);
+}

@@ -1,4 +1,3 @@
-import streamSaver from 'streamsaver';
 import * as zip from '@zip.js/zip.js';
 
 /**
@@ -88,6 +87,9 @@ export async function download(
     name?: string;
   },
 ): Promise<void> {
+  // streamsaver is not supported on Node.js
+  const streamSaver = await import('streamsaver');
+
   if (handle instanceof FileSystemFileHandle) {
     // Stream file directly to the user
     const fileStream = streamSaver.createWriteStream(opts?.name ?? handle.name);
