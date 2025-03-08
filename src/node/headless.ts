@@ -40,8 +40,8 @@ async function loadGoEnvironment() {
   globalThis.performance ??= performance;
   globalThis.crypto ??= crypto as any;
 
-  // @ts-expect-error - go wasm module
-  await import('./wasm_exec.js');
+  const wasm_exec = './wasm_exec.js';
+  await import(wasm_exec);
   console.log('Go environment loaded');
 }
 

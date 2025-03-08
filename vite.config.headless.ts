@@ -17,8 +17,11 @@ export default defineConfig({
     },
     minify: false,
     rollupOptions: {
+      output: {
+        preserveModules: true,
+        preserveModulesRoot: 'src/node',
+      },
       external: [
-        './wasm_exec.js',
         /node:.*/,
         'fs',
         'fs/promises',

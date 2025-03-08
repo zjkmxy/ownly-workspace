@@ -135,7 +135,7 @@ class NDNService {
       // @ts-expect-error - node.js dynamic import
       const fs = await import('fs');
       // @ts-expect-error - relative path to wasm
-      const buffer = fs.readFileSync(import.meta.dirname + '/main.wasm');
+      const buffer = fs.readFileSync(import.meta.dirname + '/../../main.wasm');
       result = await WebAssembly.instantiate(buffer, go.importObject);
     }
 
