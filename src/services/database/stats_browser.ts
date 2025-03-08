@@ -14,15 +14,15 @@ export class IDBStatsDb implements StatsDb {
     });
   }
 
-  public async list() {
+  public async list(): Promise<IWkspStats[]> {
     return this.db.workspaces.toArray();
   }
 
-  public async get(name: string) {
+  public async get(name: string): Promise<IWkspStats | undefined> {
     return this.db.workspaces.get(name);
   }
 
-  public async put(name: string, stats: IWkspStats) {
+  public async put(name: string, stats: IWkspStats): Promise<void> {
     await this.db.workspaces.put(stats, name);
   }
 }
