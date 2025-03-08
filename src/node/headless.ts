@@ -1,14 +1,17 @@
+/// <reference types="node" />
+
 import fs from 'fs';
 import util from 'util';
 import crypto from 'crypto';
 
-import ndn from '@/services/ndn';
-import { Workspace } from '@/services/workspace';
+import ndn from '../services/ndn';
+import { Workspace } from '../services/workspace';
 
 async function loadGoEnvironment() {
   // Prep environment for WebAssembly
   (globalThis as any).fs = fs;
   globalThis.TextEncoder = util.TextEncoder;
+  /// @ts-expect-error - TextDecoder is not defined in Node
   globalThis.TextDecoder = util.TextDecoder;
   globalThis.performance ??= performance;
   globalThis.crypto ??= crypto as any;

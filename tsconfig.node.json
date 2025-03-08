@@ -6,16 +6,12 @@
     "cypress.config.*",
     "nightwatch.conf.*",
     "playwright.config.*",
-    "eslint.config.*",
-    "src/node/**/*"
+    "eslint.config.*"
   ],
   "compilerOptions": {
     "noEmit": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
 
-    "paths": {
-      "@/*": ["./src/*"]
-    },
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "types": ["node"]
