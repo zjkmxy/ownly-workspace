@@ -2,9 +2,9 @@
 
 import * as Y from 'yjs';
 
-import { StoreDexie, type StoreJS } from './store_js';
-import { KeyChainDexie, type KeyChainJS } from './keychain_js';
-import { GlobalBus } from './event-bus';
+import { StoreDexie, type StoreJS } from '@/services/database/store_js';
+import { KeyChainDexie, type KeyChainJS } from '@/services/database/keychain_js';
+import { GlobalBus } from '@/services/event-bus';
 
 /* eslint-disable no-var */
 declare global {
