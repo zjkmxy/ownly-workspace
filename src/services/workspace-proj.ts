@@ -303,6 +303,8 @@ export class WorkspaceProj {
       } else if (utils.isExtensionType(path, 'milkdown')) {
         // https://github.com/pulsejet/ownly/issues/28
         return Y.encodeStateAsUpdateV2(doc);
+      } else if (utils.isExtensionType(path, 'excalidraw')) {
+        throw new Error('Excalidraw export is not supported for now. Check with developers.')
       }
     } finally {
       doc.destroy();
@@ -333,6 +335,11 @@ export class WorkspaceProj {
     const isText = utils.isExtensionType(path, 'code');
     const isMilkdown = utils.isExtensionType(path, 'milkdown');
     const isBlob = !isText && !isMilkdown;
+
+    // TODO(zjkmxy): Excalidraw does not support export or import for now.
+    if (utils.isExtensionType(path, 'excalidraw')) {
+      throw new Error('Excalidraw export is not supported for now. Check with developers.')
+    }
 
     // Get the existing file if present
     let meta = this.fileMap.get(path);
