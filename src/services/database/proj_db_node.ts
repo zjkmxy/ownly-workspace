@@ -1,3 +1,4 @@
+import fs from 'fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 
 import type { FsSyncEntry, ProjDb, UpdateEntry } from './proj_db';
@@ -27,6 +28,18 @@ export class NodeProjDb implements ProjDb {
         state BLOB
       ) STRICT
     `);
+  }
+
+  static async deleteWksp(name: string): Promise<void> {
+    // Project name is "root" or nanoid
+    const re = new RegExp(`^${name}-(root|.{21})\\.db$`);
+    for (const file of await fs.readdir('.')) {
+      if (re.test(file)) await fs.unlink(file);
+    }
+  }
+
+  async close(): Promise<void> {
+    this.db.close();
   }
 
   async stateGet(type: string): Promise<Uint8Array | undefined> {

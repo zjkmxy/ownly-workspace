@@ -22,6 +22,7 @@ import { ref } from 'vue';
 
 import ModalComponent from '../ModalComponent.vue';
 
+import * as utils from '@/utils';
 import { Toast } from '@/utils/toast';
 
 const props = defineProps({
@@ -46,7 +47,18 @@ async function leave() {
   try {
     loading.value = true;
 
+    // Close workspace if active
+    if (globalThis.ActiveWorkspace?.metadata.name === props.target) {
+      await globalThis.ActiveWorkspace.destroy();
+      globalThis.ActiveWorkspace = null;
+    }
+
+    // Remove from main list
     await _o.stats.del(props.target);
+
+    // Remove project databases
+    const slug = utils.escapeUrlName(props.target);
+    await _o.ProjDb.deleteWksp(slug);
 
     emit('leave');
     emit('close');

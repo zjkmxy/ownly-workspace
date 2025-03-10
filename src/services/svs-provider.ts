@@ -58,6 +58,7 @@ export class SvsProvider {
       doc.destroy();
     }
     await this.svs.stop();
+    await this.db.close();
   }
 
   /**
