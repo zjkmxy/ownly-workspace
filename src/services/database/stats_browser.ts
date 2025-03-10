@@ -25,4 +25,8 @@ export class IDBStatsDb implements StatsDb {
   public async put(name: string, stats: IWkspStats): Promise<void> {
     await this.db.workspaces.put(stats, name);
   }
+
+  public async del(name: string): Promise<void> {
+    await this.db.workspaces.delete(name);
+  }
 }

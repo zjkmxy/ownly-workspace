@@ -9,4 +9,7 @@ export interface StatsDb {
 
   /** Write workspace stats */
   put(name: string, stats: IWkspStats): Promise<void>;
+
+  /** Delete workspace stats */
+  del(name: string): Promise<void>;
 }
