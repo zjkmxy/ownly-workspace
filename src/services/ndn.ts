@@ -134,10 +134,10 @@ class NDNService {
     if (typeof window !== 'undefined') {
       result = await WebAssembly.instantiateStreaming(fetch('/main.wasm'), go.importObject);
     } else {
-      // @ts-expect-error - node.js dynamic import
-      const fs = await import('fs');
+      const fsImport = 'fs/promises';
+      const fs = await import(fsImport);
       // @ts-expect-error - relative path to wasm
-      const buffer = fs.readFileSync(import.meta.dirname + '/../../main.wasm');
+      const buffer = await fs.readFile(import.meta.dirname + '/../../main.wasm');
       result = await WebAssembly.instantiate(buffer, go.importObject);
     }
 
