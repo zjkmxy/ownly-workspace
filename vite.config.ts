@@ -22,35 +22,46 @@ function pwa() {
     includeAssets: ['*.wasm', '*.js', '*.png'],
     workbox: {
       maximumFileSizeToCacheInBytes: 10485760, // increasing the file size to cached 10mb
-      globPatterns: ['**/*.{js,css,html,scss,svg,png,wasm}'],
+      globPatterns: ['**/*.{svg,png,css,html}', 'assets/index*.js', '*.js', '*.wasm'],
     },
+
+    // Assets and manifest options generated using
+    // https://favicon.inbrowser.app/tools/favicon-generator
     manifest: {
-      name: 'Ownly: a workspace you Own Only you',
+      name: 'Ownly Workspace',
       short_name: 'Ownly',
-      // TODO: add icons 192, 384, 512
       icons: [
         {
-          src: '/icons/icon-192x192.png',
+          src: '/icons/pwa-192x192.png',
           sizes: '192x192',
           type: 'image/png',
-          purpose: 'any maskable',
+          purpose: 'any',
         },
         {
-          src: '/icons/icon-384x384.png',
-          sizes: '384x384',
-          type: 'image/png',
-        },
-        {
-          src: '/icons/icon-512x512.png',
+          src: '/icons/pwa-512x512.png',
           sizes: '512x512',
           type: 'image/png',
+          purpose: 'any',
+        },
+        {
+          src: '/icons/pwa-maskable-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
+        {
+          src: '/icons/pwa-maskable-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
         },
       ],
-      theme_color: '#673ab6',
-      background_color: '#f3f4f6',
       start_url: '/',
       display: 'standalone',
       orientation: 'portrait',
+      background_color: '#673ab7',
+      theme_color: '#673ab7',
+      description: 'A workspace you own',
     },
   });
 }
