@@ -171,7 +171,8 @@ export class SvsProvider {
     const name = `${this.svs.data_prefix}/32=blob/${uuid}/v=${version}`;
     await this.wksp.produce(name, blob);
 
-    // TODO: publish name to sync group for repo to pick up
+    // Publish name to sync group for repo to pick up
+    await this.svs.pub_blob_fetch(name);
 
     return name;
   }

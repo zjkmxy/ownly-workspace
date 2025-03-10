@@ -78,6 +78,8 @@ export interface SvsAloApi {
 
   /** Publish chat message to SVS ALO */
   pub_yjs_delta(uuid: string, binary: Uint8Array): Promise<void>;
+  /** Publish blob fetch command */
+  pub_blob_fetch(name: string): Promise<string>;
 
   /** Set SVS ALO subscription callbacks */
   subscribe(params: {
