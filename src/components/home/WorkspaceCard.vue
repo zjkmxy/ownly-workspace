@@ -17,7 +17,6 @@
           ref="button"
           class="button circle-button"
           @click.stop.prevent="$refs.wkspMenu!.open($event)"
-          title="Update contents of this node"
         >
           <FontAwesomeIcon :icon="faEllipsisV" size="sm" />
           <DropdownMenu ref="wkspMenu">
