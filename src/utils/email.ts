@@ -14,12 +14,6 @@ export function validateEmail(email: string): boolean {
 export function convertEmailToName(email: string): string {
   const splitEmail = email.split('@');
   const userName = splitEmail[0];
-  const subNames = splitEmail[1].split('.').reverse();
-  let ndnName = "/ndn/";
-  for (const subName of subNames) {
-    ndnName += subName;
-    ndnName += '/';
-  }
-  ndnName += userName;
-  return ndnName;
+  const domainName = splitEmail[1];
+  return "/" + domainName + "/@" + userName;
 }
