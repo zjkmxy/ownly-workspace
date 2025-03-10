@@ -1,4 +1,7 @@
 export interface ProjDb {
+  /** Close the database */
+  close(): Promise<void>;
+
   /** Get arbitrary state */
   stateGet(type: string): Promise<Uint8Array | undefined>;
   /** Store arbitrary state */
@@ -30,7 +33,16 @@ export interface ProjDb {
 }
 
 export interface ProjDbConstructor {
+  /**
+   * Create a new database with slug (full).
+   */
   new (name: string): ProjDb;
+
+  /**
+   * Delete the database with slug prefix.
+   * All databases with the same prefix will be deleted.
+   */
+  deleteWksp(name: string): Promise<void>;
 }
 
 /**

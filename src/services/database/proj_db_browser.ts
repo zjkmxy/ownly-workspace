@@ -18,6 +18,18 @@ export class IDBProjDb implements ProjDb {
     });
   }
 
+  static async deleteWksp(name: string): Promise<void> {
+    // Project name is "root" or nanoid
+    const re = new RegExp(`^${name}-(root|.{21})$`);
+    for (const db of await Dexie.getDatabaseNames()) {
+      if (re.test(db)) await Dexie.delete(db);
+    }
+  }
+
+  async close(): Promise<void> {
+    this.db.close();
+  }
+
   async stateGet(type: string): Promise<Uint8Array | undefined> {
     return (await this.db.state.get(type))?.state;
   }

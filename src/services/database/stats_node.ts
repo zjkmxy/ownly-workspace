@@ -34,4 +34,9 @@ export class NodeStatsDb implements StatsDb {
     `);
     sql.run(name, JSON.stringify(stats));
   }
+
+  public async del(name: string): Promise<void> {
+    const sql = this.db.prepare(`DELETE FROM workspaces WHERE name = ?`);
+    sql.run(name);
+  }
 }
