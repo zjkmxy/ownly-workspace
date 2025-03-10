@@ -32,3 +32,6 @@ coverage
 # WebAssembly
 /ndn/**/*.wasm
 /ndn/**/wasm_exec.js
+
+# Node.js
+/headless/
