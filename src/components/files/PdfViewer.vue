@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, shallowRef, watch } from 'vue';
+import { onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue';
 
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 
@@ -97,7 +97,7 @@ const props = defineProps({
   },
 });
 
-const pdfviewer = ref<InstanceType<typeof HTMLDivElement> | null>(null);
+const pdfviewer = useTemplateRef('pdfviewer');
 const width = ref(0);
 const loaded = ref(false);
 const pdfCopy = shallowRef<Uint8Array | null>(null);

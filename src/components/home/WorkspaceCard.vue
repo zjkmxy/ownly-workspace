@@ -16,7 +16,7 @@
         <button
           ref="button"
           class="button circle-button"
-          @click.stop.prevent="$refs.wkspMenu!.open($event)"
+          @click.stop.prevent="wkspMenu?.open($event)"
         >
           <FontAwesomeIcon :icon="faEllipsisV" size="sm" />
           <DropdownMenu ref="wkspMenu">
@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, useTemplateRef } from 'vue';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faEllipsisV } from '@fortawesome/free-solid-svg-icons';
@@ -67,6 +67,7 @@ const props = defineProps({
 const emit = defineEmits(['open', 'leave']);
 
 const avatar = ref<string>(utils.makeAvatar(props.metadata.name ?? 'wksp', 'shapes'));
+const wkspMenu = useTemplateRef('wkspMenu');
 
 function launch() {
   emit('open');
