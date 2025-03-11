@@ -164,11 +164,14 @@ export class Workspace {
     // Join workspace - this will check invitation etc.
     const finalName = await ndn.api.join_workspace(wksp, create);
 
+    // Check if we have the owner permissions
+    const isOwner = await ndn.api.is_workspace_owner(finalName);
+
     // Insert workspace metadata to database
     await _o.stats.put(finalName, {
       label: label,
       name: finalName,
-      owner: create,
+      owner: isOwner,
       pendingSetup: create ? true : undefined,
     });
 

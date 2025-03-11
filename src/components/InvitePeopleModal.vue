@@ -13,24 +13,31 @@
     <div class="field mt-2">
       <textarea
         class="textarea"
-        rows="10"
+        rows="8"
         placeholder="name@example.com"
         autofocus
         v-model="emails"
+        :disabled="!isOwner"
       ></textarea>
     </div>
+
+    <p v-if="!isOwner" class="has-text-danger has-text-weight-semibold mt-2">
+      You must be the owner of the workspace to invite people
+    </p>
 
     <div class="field has-text-right mt-2">
       <div class="control">
         <button class="button mr-2" @click="emit('close')">Cancel</button>
-        <button class="button is-primary soft-if-dark" @click="send">Invite</button>
+        <button class="button is-primary soft-if-dark" @click="send" :disabled="!isOwner">
+          Invite
+        </button>
       </div>
     </div>
   </ModalComponent>
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, watch } from 'vue';
+import { computed, ref, shallowRef, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import ModalComponent from './ModalComponent.vue';
@@ -50,6 +57,7 @@ const router = useRouter();
 
 const wksp = shallowRef<Workspace | null>(null);
 const emails = ref(String());
+const isOwner = computed(() => !!wksp.value?.metadata.owner);
 
 // Do not use the onMounted hook since this component is always mounted
 // in the sidebar (the inner modal has the v-if directive)

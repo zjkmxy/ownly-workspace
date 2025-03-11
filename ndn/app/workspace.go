@@ -136,6 +136,25 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 	return
 }
 
+// IsWorkspaceOwner returns true if the current identity has owner permissions.
+func (a *App) IsWorkspaceOwner(wkspStr string) (bool, error) {
+	wkspName, err := enc.NameFromStr(wkspStr)
+	if err != nil {
+		return false, err
+	}
+
+	idKey := a.GetTestbedKey()
+	if idKey == nil {
+		return false, fmt.Errorf("no testbed key")
+	}
+
+	// Currently this only checks if the workspace is in the identity namespace, but in the
+	// future it should check for actual delegation (valid signer)
+	// We don't support any owner-level delegation yet.
+	idName := idKey.KeyName().Prefix(-2)
+	return idName.IsPrefix(wkspName), nil
+}
+
 // GetWorkspace returns a JS object representing the workspace with the given name.
 func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	group, err := enc.NameFromStr(groupStr)

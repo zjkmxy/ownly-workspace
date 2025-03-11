@@ -33,6 +33,8 @@ interface NDNAPI {
 
   /** Join Workspace (generate keys etc.) */
   join_workspace(wksp: string, create: boolean): Promise<string>;
+  /** Check if the user has owner permissions on the workspace */
+  is_workspace_owner(wksp: string): Promise<boolean>;
 
   /** Get a Workspace API */
   get_workspace(name: string): Promise<WorkspaceAPI>;

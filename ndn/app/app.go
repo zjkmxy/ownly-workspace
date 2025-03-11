@@ -94,6 +94,11 @@ func (a *App) JsApi() js.Value {
 			return a.JoinWorkspace(p[0].String(), p[1].Bool())
 		}),
 
+		// is_workspace_owner(wksp: string): Promise<boolean>;
+		"is_workspace_owner": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			return a.IsWorkspaceOwner(p[0].String())
+		}),
+
 		// get_workspace(name: string): Promise<WorkspaceAPI>;
 		"get_workspace": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return a.GetWorkspace(p[0].String())
