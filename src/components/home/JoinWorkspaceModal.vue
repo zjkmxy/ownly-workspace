@@ -26,8 +26,8 @@
 
     <div class="field has-text-right">
       <div class="control">
-        <button class="button is-light mr-2" @click="close">Cancel</button>
-        <button class="button is-primary" @click="join">Join</button>
+        <button class="button is-light mr-2" :disabled="loading" @click="close">Cancel</button>
+        <button class="button is-primary" :disabled="loading" @click="join">Join</button>
       </div>
     </div>
   </ModalComponent>

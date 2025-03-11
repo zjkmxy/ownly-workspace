@@ -33,8 +33,8 @@
 
     <div class="field mt-2 has-text-right">
       <div class="control">
-        <button class="button is-light mr-2" @click="close">Cancel</button>
-        <button class="button is-primary" @click="create">Create</button>
+        <button class="button is-light mr-2" :disabled="loading" @click="close">Cancel</button>
+        <button class="button is-primary" :disabled="loading" @click="create">Create</button>
       </div>
     </div>
   </ModalComponent>
