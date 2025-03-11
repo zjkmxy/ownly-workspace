@@ -3,7 +3,6 @@
 package app
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 
@@ -13,12 +12,7 @@ import (
 )
 
 func (a *App) NdncertEmail(email string, CodeCb func(status string) string) (err error) {
-	rootCert, err := base64.StdEncoding.DecodeString(string(testbedRootCert))
-	if err != nil {
-		panic(err)
-	}
-
-	certClient, err := ndncert.NewClient(a.engine, rootCert)
+	certClient, err := ndncert.NewClient(a.engine, testbedRootCert)
 	if err != nil {
 		return err
 	}

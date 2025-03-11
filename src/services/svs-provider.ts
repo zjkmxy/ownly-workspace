@@ -172,7 +172,7 @@ export class SvsProvider {
     await this.wksp.produce(name, blob);
 
     // Publish name to sync group for repo to pick up
-    await this.svs.pub_blob_fetch(name);
+    await this.svs.pub_blob_fetch(name, undefined);
 
     return name;
   }

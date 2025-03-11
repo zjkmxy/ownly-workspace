@@ -4,6 +4,7 @@ package app
 
 import (
 	"crypto/elliptic"
+	_ "embed"
 	"fmt"
 	"syscall/js"
 	"time"
@@ -28,6 +29,9 @@ const SnapshotThreshold = 100
 
 // TODO: change this
 var repoName, _ = enc.NameFromStr("/ndnd/ucla/repo")
+
+//go:embed schema.tlv
+var SchemaBytes []byte
 
 // JoinWorkspace joins the workspace with the given name.
 // If the workspace does not exist, it will be created if create is true.
@@ -100,22 +104,22 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 	// Generate key and certificate for this workspace
 	appIdName := wkspName.Append(idName...)
 	appIdKeyName := security.MakeKeyName(appIdName)
-	signer, err := sig.KeygenEcc(appIdKeyName, elliptic.P256())
+	appIdSigner, err := sig.KeygenEcc(appIdKeyName, elliptic.P256())
 	if err != nil {
 		return
 	}
 
 	// Get key secret to sign certificate
-	appIdSecret, err := sig.MarshalSecretToData(signer)
+	appIdSecret, err := sig.MarshalSecretToData(appIdSigner)
 	if err != nil {
 		return
 	}
 
 	// Create certificate for this workspace
 	// TODO: limit validity to same as invite validity
-	cert, err := security.SignCert(security.SignCertArgs{
+	appIdCert, err := security.SignCert(security.SignCertArgs{
 		Data:        appIdSecret,
-		Signer:      signer,
+		Signer:      idSigner,
 		IssuerId:    enc.NewGenericComponent("self"),
 		NotBefore:   time.Now().Add(-time.Hour),
 		NotAfter:    time.Now().AddDate(10, 0, 0), // for now
@@ -126,10 +130,10 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 	}
 
 	// Insert key and certificate into keychain
-	if err = a.keychain.InsertKey(signer); err != nil {
+	if err = a.keychain.InsertKey(appIdSigner); err != nil {
 		return
 	}
-	if err = a.keychain.InsertCert(cert.Join()); err != nil {
+	if err = a.keychain.InsertCert(appIdCert.Join()); err != nil {
 		return
 	}
 
@@ -162,19 +166,46 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 		return
 	}
 
-	// Get name of this node
-	idKey := a.GetTestbedKey()
-	if idKey == nil {
-		err = fmt.Errorf("no testbed key")
+	// Create trust configuration
+	schema, err := trust_schema.NewLvsSchema(SchemaBytes)
+	if err != nil {
+		return
+	}
+	trust, err := security.NewTrustConfig(a.keychain, schema, []enc.Name{testbedRootName})
+	if err != nil {
 		return
 	}
 
+	// Get identity key to use (same as testbed key)
+	idKey := a.GetTestbedKey()
+	if idKey == nil {
+		err = fmt.Errorf("no valid testbed key found")
+		return
+	}
 	// Use testbed key to sign NFD management commands
 	a.SetCmdKey(idKey)
 	idName := idKey.KeyName().Prefix(-2) // pop KeyId and KEY
 
+	// Get workspace-specific user key
+	userKey := trust.Suggest(group.Append(
+		enc.NewGenericComponent("root"),
+		enc.NewKeywordComponent("svs"), // hacky
+	))
+	if userKey == nil {
+		err = fmt.Errorf("no valid user key found")
+		return
+	} else {
+		log.Info(a, "Found valid user key", "name", userKey.KeyName())
+	}
+
 	// Create client object for this workspace
-	client := object.NewClient(a.engine, a.store, nil)
+	client := object.NewClient(a.engine, a.store, trust)
+
+	// We need to make our own certificates available
+	wkspRoutes := []enc.Name{
+		idKey.KeyName(),
+		userKey.KeyName(),
+	}
 
 	var workspaceJs map[string]any
 	workspaceJs = map[string]any{
@@ -189,6 +220,16 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			if err := client.Start(); err != nil {
 				return nil, err
 			}
+
+			// Announce certificate routes
+			for _, route := range wkspRoutes {
+				client.AnnouncePrefix(ndn.Announcement{
+					Name:    route,
+					Expose:  true,
+					OnError: nil, // TODO
+				})
+			}
+
 			return nil, nil
 		}),
 
@@ -196,6 +237,11 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 		"stop": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			if err := client.Stop(); err != nil {
 				return nil, err
+			}
+
+			// Withdraw certificate routes
+			for _, route := range wkspRoutes {
+				client.WithdrawPrefix(route, nil) // TODO: error
 			}
 
 			jsutil.ReleaseMap(workspaceJs)
@@ -359,11 +405,9 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 			// Announce prefixes to the network
 			for _, route := range routes {
 				client.AnnouncePrefix(ndn.Announcement{
-					Name:   route,
-					Expose: true,
-					OnError: func(err error) {
-						// TODO: show error to the user, use a global bus hook
-					},
+					Name:    route,
+					Expose:  true,
+					OnError: nil, // TODO
 				})
 			}
 
@@ -419,7 +463,7 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 			return js.ValueOf(name.String()), nil
 		}),
 
-		// pub_blob_fetch(name: string, encapsulate?: Uint8Array): Promise<string>;
+		// pub_blob_fetch(name: string, encapsulate: Uint8Array | undefined): Promise<string>;
 		"pub_blob_fetch": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			// This message is special, in the sense that it is purely intended for repo.
 			// So subscribers will never see this message.

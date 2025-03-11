@@ -26,10 +26,17 @@ var _ndnd_keychain_js = js.Global().Get("_ndnd_keychain_js")
 var _ndnd_conn_change_js = js.Global().Get("_ndnd_conn_change_js")
 
 func NewApp() *App {
+	// Setup JS shim store
 	store := storage.NewJsStore(_ndnd_store_js)
 
+	// Setup JS shim keychain
 	kc, err := keychain.NewKeyChainJS(_ndnd_keychain_js, store)
 	if err != nil {
+		panic(err)
+	}
+
+	// Insert trust anchor
+	if err = kc.InsertCert(testbedRootCert); err != nil {
 		panic(err)
 	}
 
@@ -40,10 +47,20 @@ func NewApp() *App {
 }
 
 func NewNodeApp() *App {
+	// NodeApp currently only supports consumer mode.
+	// If we want producer mode, we need a real store implementation.
+	// FS already works but badger may be too slow.
 	store := storage.NewMemoryStore()
 
+	// Setup directory keychain
+	// TODO: make this path configurable, maybe env variable
 	kc, err := keychain.NewKeyChainDir("./keychain", store)
 	if err != nil {
+		panic(err)
+	}
+
+	// Insert trust anchor
+	if err = kc.InsertCert(testbedRootCert); err != nil {
 		panic(err)
 	}
 
