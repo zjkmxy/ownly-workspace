@@ -84,12 +84,13 @@ async function create() {
     const label = opts.value.label.trim();
     const name = opts.value.name.trim();
     if (!label || !name) {
-      throw new Error('Label and name identifier are required');
+      throw new Error('Please fill in all the fields');
     }
     if (!/^[a-z0-9-_]+$/.test(name)) {
       throw new Error('Name identifier contains invalid characters');
     }
 
+    // Join the workspace with attempt to create
     const finalName = await Workspace.join(label, fullName.value, true);
 
     emit('create', finalName);
@@ -98,7 +99,7 @@ async function create() {
     Toast.success('Created workspace successfully!');
   } catch (err) {
     console.error(err);
-    Toast.error(`Error creating workspace: ${err}`);
+    Toast.error(`${err}`);
   } finally {
     loading.value = false;
   }

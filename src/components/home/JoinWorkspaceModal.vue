@@ -64,7 +64,15 @@ async function join() {
   try {
     loading.value = true;
 
-    const finalName = await Workspace.join(opts.value.label, opts.value.name, false);
+    // Validate the inputs
+    const label = opts.value.label.trim();
+    const name = opts.value.name.trim();
+    if (!label || !name) {
+      throw new Error('Please fill in all the fields');
+    }
+
+    // Join the workspace without attempting create
+    const finalName = await Workspace.join(label, name, false);
 
     emit('join', finalName);
     emit('close');
@@ -72,7 +80,7 @@ async function join() {
     Toast.success('Joined workspace successfully!');
   } catch (err) {
     console.error(err);
-    Toast.error(`Error joining workspace: ${err}`);
+    Toast.error(`${err}`);
   } finally {
     loading.value = false;
   }
