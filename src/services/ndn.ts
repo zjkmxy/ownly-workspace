@@ -58,8 +58,12 @@ export interface WorkspaceAPI {
     state: Uint8Array | undefined,
     persist_state: (state: Uint8Array) => Promise<void>,
   ): Promise<SvsAloApi>;
+
   /** Awareness instance */
   awareness(group: string): Promise<AwarenessApi>;
+
+  /** Sign an invitation for a given NDN name */
+  sign_invitation(invitee: string): Promise<Uint8Array>;
 }
 
 /** API of the SVS ALO instance */
@@ -79,7 +83,7 @@ export interface SvsAloApi {
   /** Publish chat message to SVS ALO */
   pub_yjs_delta(uuid: string, binary: Uint8Array): Promise<void>;
   /** Publish blob fetch command */
-  pub_blob_fetch(name: string): Promise<string>;
+  pub_blob_fetch(name: string, encapsulate?: Uint8Array): Promise<string>;
 
   /** Set SVS ALO subscription callbacks */
   subscribe(params: {

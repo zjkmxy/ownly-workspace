@@ -21,7 +21,7 @@ export class SvsProvider {
   private constructor(
     private readonly db: ProjDb,
     private readonly wksp: WorkspaceAPI,
-    private readonly svs: SvsAloApi,
+    public readonly svs: SvsAloApi,
   ) {}
 
   /**

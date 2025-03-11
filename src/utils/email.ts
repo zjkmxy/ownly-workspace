@@ -12,8 +12,14 @@ export function validateEmail(email: string): boolean {
 }
 
 export function convertEmailToName(email: string): string {
-  const splitEmail = email.split('@');
-  const userName = splitEmail[0];
-  const domainName = splitEmail[1];
-  return "/" + domainName + "/@" + userName;
+  if (!validateEmail(email)) {
+    throw new Error('Invalid email address');
+  }
+
+  const parts = email.split('@');
+  const user = parts[0];
+  const domain = parts[1];
+
+  // Technically @ is not allowed in URI, but NDNd can handle this
+  return `/${domain}/@${user}`;
 }

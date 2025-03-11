@@ -68,24 +68,16 @@
             </a>
           </li>
         </ul>
-        <p class="menu-label">
-          <a @click="showInvite = !showInvite">
-            <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm"/>
-            Invite Someone
-          </a>
-          <template v-if="showInvite">
-          <input
-            :class="{ input: true }"
-            inputmode="email"
-            autocomplete="email"
-            type="email"
-            placeholder="name@email.com"
-            v-model="inviteeEmail"
-            @keyup.enter="inviteEmail"
-          />
-            <button class="button mt-1 is-fullwidth" @click="inviteEmail">Invite</button>
-          </template>
-        </p>
+
+        <p class="menu-label">Workspace</p>
+        <ul class="menu-list">
+          <li>
+            <a @click="showInviteModal = true">
+              <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
+              Invite people
+            </a>
+          </li>
+        </ul>
       </template>
     </div>
 
@@ -104,6 +96,7 @@
 
     <AddChannelModal :show="showChannelModal" @close="showChannelModal = false" />
     <AddProjectModal :show="showProjectModal" @close="showProjectModal = false" />
+    <InvitePeopleModal :show="showInviteModal" @close="showInviteModal = false" />
   </aside>
 </template>
 
@@ -127,47 +120,26 @@ import AddProjectModal from './AddProjectModal.vue';
 
 import { GlobalBus } from '@/services/event-bus';
 import { Toast } from '@/utils/toast';
-import {validateEmail, convertEmailToName} from "@/utils";
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
+import InvitePeopleModal from './InvitePeopleModal.vue';
 
-const inviteeEmail = ref(String());
-const showInvite = ref(false);
-
-function inviteEmail() {
-  console.log(inviteeEmail.value);
-  if (!showInvite.value) {
-    return;
-  }
-
-  if (!inviteeEmail.value) {
-    console.error("Email invite submitted without value");
-    return;
-  }
-
-  if (!validateEmail(inviteeEmail.value)) {
-    console.error("invited email is not valid");
-    return;
-  }
-  const converted = convertEmailToName(inviteeEmail.value);
-  console.log(converted);
-  showInvite.value = false;
-  return true;
-}
 const route = useRoute();
 const routeIsDashboard = computed(() => route.name === 'dashboard');
 const routeIsWorkspace = computed(() =>
   ['space-home', 'project', 'discuss', 'project-file'].includes(String(route.name)),
 );
 
+const showChannelModal = ref(false);
+const showProjectModal = ref(false);
+const showInviteModal = ref(false);
+
 // vue-tsc chokes on this type inference
 const projectTree = useTemplateRef<Array<InstanceType<typeof ProjectTree>>>('projectTree');
 
 const channels = ref([] as IChatChannel[]);
-const showChannelModal = ref(false);
 
 const projects = ref([] as IProject[]);
-const showProjectModal = ref(false);
 const activeProjectName = ref(null as string | null);
 const projectFiles = ref([] as IProjectFile[]);
 

@@ -1,5 +1,6 @@
 import { WorkspaceChat } from './workspace-chat';
 import { WorkspaceProj, WorkspaceProjManager } from './workspace-proj';
+import { WorkspaceInviteManager } from './workspace-invite';
 
 import { SvsProvider } from '@/services/svs-provider';
 
@@ -30,6 +31,7 @@ export class Workspace {
     private readonly provider: SvsProvider,
     public readonly chat: WorkspaceChat,
     public readonly proj: WorkspaceProjManager,
+    public readonly invite: WorkspaceInviteManager,
   ) {}
 
   /**
@@ -50,9 +52,10 @@ export class Workspace {
     // Create general modules
     const chat = await WorkspaceChat.create(api, provider);
     const proj = await WorkspaceProjManager.create(api, provider);
+    const invite = await WorkspaceInviteManager.create(api, provider);
 
     // Create workspace object
-    return new Workspace(metadata, api, provider, chat, proj);
+    return new Workspace(metadata, api, provider, chat, proj, invite);
   }
 
   /**

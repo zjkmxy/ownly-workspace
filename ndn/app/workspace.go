@@ -17,6 +17,7 @@ import (
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/security/trust_schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
@@ -75,7 +76,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 	// Use testbed key to sign NFD management commands
 	a.SetCmdKey(key)
-	name := key.KeyName().Prefix(-2) // pop KeyId and KEY
+	userName := key.KeyName().Prefix(-2) // pop KeyId and KEY
 
 	// Create client object for this workspace
 	client := object.NewClient(a.engine, a.store, nil)
@@ -83,7 +84,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	var workspaceJs map[string]any
 	workspaceJs = map[string]any{
 		// name: string;
-		"name": js.ValueOf(name.String()),
+		"name": js.ValueOf(userName.String()),
 
 		// group: string;
 		"group": js.ValueOf(group.String()),
@@ -161,7 +162,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 			// Create new SVS ALO instance
 			svsAlo, err := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
-				Name:         name,
+				Name:         userName,
 				InitialState: stateWire,
 
 				Svs: ndn_sync.SvSyncOpts{
@@ -195,6 +196,52 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 				Name:   awarenessGroup,
 				Client: client,
 			}), nil
+		}),
+
+		// sign_invitation(invitee: string): Promise<Uint8Array>;
+		"sign_invitation": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			invitee, err := enc.NameFromStr(p[0].String())
+			if err != nil {
+				return nil, err
+			}
+
+			// Make the invitation name
+			// There is always a "root" project that manages the workspace,
+			// so we reuse that naming convention for the invitation.
+			// /<wksp>/root/32=INVITE/<invitee>/v=<time>
+			inviteName := group.
+				Append(enc.NewGenericComponent("root")).
+				Append(enc.NewKeywordComponent("INVITE")).
+				Append(invitee...).
+				WithVersion(enc.VersionUnixMicro)
+
+			// Make sure we can make this invitation
+			signer := client.SuggestSigner(inviteName)
+			if signer == nil {
+				return nil, fmt.Errorf("no valid signing key")
+			}
+
+			wire, err := trust_schema.SignCrossSchema(trust_schema.SignCrossSchemaArgs{
+				Name:   inviteName,
+				Signer: signer,
+				Content: trust_schema.CrossSchemaContent{
+					SimpleSchemaRules: []*trust_schema.SimpleSchemaRule{{
+						// Authorize invitee's identity key to sign data
+						NamePrefix: group.Append(invitee...),
+						KeyLocator: &spec.KeyLocator{
+							Name: invitee.Append(enc.NewGenericComponent("KEY")),
+						},
+					}},
+				},
+				NotBefore: time.Now().Add(-time.Hour),
+				NotAfter:  time.Now().AddDate(50, 0, 0), // for now
+				Store:     client.Store(),               // auto-store
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			return jsutil.SliceToJsArray(wire.Join()), nil
 		}),
 	}
 
@@ -277,19 +324,26 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 			return js.ValueOf(name.String()), nil
 		}),
 
-		// pub_blob_fetch(name: string): Promise<string>;
+		// pub_blob_fetch(name: string, encapsulate?: Uint8Array): Promise<string>;
 		"pub_blob_fetch": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			// This message is special, in the sense that it is purely intended for repo.
 			// So subscribers will never see this message.
-			blobName, err := enc.NameFromStr(p[0].String())
-			if err != nil {
-				return nil, err
-			}
 			cmd := spec_repo.RepoCmd{
-				BlobFetch: &spec_repo.BlobFetch{
-					Name: &spec.NameContainer{Name: blobName},
-				},
+				BlobFetch: &spec_repo.BlobFetch{},
 			}
+			if !p[1].IsUndefined() { // encapsulate
+				// For now this only supports a single encapsulated Data
+				cmd.BlobFetch.Data = [][]byte{
+					jsutil.JsArrayToSlice(p[1]),
+				}
+			} else { // pointer only
+				blobName, err := enc.NameFromStr(p[0].String())
+				if err != nil {
+					return nil, err
+				}
+				cmd.BlobFetch.Name = &spec.NameContainer{Name: blobName}
+			}
+
 			blobName, state, err := alo.Publish(cmd.Encode())
 			if err != nil {
 				return nil, err
