@@ -79,14 +79,27 @@ async function send() {
   if (emailSet.size === 0) {
     Toast.error('No valid email addresses entered');
     return;
+  } else if (emailSet.size > 100) {
+    Toast.error('Maximum of 100 email addresses allowed');
+    return;
   }
 
   for (const email of emailSet) {
     const ndnName = utils.convertEmailToName(email);
 
-    // Generate and publish invitation to sync
-    await wksp.value.invite.invite(ndnName);
+    try {
+      // Generate and publish invitation to sync
+      await wksp.value.invite.invite(ndnName);
+    } catch (err) {
+      Toast.error(`Failed to invite ${email}: ${err}`);
+      return; // rare
+    }
   }
+
+  // Finish
+  Toast.success(`Invited ${emailSet.size} addresses to workpace!`);
+  emit('close');
+  emails.value = String();
 }
 </script>
 
