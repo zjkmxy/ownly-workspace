@@ -23,34 +23,110 @@ import (
 	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
 
+// TODO: find optimal value
 const SnapshotThreshold = 100
 
+// TODO: change this
 var repoName, _ = enc.NameFromStr("/ndnd/ucla/repo")
 
-// CreateWorkspace creates a new workspace with the given name.
-func (a *App) CreateWorkspace(nameStr string) (nameStrFinal string, err error) {
-	name, err := enc.NameFromStr(nameStr)
+// JoinWorkspace joins the workspace with the given name.
+// If the workspace does not exist, it will be created if create is true.
+func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err error) {
+	wkspName, err := enc.NameFromStr(wkspStr_)
 	if err != nil {
 		return
 	}
-	nameStrFinal = name.String()
+	wkspStr = wkspName.String()
 
-	keyName := security.MakeKeyName(name)
-	signer, err := sig.KeygenEcc(keyName, elliptic.P256())
+	// Connect to network
+	if err = a.ConnectTestbed(); err != nil {
+		return
+	}
+
+	// TODO: fetch workspace "metadata" and check for existence
+	// If not existing, check the create flag and proceed
+
+	// Get a valid identity key to sign the certificate
+	idSigner := a.GetTestbedKey()
+	if idSigner == nil {
+		err = fmt.Errorf("no identity key found")
+		return
+	}
+	idName := idSigner.KeyName().Prefix(-2) // pop KeyId and KEY
+
+	// Check if the workspace is outside our namespace
+	// In that case we need to attach the invitation cross schema to certificate
+	var invitation enc.Wire = nil
+	if !idName.IsPrefix(wkspName) {
+		// Check if we are allowed to create the workspace
+		if create {
+			err = fmt.Errorf("cannot create workspace outside your namespace: %s", idName)
+			return
+		}
+
+		// Other namespace - check for invitation
+		inviteName := wkspName.
+			Append(enc.NewGenericComponent("root")).
+			Append(enc.NewKeywordComponent("INVITE")).
+			Append(idName...)
+		log.Info(a, "Fetching workspace invite", "name", inviteName)
+
+		// Fetch the invitation from the network
+		ch := make(chan ndn.ExpressCallbackArgs)
+		object.ExpressR(a.engine, ndn.ExpressRArgs{
+			Name: inviteName,
+			Config: &ndn.InterestConfig{
+				MustBeFresh: true,
+				CanBePrefix: true,
+			},
+			Retries:  3,
+			Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
+		})
+		args := <-ch
+		if args.Result != ndn.InterestResultData {
+			err = fmt.Errorf("failed to get invitation, make sure %s is invited to %s (%s)",
+				idName, wkspName, args.Result)
+			return
+		}
+
+		// TODO: validate the invitation itself
+		invitation = args.RawData
+
+		log.Info(a, "Got workspace invitation", "name", wkspStr, "invite", args.Data.Name())
+	} else {
+		log.Info(a, "Joining workspace in own namespace", "name", wkspStr)
+	}
+
+	// Generate key and certificate for this workspace
+	appIdName := wkspName.Append(idName...)
+	appIdKeyName := security.MakeKeyName(appIdName)
+	signer, err := sig.KeygenEcc(appIdKeyName, elliptic.P256())
 	if err != nil {
 		return
 	}
-	if err = a.keychain.InsertKey(signer); err != nil {
+
+	// Get key secret to sign certificate
+	appIdSecret, err := sig.MarshalSecretToData(signer)
+	if err != nil {
 		return
 	}
 
-	// Create self-signed certificate trust anchor
-	cert, err := security.SelfSign(security.SignCertArgs{
-		Signer:    signer,
-		NotBefore: time.Now().Add(-time.Hour),
-		NotAfter:  time.Now().Add(time.Hour * 24 * 365 * 10), // 10 years
+	// Create certificate for this workspace
+	// TODO: limit validity to same as invite validity
+	cert, err := security.SignCert(security.SignCertArgs{
+		Data:        appIdSecret,
+		Signer:      signer,
+		IssuerId:    enc.NewGenericComponent("self"),
+		NotBefore:   time.Now().Add(-time.Hour),
+		NotAfter:    time.Now().AddDate(10, 0, 0), // for now
+		CrossSchema: invitation,
 	})
 	if err != nil {
+		return
+	}
+
+	// Insert key and certificate into keychain
+	if err = a.keychain.InsertKey(signer); err != nil {
 		return
 	}
 	if err = a.keychain.InsertCert(cert.Join()); err != nil {
@@ -68,15 +144,15 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	}
 
 	// Get name of this node
-	key := a.GetTestbedKey()
-	if key == nil {
+	idKey := a.GetTestbedKey()
+	if idKey == nil {
 		err = fmt.Errorf("no testbed key")
 		return
 	}
 
 	// Use testbed key to sign NFD management commands
-	a.SetCmdKey(key)
-	userName := key.KeyName().Prefix(-2) // pop KeyId and KEY
+	a.SetCmdKey(idKey)
+	idName := idKey.KeyName().Prefix(-2) // pop KeyId and KEY
 
 	// Create client object for this workspace
 	client := object.NewClient(a.engine, a.store, nil)
@@ -84,7 +160,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	var workspaceJs map[string]any
 	workspaceJs = map[string]any{
 		// name: string;
-		"name": js.ValueOf(userName.String()),
+		"name": js.ValueOf(idName.String()), // wrong
 
 		// group: string;
 		"group": js.ValueOf(group.String()),
@@ -162,7 +238,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 			// Create new SVS ALO instance
 			svsAlo, err := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
-				Name:         userName,
+				Name:         idName,
 				InitialState: stateWire,
 
 				Svs: ndn_sync.SvSyncOpts{
@@ -378,7 +454,7 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 					default:
 						// This will be logged even for BlobFetch commands, which is fine
 						// (can be fixed but avoid the extra parse that is unused)
-						log.Warn(nil, "Ignoring unknown message")
+						log.Warn(a, "Ignoring unknown message")
 					}
 				}
 

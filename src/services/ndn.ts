@@ -22,6 +22,8 @@ declare global {
 interface NDNAPI {
   /** Check if there is a valid testbed key in the keychain */
   has_testbed_key(): Promise<boolean>;
+  /** Get the user's identity key */
+  get_identity_name(): Promise<string>;
 
   /** Connect to the global NDN testbed */
   connect_testbed(): Promise<void>;
@@ -29,10 +31,10 @@ interface NDNAPI {
   /** NDNCERT email verfication challenge */
   ndncert_email(email: string, code: (status: string) => Promise<string>): Promise<void>;
 
-  /** Create new workspace */
-  create_workspace(name: string): Promise<string>;
+  /** Join Workspace (generate keys etc.) */
+  join_workspace(wksp: string, create: boolean): Promise<string>;
 
-  /** Get an existing workspace */
+  /** Get a Workspace API */
   get_workspace(name: string): Promise<WorkspaceAPI>;
 }
 

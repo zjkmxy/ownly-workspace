@@ -149,4 +149,29 @@ export class Workspace {
     await proj.activate();
     return proj;
   }
+
+  /**
+   * Join a workspace by name and the default identity.
+   *
+   * @param label Display name
+   * @param wksp Workspace name
+   * @param create Create the workspace if it does not exist
+   */
+  public static async join(label: string, wksp: string, create: boolean): Promise<string> {
+    const metadata = await _o.stats.get(wksp);
+    if (metadata) throw new Error('You have already joined this workspace');
+
+    // Join workspace - this will check invitation etc.
+    const finalName = await ndn.api.join_workspace(wksp, create);
+
+    // Insert workspace metadata to database
+    await _o.stats.put(finalName, {
+      label: label,
+      name: finalName,
+      owner: create,
+      pendingSetup: create ? true : undefined,
+    });
+
+    return finalName;
+  }
 }

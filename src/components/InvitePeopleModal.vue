@@ -23,7 +23,7 @@
     <div class="field has-text-right mt-2">
       <div class="control">
         <button class="button mr-2" @click="emit('close')">Cancel</button>
-        <button class="button is-primary soft-if-dark" @click="send">Send</button>
+        <button class="button is-primary soft-if-dark" @click="send">Invite</button>
       </div>
     </div>
   </ModalComponent>
@@ -85,7 +85,7 @@ async function send() {
   }
 
   for (const email of emailSet) {
-    const ndnName = utils.convertEmailToName(email);
+    const ndnName = utils.convertEmailToNameLegacy(email);
 
     try {
       // Generate and publish invitation to sync
