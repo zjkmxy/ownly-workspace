@@ -48,13 +48,7 @@ async function loadGoEnvironment() {
 async function setupWorkspace(wkspName: string): Promise<Workspace> {
   // Join the workspace if not already joined
   const wkspMeta = await globalThis._o.stats.get(wkspName);
-  if (!wkspMeta) {
-    await _o.stats.put(wkspName, {
-      label: wkspName,
-      name: wkspName,
-      owner: false,
-    });
-  }
+  if (!wkspMeta) await Workspace.join(wkspName, wkspName, false);
 
   // Setup the workspace
   return await Workspace.setup(utils.escapeUrlName(wkspName));
