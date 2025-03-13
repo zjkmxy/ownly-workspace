@@ -353,7 +353,7 @@ class NdnAwareness extends awareProto.Awareness {
     // Set the local user state
     const userState: AwarenessLocalState['user'] = {
       name: username, // common
-      color: `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`, // milkdown+monaco
+      color: `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`, // milkdown+monaco
     };
     me.setLocalStateField('user', userState);
 
