@@ -4,6 +4,7 @@ package app
 
 import (
 	"crypto/elliptic"
+	_ "embed"
 	"fmt"
 	"syscall/js"
 	"time"
@@ -17,46 +18,148 @@ import (
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security"
 	sig "github.com/named-data/ndnd/std/security/signer"
+	"github.com/named-data/ndnd/std/security/trust_schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
 	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
 
+// TODO: find optimal value
 const SnapshotThreshold = 100
 
+// TODO: change this
 var repoName, _ = enc.NameFromStr("/ndnd/ucla/repo")
 
-// CreateWorkspace creates a new workspace with the given name.
-func (a *App) CreateWorkspace(nameStr string) (nameStrFinal string, err error) {
-	name, err := enc.NameFromStr(nameStr)
+// TODO: this is testbed configuration
+var multicastPrefix, _ = enc.NameFromStr("/ndn/multicast")
+
+//go:embed schema.tlv
+var SchemaBytes []byte
+
+// JoinWorkspace joins the workspace with the given name.
+// If the workspace does not exist, it will be created if create is true.
+func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err error) {
+	wkspName, err := enc.NameFromStr(wkspStr_)
 	if err != nil {
 		return
 	}
-	nameStrFinal = name.String()
+	wkspStr = wkspName.String()
 
-	keyName := security.MakeKeyName(name)
-	signer, err := sig.KeygenEcc(keyName, elliptic.P256())
+	// Connect to network
+	if err = a.ConnectTestbed(); err != nil {
+		return
+	}
+
+	// TODO: fetch workspace "metadata" and check for existence
+	// If not existing, check the create flag and proceed
+
+	// Get a valid identity key to sign the certificate
+	idSigner := a.GetTestbedKey()
+	if idSigner == nil {
+		err = fmt.Errorf("no identity key found")
+		return
+	}
+	idName := idSigner.KeyName().Prefix(-2) // pop KeyId and KEY
+
+	// Check if the workspace is outside our namespace
+	// In that case we need to attach the invitation cross schema to certificate
+	var invitation enc.Wire = nil
+	if !idName.IsPrefix(wkspName) {
+		// Check if we are allowed to create the workspace
+		if create {
+			err = fmt.Errorf("cannot create workspace outside your namespace: %s", idName)
+			return
+		}
+
+		// Other namespace - check for invitation
+		inviteName := wkspName.
+			Append(enc.NewGenericComponent("root")).
+			Append(enc.NewKeywordComponent("INVITE")).
+			Append(idName...)
+		log.Info(a, "Fetching workspace invite", "name", inviteName)
+
+		// Fetch the invitation from the network
+		ch := make(chan ndn.ExpressCallbackArgs)
+		object.ExpressR(a.engine, ndn.ExpressRArgs{
+			Name: inviteName,
+			Config: &ndn.InterestConfig{
+				MustBeFresh: true,
+				CanBePrefix: true,
+			},
+			Retries:  3,
+			Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
+		})
+		args := <-ch
+		if args.Result != ndn.InterestResultData {
+			err = fmt.Errorf("failed to get invitation, make sure %s is invited to %s (%s)",
+				idName, wkspName, args.Result)
+			return
+		}
+
+		// TODO: validate the invitation itself
+		invitation = args.RawData
+
+		log.Info(a, "Got workspace invitation", "name", wkspStr, "invite", args.Data.Name())
+	} else {
+		log.Info(a, "Joining workspace in own namespace", "name", wkspStr)
+	}
+
+	// Generate key and certificate for this workspace
+	appIdName := wkspName.Append(idName...)
+	appIdKeyName := security.MakeKeyName(appIdName)
+	appIdSigner, err := sig.KeygenEcc(appIdKeyName, elliptic.P256())
 	if err != nil {
 		return
 	}
-	if err = a.keychain.InsertKey(signer); err != nil {
+
+	// Get key secret to sign certificate
+	appIdSecret, err := sig.MarshalSecretToData(appIdSigner)
+	if err != nil {
 		return
 	}
 
-	// Create self-signed certificate trust anchor
-	cert, err := security.SelfSign(security.SignCertArgs{
-		Signer:    signer,
-		NotBefore: time.Now().Add(-time.Hour),
-		NotAfter:  time.Now().Add(time.Hour * 24 * 365 * 10), // 10 years
+	// Create certificate for this workspace
+	// TODO: limit validity to same as invite validity
+	appIdCert, err := security.SignCert(security.SignCertArgs{
+		Data:        appIdSecret,
+		Signer:      idSigner,
+		IssuerId:    enc.NewGenericComponent("self"),
+		NotBefore:   time.Now().Add(-time.Hour),
+		NotAfter:    time.Now().AddDate(10, 0, 0), // for now
+		CrossSchema: invitation,
 	})
 	if err != nil {
 		return
 	}
-	if err = a.keychain.InsertCert(cert.Join()); err != nil {
+
+	// Insert key and certificate into keychain
+	if err = a.keychain.InsertKey(appIdSigner); err != nil {
+		return
+	}
+	if err = a.keychain.InsertCert(appIdCert.Join()); err != nil {
 		return
 	}
 
 	return
+}
+
+// IsWorkspaceOwner returns true if the current identity has owner permissions.
+func (a *App) IsWorkspaceOwner(wkspStr string) (bool, error) {
+	wkspName, err := enc.NameFromStr(wkspStr)
+	if err != nil {
+		return false, err
+	}
+
+	idKey := a.GetTestbedKey()
+	if idKey == nil {
+		return false, fmt.Errorf("no testbed key")
+	}
+
+	// Currently this only checks if the workspace is in the identity namespace, but in the
+	// future it should check for actual delegation (valid signer)
+	// We don't support any owner-level delegation yet.
+	idName := idKey.KeyName().Prefix(-2)
+	return idName.IsPrefix(wkspName), nil
 }
 
 // GetWorkspace returns a JS object representing the workspace with the given name.
@@ -66,24 +169,44 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 		return
 	}
 
-	// Get name of this node
-	key := a.GetTestbedKey()
-	if key == nil {
-		err = fmt.Errorf("no testbed key")
+	// Create trust configuration
+	schema, err := trust_schema.NewLvsSchema(SchemaBytes)
+	if err != nil {
 		return
 	}
+	trust, err := security.NewTrustConfig(a.keychain, schema, []enc.Name{testbedRootName})
+	if err != nil {
+		return
+	}
+	trust.UseDataNameFwHint = true
 
+	// Get identity key to use (same as testbed key)
+	idKey := a.GetTestbedKey()
+	if idKey == nil {
+		err = fmt.Errorf("no valid testbed key found")
+		return
+	}
 	// Use testbed key to sign NFD management commands
-	a.SetCmdKey(key)
-	name := key.KeyName().Prefix(-2) // pop KeyId and KEY
+	a.SetCmdKey(idKey)
+	idName := idKey.KeyName().Prefix(-2) // pop KeyId and KEY
+
+	// Get workspace-specific user key
+	detect := group.Append(enc.NewKeywordComponent("KD"))
+	userKey := trust.Suggest(detect)
+	if userKey == nil {
+		err = fmt.Errorf("no valid user key found")
+		return
+	} else {
+		log.Info(a, "Found valid user key", "name", userKey.KeyName())
+	}
 
 	// Create client object for this workspace
-	client := object.NewClient(a.engine, a.store, nil)
+	client := object.NewClient(a.engine, a.store, trust)
 
 	var workspaceJs map[string]any
 	workspaceJs = map[string]any{
 		// name: string;
-		"name": js.ValueOf(name.String()),
+		"name": js.ValueOf(idName.String()), // wrong
 
 		// group: string;
 		"group": js.ValueOf(group.String()),
@@ -93,6 +216,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			if err := client.Start(); err != nil {
 				return nil, err
 			}
+
 			return nil, nil
 		}),
 
@@ -161,7 +285,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 			// Create new SVS ALO instance
 			svsAlo, err := ndn_sync.NewSvsALO(ndn_sync.SvsAloOpts{
-				Name:         name,
+				Name:         idName,
 				InitialState: stateWire,
 
 				Svs: ndn_sync.SvSyncOpts{
@@ -174,6 +298,8 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 					Threshold: SnapshotThreshold,
 					Compress:  CompressSnapshotYjs,
 				},
+
+				MulticastPrefix: multicastPrefix,
 			})
 			if err != nil {
 				return nil, err
@@ -183,18 +309,50 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			return a.SvsAloJs(client, svsAlo, p[2]), nil
 		}),
 
-		// awareness(group: string): Promise<AwarenessApi>;
-		"awareness": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			awarenessGroup, err := enc.NameFromStr(p[0].String())
+		// sign_invitation(invitee: string): Promise<Uint8Array>;
+		"sign_invitation": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			invitee, err := enc.NameFromStr(p[0].String())
 			if err != nil {
 				return nil, err
 			}
 
-			// Create new Awareness instance
-			return a.AwarenessJs(&Awareness{
-				Name:   awarenessGroup,
-				Client: client,
-			}), nil
+			// Make the invitation name
+			// There is always a "root" project that manages the workspace,
+			// so we reuse that naming convention for the invitation.
+			// /<wksp>/root/32=INVITE/<invitee>/v=<time>
+			inviteName := group.
+				Append(enc.NewGenericComponent("root")).
+				Append(enc.NewKeywordComponent("INVITE")).
+				Append(invitee...).
+				WithVersion(enc.VersionUnixMicro)
+
+			// Make sure we can make this invitation
+			signer := client.SuggestSigner(inviteName)
+			if signer == nil {
+				return nil, fmt.Errorf("no valid signing key")
+			}
+
+			wire, err := trust_schema.SignCrossSchema(trust_schema.SignCrossSchemaArgs{
+				Name:   inviteName,
+				Signer: signer,
+				Content: trust_schema.CrossSchemaContent{
+					SimpleSchemaRules: []*trust_schema.SimpleSchemaRule{{
+						// Authorize invitee's identity key to sign data
+						NamePrefix: group.Append(invitee...),
+						KeyLocator: &spec.KeyLocator{
+							Name: invitee.Append(enc.NewGenericComponent("KEY")),
+						},
+					}},
+				},
+				NotBefore: time.Now().Add(-time.Hour),
+				NotAfter:  time.Now().AddDate(50, 0, 0), // for now
+				Store:     client.Store(),               // auto-store
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			return jsutil.SliceToJsArray(wire.Join()), nil
 		}),
 	}
 
@@ -217,16 +375,14 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 			// Announce prefixes to the network
 			for _, route := range routes {
 				client.AnnouncePrefix(ndn.Announcement{
-					Name:   route,
-					Expose: true,
-					OnError: func(err error) {
-						// TODO: show error to the user, use a global bus hook
-					},
+					Name:    route,
+					Expose:  true,
+					OnError: nil, // TODO
 				})
 			}
 
 			// Notify repo to start
-			a.NotifyRepo(client, alo.GroupPrefix())
+			go a.NotifyRepo(client, alo.GroupPrefix(), alo.DataPrefix())
 
 			if err := alo.Start(); err != nil {
 				return nil, err
@@ -277,19 +433,26 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 			return js.ValueOf(name.String()), nil
 		}),
 
-		// pub_blob_fetch(name: string): Promise<string>;
+		// pub_blob_fetch(name: string, encapsulate: Uint8Array | undefined): Promise<string>;
 		"pub_blob_fetch": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			// This message is special, in the sense that it is purely intended for repo.
 			// So subscribers will never see this message.
-			blobName, err := enc.NameFromStr(p[0].String())
-			if err != nil {
-				return nil, err
-			}
 			cmd := spec_repo.RepoCmd{
-				BlobFetch: &spec_repo.BlobFetch{
-					Name: &spec.NameContainer{Name: blobName},
-				},
+				BlobFetch: &spec_repo.BlobFetch{},
 			}
+			if !p[1].IsUndefined() { // encapsulate
+				// For now this only supports a single encapsulated Data
+				cmd.BlobFetch.Data = [][]byte{
+					jsutil.JsArrayToSlice(p[1]),
+				}
+			} else { // pointer only
+				blobName, err := enc.NameFromStr(p[0].String())
+				if err != nil {
+					return nil, err
+				}
+				cmd.BlobFetch.Name = &spec.NameContainer{Name: blobName}
+			}
+
 			blobName, state, err := alo.Publish(cmd.Encode())
 			if err != nil {
 				return nil, err
@@ -324,7 +487,7 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 					default:
 						// This will be logged even for BlobFetch commands, which is fine
 						// (can be fixed but avoid the extra parse that is unused)
-						log.Warn(nil, "Ignoring unknown message")
+						log.Warn(a, "Ignoring unknown message")
 					}
 				}
 
@@ -361,6 +524,16 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 				return
 			})
 			return nil, nil
+		}),
+
+		// awareness(uuid: string): Promise<AwarenessApi>;
+		"awareness": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			// Create new Awareness instance
+			return a.AwarenessJs(&Awareness{
+				Group:  alo.SyncPrefix().Append(enc.NewKeywordComponent("aware")),
+				Name:   alo.DataPrefix().Append(enc.NewKeywordComponent("aware")),
+				Client: client,
+			}), nil
 		}),
 	}
 	return js.ValueOf(svsAloJs)
@@ -399,16 +572,19 @@ func (a *App) AwarenessJs(awareness *Awareness) (api js.Value) {
 	return js.ValueOf(awarenessJs)
 }
 
-func (a *App) NotifyRepo(client ndn.Client, group enc.Name) {
+func (a *App) NotifyRepo(client ndn.Client, group enc.Name, dataPrefix enc.Name) {
 	// If the face is not running, wait for it to come up
 	if !a.face.IsRunning() {
 		var cancel func()
 		cancel = a.face.OnUp(func() {
-			go a.NotifyRepo(client, group)
+			go a.NotifyRepo(client, group, dataPrefix)
 			cancel()
 		})
 		return
 	}
+
+	// Wait for 1s so that routes get registered
+	time.Sleep(time.Second)
 
 	// Notify repo to join SVS group
 	repoCmd := spec_repo.RepoCmd{
@@ -418,10 +594,12 @@ func (a *App) NotifyRepo(client ndn.Client, group enc.Name) {
 			HistorySnapshot: &spec_repo.HistorySnapshotConfig{
 				Threshold: SnapshotThreshold,
 			},
+			MulticastPrefix: &spec.NameContainer{Name: multicastPrefix},
 		},
 	}
 	client.ExpressCommand(
-		repoName.Append(enc.NewKeywordComponent("cmd")),
+		repoName,
+		dataPrefix.Append(enc.NewKeywordComponent("repo-cmd")),
 		repoCmd.Encode(),
 		func(w enc.Wire, err error) {
 			if err != nil {

@@ -13,37 +13,40 @@
           autofocus
         />
       </div>
-      <p class="help">A human-readable title for the workspace on your dashboard</p>
+      <p class="help">A readable label for the workspace on your dashboard</p>
     </div>
 
     <div class="field">
-      <label class="label">NDN Name</label>
+      <label class="label">Name Identifier</label>
       <div class="control">
-        <input
-          class="input"
-          type="text"
-          placeholder="/org/division/team/workspace"
-          v-model="opts.name"
-        />
+        <input class="input" type="text" placeholder="marketing-team" v-model="opts.name" />
       </div>
-      <p class="help">A unique NDN name identifier for the workspace, structured like a path</p>
+      <p class="help">
+        A unique identifier for the workspace, without spaces or special characters
+      </p>
     </div>
 
-    <div class="field has-text-right">
+    <div>
+      Your workspace will have the network name &ndash;<br />
+      <code>{{ fullName }}</code>
+    </div>
+
+    <div class="field mt-2 has-text-right">
       <div class="control">
-        <button class="button is-light mr-2" @click="close">Cancel</button>
-        <button class="button is-primary" @click="create">Create</button>
+        <button class="button is-light mr-2" :disabled="loading" @click="close">Cancel</button>
+        <button class="button is-primary" :disabled="loading" @click="create">Create</button>
       </div>
     </div>
   </ModalComponent>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
-import ModalComponent from '../ModalComponent.vue';
+import ModalComponent from '@/components/ModalComponent.vue';
 
 import ndn from '@/services/ndn';
+import { Workspace } from '@/services/workspace';
 import { Toast } from '@/utils/toast';
 
 defineProps({
@@ -59,32 +62,44 @@ const emit = defineEmits<{
 }>();
 
 const loading = ref(false);
-
+const idName = ref(String());
 const opts = ref({
   label: String(),
   name: String(),
+});
+
+// Name we intend to give the workspace
+const fullName = computed(() => `${idName.value}/${opts.value.name.trim()}`);
+
+// No need to reset these values on show
+onMounted(async () => {
+  idName.value = await ndn.api.get_identity_name();
 });
 
 async function create() {
   try {
     loading.value = true;
 
-    const name = await ndn.api.create_workspace(opts.value.name);
+    // Validate inputs
+    const label = opts.value.label.trim();
+    const name = opts.value.name.trim();
+    if (!label || !name) {
+      throw new Error('Please fill in all the fields');
+    }
+    if (!/^[a-z0-9-_]+$/.test(name)) {
+      throw new Error('Name identifier contains invalid characters');
+    }
 
-    await _o.stats.put(name, {
-      label: opts.value.label,
-      name: name,
-      owner: true,
-      pendingSetup: true,
-    });
+    // Join the workspace with attempt to create
+    const finalName = await Workspace.join(label, fullName.value, true);
 
-    emit('create', name);
+    emit('create', finalName);
     emit('close');
 
     Toast.success('Created workspace successfully!');
   } catch (err) {
     console.error(err);
-    Toast.error(`Error creating workspace: ${err}`);
+    Toast.error(`${err}`);
   } finally {
     loading.value = false;
   }

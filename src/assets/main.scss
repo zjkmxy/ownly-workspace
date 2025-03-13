@@ -10,7 +10,7 @@
 @use 'utils.scss';
 
 html {
-  overflow: auto;
+  overflow: hidden;
   --z-spinner: 100;
   --z-navbar: 500;
   --z-dropdown: 550;

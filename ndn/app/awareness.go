@@ -15,6 +15,7 @@ import (
 )
 
 type Awareness struct {
+	Group  enc.Name
 	Name   enc.Name
 	Client ndn.Client
 	OnData func(enc.Wire)
@@ -25,7 +26,7 @@ func (a *Awareness) String() string {
 }
 
 func (a *Awareness) Start() {
-	a.Client.Engine().AttachHandler(a.Name, func(args ndn.InterestHandlerArgs) {
+	a.Client.Engine().AttachHandler(a.Group, func(args ndn.InterestHandlerArgs) {
 		if a.OnData == nil {
 			return
 		}
@@ -61,10 +62,11 @@ func (a *Awareness) Publish(content enc.Wire) error {
 		return fmt.Errorf("failed to find valid signer")
 	}
 
+	dataName := a.Name.WithVersion(enc.VersionUnixMicro)
 	dataCfg := &ndn.DataConfig{
 		ContentType: optional.Some(ndn.ContentTypeBlob),
 	}
-	data, err := a.Client.Engine().Spec().MakeData(a.Name, dataCfg, content, signer)
+	data, err := a.Client.Engine().Spec().MakeData(dataName, dataCfg, content, signer)
 	if err != nil {
 		return fmt.Errorf("failed to make data: %w", err)
 	}
@@ -73,7 +75,7 @@ func (a *Awareness) Publish(content enc.Wire) error {
 		Lifetime: optional.Some(1 * time.Second),
 		Nonce:    utils.ConvertNonce(a.Client.Engine().Timer().Nonce()),
 	}
-	interest, err := a.Client.Engine().Spec().MakeInterest(a.Name, intCfg, data.Wire, nil)
+	interest, err := a.Client.Engine().Spec().MakeInterest(a.Group, intCfg, data.Wire, nil)
 	if err != nil {
 		return fmt.Errorf("failed to make interest: %w", err)
 	}

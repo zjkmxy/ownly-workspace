@@ -22,6 +22,8 @@ declare global {
 interface NDNAPI {
   /** Check if there is a valid testbed key in the keychain */
   has_testbed_key(): Promise<boolean>;
+  /** Get the user's identity key */
+  get_identity_name(): Promise<string>;
 
   /** Connect to the global NDN testbed */
   connect_testbed(): Promise<void>;
@@ -29,10 +31,12 @@ interface NDNAPI {
   /** NDNCERT email verfication challenge */
   ndncert_email(email: string, code: (status: string) => Promise<string>): Promise<void>;
 
-  /** Create new workspace */
-  create_workspace(name: string): Promise<string>;
+  /** Join Workspace (generate keys etc.) */
+  join_workspace(wksp: string, create: boolean): Promise<string>;
+  /** Check if the user has owner permissions on the workspace */
+  is_workspace_owner(wksp: string): Promise<boolean>;
 
-  /** Get an existing workspace */
+  /** Get a Workspace API */
   get_workspace(name: string): Promise<WorkspaceAPI>;
 }
 
@@ -58,8 +62,9 @@ export interface WorkspaceAPI {
     state: Uint8Array | undefined,
     persist_state: (state: Uint8Array) => Promise<void>,
   ): Promise<SvsAloApi>;
-  /** Awareness instance */
-  awareness(group: string): Promise<AwarenessApi>;
+
+  /** Sign an invitation for a given NDN name */
+  sign_invitation(invitee: string): Promise<Uint8Array>;
 }
 
 /** API of the SVS ALO instance */
@@ -79,12 +84,15 @@ export interface SvsAloApi {
   /** Publish chat message to SVS ALO */
   pub_yjs_delta(uuid: string, binary: Uint8Array): Promise<void>;
   /** Publish blob fetch command */
-  pub_blob_fetch(name: string): Promise<string>;
+  pub_blob_fetch(name: string, encapsulate: Uint8Array | undefined): Promise<string>;
 
   /** Set SVS ALO subscription callbacks */
   subscribe(params: {
     on_yjs_delta: SvsAloSub<{ uuid: string; binary: Uint8Array }>;
   }): Promise<void>;
+
+  /** Awareness instance piggybacking on this SVS instance */
+  awareness(uuid: string): Promise<AwarenessApi>;
 }
 
 /** Subscription to SVS ALO */

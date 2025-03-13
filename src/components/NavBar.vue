@@ -68,6 +68,16 @@
             </a>
           </li>
         </ul>
+
+        <p class="menu-label">Workspace</p>
+        <ul class="menu-list">
+          <li>
+            <a @click="showInviteModal = true">
+              <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
+              Invite people
+            </a>
+          </li>
+        </ul>
       </template>
     </div>
 
@@ -86,6 +96,7 @@
 
     <AddChannelModal :show="showChannelModal" @close="showChannelModal = false" />
     <AddProjectModal :show="showProjectModal" @close="showProjectModal = false" />
+    <InvitePeopleModal :show="showInviteModal" @close="showInviteModal = false" />
   </aside>
 </template>
 
@@ -111,6 +122,7 @@ import { GlobalBus } from '@/services/event-bus';
 import { Toast } from '@/utils/toast';
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
+import InvitePeopleModal from './InvitePeopleModal.vue';
 
 const route = useRoute();
 const routeIsDashboard = computed(() => route.name === 'dashboard');
@@ -118,14 +130,16 @@ const routeIsWorkspace = computed(() =>
   ['space-home', 'project', 'discuss', 'project-file'].includes(String(route.name)),
 );
 
+const showChannelModal = ref(false);
+const showProjectModal = ref(false);
+const showInviteModal = ref(false);
+
 // vue-tsc chokes on this type inference
 const projectTree = useTemplateRef<Array<InstanceType<typeof ProjectTree>>>('projectTree');
 
 const channels = ref([] as IChatChannel[]);
-const showChannelModal = ref(false);
 
 const projects = ref([] as IProject[]);
-const showProjectModal = ref(false);
 const activeProjectName = ref(null as string | null);
 const projectFiles = ref([] as IProjectFile[]);
 

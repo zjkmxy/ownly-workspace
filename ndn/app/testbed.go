@@ -16,6 +16,9 @@ import (
 
 //go:embed testbed.root.cert
 var testbedRootCert []byte
+
+// TODO: better way to configure/change this as needed
+var testbedRootName, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/v=1651246789556")
 var testbedPrefix = enc.Name{enc.NewGenericComponent("ndn")}
 
 func (a *App) GetTestbedKey() ndn.Signer {

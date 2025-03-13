@@ -1,0 +1,42 @@
+// ========================================================
+// Trust policy for the Ownly Workspace application
+// ========================================================
+
+// Name of workspace
+#owner: "ndn"/owner10
+#owner: "ndn"/owner20/owner21
+#owner: "ndn"/owner30/owner31/owner32
+#owner: "ndn"/owner40/owner41/owner42/owner43
+
+// Name of user
+#user: "ndn"/user10
+#user: "ndn"/user20/user21
+#user: "ndn"/user30/user31/user32
+#user: "ndn"/user40/user41/user42/user43
+
+// Only owner can sign all user certificates
+// The delegation will happen using a separate CrossSchema
+#user_cert: #owner/wksp/#user/#KEY <= #owner_cert
+#owner_cert: #owner/wksp/#owner/#KEY <= #owner_id_cert
+#owner_id_cert: #owner/#KEY <= #testbed_site_cert | #testbed_root_cert
+
+// Testbed trust model
+#testbed_site_cert: /"ndn"/_/_/#KEY <= #testbed_root_cert
+#testbed_root_cert: /"ndn"/#KEY
+
+// Project sync group
+#proj: #owner/wksp/proj
+#proj_data: #proj/#user/_/_ <= #user_cert
+#proj_blob: #proj/#user/_/"32=blob"/_ <= #user_cert
+
+// This rule is only used for finding a valid key for the workspace
+#wksp_detect_key: #owner/wksp/"32=KD" <= #user_cert
+
+// Invitations
+#invite: #owner/wksp/"root"/"32=INVITE"/#user <= #owner_cert
+
+// TODO: Repo commands
+#repo_cmd: /"ndnd"/"ucla"/"repo"/_ <= #user_cert
+
+// Standard NDN conventions
+#KEY: "KEY"/_/_/_

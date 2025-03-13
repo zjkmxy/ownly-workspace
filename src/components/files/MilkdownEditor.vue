@@ -3,11 +3,12 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, useTemplateRef, watch, type PropType } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch, type PropType } from 'vue';
 
 import * as Y from 'yjs';
 import type { Awareness } from 'y-protocols/awareness.js';
 
+import { editorViewCtx } from '@milkdown/core';
 import { Crepe } from '@milkdown/crepe';
 import { collab, CollabService, collabServiceCtx } from '@milkdown/plugin-collab';
 import '@milkdown/crepe/theme/common/style.css';
@@ -49,13 +50,37 @@ async function create() {
 
   crepe = new Crepe({
     root: outer.value!,
+    features: {
+      [Crepe.Feature.ImageBlock]: false,
+    },
   });
   crepe.editor.use(collab);
   await crepe.create();
 
   crepe.editor.action((ctx) => {
+    // Connect to the collab service
     collabService = ctx.get(collabServiceCtx);
     collabService.bindXmlFragment(props.yxml).setAwareness(props.awareness).connect();
+
+    // Add a space after pasting a link. This prevents the link from being written
+    // over when you type after the link. Do the same thing when pressing space after link.
+    const view = ctx.get(editorViewCtx);
+
+    const handleLinkSpace = async (event?: KeyboardEvent) => {
+      await nextTick();
+
+      const { $from } = view.state.selection;
+      if ($from.marks().some((mark) => mark.type.name === 'link')) {
+        // Insert a new element after the link
+        view.dispatch(view.state.tr.insert($from.pos, view.state.schema.text(' ')));
+
+        // Prevent the space from being written
+        event?.preventDefault();
+      }
+    };
+
+    view.dom.addEventListener('paste', () => handleLinkSpace());
+    view.dom.addEventListener('keydown', (e) => e.key === ' ' && handleLinkSpace(e));
   });
 }
 

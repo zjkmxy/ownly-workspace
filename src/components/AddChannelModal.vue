@@ -91,7 +91,7 @@ async function create() {
     name.value = String();
   } catch (err) {
     console.error(err);
-    Toast.error(`Error creating channel: ${err}`);
+    Toast.error(`${err}`);
   }
 }
 </script>
