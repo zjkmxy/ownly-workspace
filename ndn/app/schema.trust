@@ -21,16 +21,16 @@
 #owner_id_cert: #owner/#KEY <= #testbed_site_cert | #testbed_root_cert
 
 // Testbed trust model
-#testbed_site: /"ndn"/_/_
-#testbed_site_cert: #testbed_site/#KEY <= #testbed_root_cert
+#testbed_site_cert: /"ndn"/_/_/#KEY <= #testbed_root_cert
 #testbed_root_cert: /"ndn"/#KEY
 
 // Project sync group
 #proj: #owner/wksp/proj
-#proj_svs: #proj/"32=svs" <= #user_cert
-#proj_aware: #proj/"32=svs"/"32=aware"/_ <= #user_cert
 #proj_data: #proj/#user/_/_ <= #user_cert
 #proj_blob: #proj/#user/_/"32=blob"/_ <= #user_cert
+
+// This rule is only used for finding a valid key for the workspace
+#wksp_detect_key: #owner/wksp/"32=KD" <= #user_cert
 
 // Invitations
 #invite: #owner/wksp/"root"/"32=INVITE"/#user <= #owner_cert

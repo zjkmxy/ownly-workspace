@@ -63,9 +63,6 @@ export interface WorkspaceAPI {
     persist_state: (state: Uint8Array) => Promise<void>,
   ): Promise<SvsAloApi>;
 
-  /** Awareness instance */
-  awareness(group: string): Promise<AwarenessApi>;
-
   /** Sign an invitation for a given NDN name */
   sign_invitation(invitee: string): Promise<Uint8Array>;
 }
@@ -93,6 +90,9 @@ export interface SvsAloApi {
   subscribe(params: {
     on_yjs_delta: SvsAloSub<{ uuid: string; binary: Uint8Array }>;
   }): Promise<void>;
+
+  /** Awareness instance piggybacking on this SVS instance */
+  awareness(uuid: string): Promise<AwarenessApi>;
 }
 
 /** Subscription to SVS ALO */

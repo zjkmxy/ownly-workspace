@@ -175,6 +175,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	if err != nil {
 		return
 	}
+	trust.UseDataNameFwHint = true
 
 	// Get identity key to use (same as testbed key)
 	idKey := a.GetTestbedKey()
@@ -187,10 +188,8 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	idName := idKey.KeyName().Prefix(-2) // pop KeyId and KEY
 
 	// Get workspace-specific user key
-	userKey := trust.Suggest(group.Append(
-		enc.NewGenericComponent("root"),
-		enc.NewKeywordComponent("svs"), // hacky
-	))
+	detect := group.Append(enc.NewKeywordComponent("KD"))
+	userKey := trust.Suggest(detect)
 	if userKey == nil {
 		err = fmt.Errorf("no valid user key found")
 		return
@@ -200,12 +199,6 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 	// Create client object for this workspace
 	client := object.NewClient(a.engine, a.store, trust)
-
-	// We need to make our own certificates available
-	wkspRoutes := []enc.Name{
-		idKey.KeyName(),
-		userKey.KeyName(),
-	}
 
 	var workspaceJs map[string]any
 	workspaceJs = map[string]any{
@@ -221,15 +214,6 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 				return nil, err
 			}
 
-			// Announce certificate routes
-			for _, route := range wkspRoutes {
-				client.AnnouncePrefix(ndn.Announcement{
-					Name:    route,
-					Expose:  true,
-					OnError: nil, // TODO
-				})
-			}
-
 			return nil, nil
 		}),
 
@@ -237,11 +221,6 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 		"stop": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			if err := client.Stop(); err != nil {
 				return nil, err
-			}
-
-			// Withdraw certificate routes
-			for _, route := range wkspRoutes {
-				client.WithdrawPrefix(route, nil) // TODO: error
 			}
 
 			jsutil.ReleaseMap(workspaceJs)
@@ -323,20 +302,6 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 			// Create JS API for SVS ALO
 			return a.SvsAloJs(client, svsAlo, p[2]), nil
-		}),
-
-		// awareness(group: string): Promise<AwarenessApi>;
-		"awareness": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			awarenessGroup, err := enc.NameFromStr(p[0].String())
-			if err != nil {
-				return nil, err
-			}
-
-			// Create new Awareness instance
-			return a.AwarenessJs(&Awareness{
-				Name:   awarenessGroup,
-				Client: client,
-			}), nil
 		}),
 
 		// sign_invitation(invitee: string): Promise<Uint8Array>;
@@ -554,6 +519,16 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 				return
 			})
 			return nil, nil
+		}),
+
+		// awareness(uuid: string): Promise<AwarenessApi>;
+		"awareness": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			// Create new Awareness instance
+			return a.AwarenessJs(&Awareness{
+				Group:  alo.SyncPrefix().Append(enc.NewKeywordComponent("aware")),
+				Name:   alo.DataPrefix().Append(enc.NewKeywordComponent("aware")),
+				Client: client,
+			}), nil
 		}),
 	}
 	return js.ValueOf(svsAloJs)
