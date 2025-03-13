@@ -5,7 +5,6 @@ import { GlobalBus } from '@/services/event-bus';
 import { SvsProvider } from '@/services/svs-provider';
 import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
-import { deserializeYxml } from '@/utils/yxml';
 import { nanoid } from 'nanoid';
 
 import type { WorkspaceAPI } from './ndn';
@@ -302,8 +301,8 @@ export class WorkspaceProj {
         // Get the text content as UTF-8
         return toUtf8(doc.getText('text').toString());
       } else if (utils.isExtensionType(path, 'milkdown')) {
-        // Get the milkdown XML content
-        return toUtf8(doc.getXmlFragment('milkdown').toJSON());
+        // https://github.com/pulsejet/ownly/issues/28
+        return Y.encodeStateAsUpdateV2(doc);
       }
     } finally {
       doc.destroy();
@@ -374,21 +373,18 @@ export class WorkspaceProj {
     // Import text content
     if (isText || isMilkdown) {
       const buffer = await new Response(content).arrayBuffer();
-      const strContent = new TextDecoder().decode(buffer);
       const doc = await this.getFile(path);
       try {
         if (isText) {
           const text = doc.getText('text');
+          const strContent = new TextDecoder().decode(buffer);
           doc.transact(() => {
             text.delete(0, text.length);
             text.insert(0, strContent);
           });
         } else if (isMilkdown) {
-          const frag = doc.getXmlFragment('milkdown');
-          doc.transact(() => {
-            frag.delete(0, frag.length);
-            deserializeYxml(strContent, frag);
-          });
+          // https://github.com/pulsejet/ownly/issues/28
+          Y.applyUpdateV2(doc, new Uint8Array(buffer));
         }
       } finally {
         // TODO: if the doc is already open, we should not destroy it
