@@ -4,7 +4,7 @@ import type { ProjDbConstructor } from '@/services/database/proj_db';
 declare global {
   // compile-time constants
   // eslint-disable-next-line no-var
-  var BUILD_VERSION: string;
+  var __BUILD_VERSION__: string;
 
   // Global services
   interface OwnlyServices {

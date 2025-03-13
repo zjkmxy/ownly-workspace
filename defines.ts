@@ -12,5 +12,5 @@ const dateFmt = new Intl.DateTimeFormat('ja-JP', {
 });
 
 export default {
-  BUILD_VERSION: dateFmt.format(new Date()).replace(/\D/g, ''),
+  __BUILD_VERSION__: JSON.stringify(dateFmt.format(new Date()).replace(/\D/g, '')),
 };

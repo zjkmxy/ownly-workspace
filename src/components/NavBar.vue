@@ -12,7 +12,7 @@
           <li><router-link to="/">Dashboard</router-link></li>
         </ul>
 
-        <p class="menu-label">v{{ buildVersion }}</p>
+        <p class="menu-label">v{{ buildVersion() }}</p>
       </template>
 
       <template v-if="routeIsWorkspace">
@@ -147,8 +147,6 @@ const projectFiles = ref([] as IProjectFile[]);
 
 const connState = ref(globalThis._ndnd_conn_state);
 
-const buildVersion = computed(() => globalThis.BUILD_VERSION);
-
 const busListeners = {
   'project-list': (projs: IProject[]) => (projects.value = projs),
   'project-files': (name: string, files: IProjectFile[]) => {
@@ -177,6 +175,10 @@ onUnmounted(() => {
   GlobalBus.removeListener('chat-channels', busListeners['chat-channels']);
   GlobalBus.removeListener('conn-change', busListeners['conn-change']);
 });
+
+function buildVersion() {
+  return __BUILD_VERSION__;
+}
 
 /** Link to project home page */
 function linkProject(project: IProject) {
