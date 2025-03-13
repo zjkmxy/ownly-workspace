@@ -2,6 +2,8 @@ import { fileURLToPath, URL } from 'node:url';
 
 import { defineConfig } from 'vite';
 
+import defines from './defines';
+
 // https://vite.dev/config/
 export default defineConfig({
   resolve: {
@@ -9,6 +11,7 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  define: defines,
   build: {
     lib: {
       name: 'headless',

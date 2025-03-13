@@ -11,6 +11,8 @@
         <ul class="menu-list">
           <li><router-link to="/">Dashboard</router-link></li>
         </ul>
+
+        <p class="menu-label">v{{ buildVersion }}</p>
       </template>
 
       <template v-if="routeIsWorkspace">
@@ -144,6 +146,8 @@ const activeProjectName = ref(null as string | null);
 const projectFiles = ref([] as IProjectFile[]);
 
 const connState = ref(globalThis._ndnd_conn_state);
+
+const buildVersion = computed(() => globalThis.BUILD_VERSION);
 
 const busListeners = {
   'project-list': (projs: IProject[]) => (projects.value = projs),
