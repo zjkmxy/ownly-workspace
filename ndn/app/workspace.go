@@ -30,6 +30,9 @@ const SnapshotThreshold = 100
 // TODO: change this
 var repoName, _ = enc.NameFromStr("/ndnd/ucla/repo")
 
+// TODO: this is testbed configuration
+var multicastPrefix, _ = enc.NameFromStr("/ndn/multicast")
+
 //go:embed schema.tlv
 var SchemaBytes []byte
 
@@ -295,6 +298,8 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 					Threshold: SnapshotThreshold,
 					Compress:  CompressSnapshotYjs,
 				},
+
+				MulticastPrefix: multicastPrefix,
 			})
 			if err != nil {
 				return nil, err
@@ -377,7 +382,7 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 			}
 
 			// Notify repo to start
-			a.NotifyRepo(client, alo.GroupPrefix())
+			go a.NotifyRepo(client, alo.GroupPrefix(), alo.DataPrefix())
 
 			if err := alo.Start(); err != nil {
 				return nil, err
@@ -567,16 +572,19 @@ func (a *App) AwarenessJs(awareness *Awareness) (api js.Value) {
 	return js.ValueOf(awarenessJs)
 }
 
-func (a *App) NotifyRepo(client ndn.Client, group enc.Name) {
+func (a *App) NotifyRepo(client ndn.Client, group enc.Name, dataPrefix enc.Name) {
 	// If the face is not running, wait for it to come up
 	if !a.face.IsRunning() {
 		var cancel func()
 		cancel = a.face.OnUp(func() {
-			go a.NotifyRepo(client, group)
+			go a.NotifyRepo(client, group, dataPrefix)
 			cancel()
 		})
 		return
 	}
+
+	// Wait for 1s so that routes get registered
+	time.Sleep(time.Second)
 
 	// Notify repo to join SVS group
 	repoCmd := spec_repo.RepoCmd{
@@ -586,10 +594,12 @@ func (a *App) NotifyRepo(client ndn.Client, group enc.Name) {
 			HistorySnapshot: &spec_repo.HistorySnapshotConfig{
 				Threshold: SnapshotThreshold,
 			},
+			MulticastPrefix: &spec.NameContainer{Name: multicastPrefix},
 		},
 	}
 	client.ExpressCommand(
-		repoName.Append(enc.NewKeywordComponent("cmd")),
+		repoName,
+		dataPrefix.Append(enc.NewKeywordComponent("repo-cmd")),
 		repoCmd.Encode(),
 		func(w enc.Wire, err error) {
 			if err != nil {
