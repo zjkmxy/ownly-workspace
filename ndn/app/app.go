@@ -78,12 +78,13 @@ func (a *App) JsApi() js.Value {
 	api := map[string]any{
 		// has_testbed_key(): Promise<boolean>;
 		"has_testbed_key": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			return a.GetTestbedKey() != nil, nil
+			key, _, _ := a.GetTestbedKey()
+			return key != nil, nil
 		}),
 
 		// get_identity_name(): Promise<string>;
 		"get_identity_name": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			key := a.GetTestbedKey()
+			key, _, _ := a.GetTestbedKey()
 			if key == nil {
 				return nil, fmt.Errorf("no testbed key")
 			}

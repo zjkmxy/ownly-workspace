@@ -21,7 +21,9 @@ var testbedRootCert []byte
 var testbedRootName, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/v=1651246789556")
 var testbedPrefix = enc.Name{enc.NewGenericComponent("ndn")}
 
-func (a *App) GetTestbedKey() ndn.Signer {
+// GetTestbedKey returns the testbed key, or nil if not found.
+// Returns (signer, certData, certSigCov)
+func (a *App) GetTestbedKey() (ndn.Signer, ndn.Data, enc.Wire) {
 	// TODO: move most of this to NDNd
 	now := time.Now()
 
@@ -31,39 +33,42 @@ func (a *App) GetTestbedKey() ndn.Signer {
 		}
 
 		for _, key := range id.Keys() {
-			for _, cname := range key.UniqueCerts() {
-				certw, _ := a.store.Get(cname.Prefix(-1), true)
-				if certw == nil {
-					log.Error(nil, "Failed to find certificate", "name", cname)
+			for _, certName := range key.UniqueCerts() {
+				certWire, _ := a.store.Get(certName.Prefix(-1), true)
+				if certWire == nil {
+					log.Error(nil, "Failed to find certificate", "name", certName)
 					continue
 				}
 
 				// TODO: actually validate the certificate with testbed root cert
-				if cname.At(-2).String() != "NDNCERT" {
+				if certName.At(-2).String() != "NDNCERT" {
 					continue
 				}
 
-				cert, _, err := spec_2022.Spec{}.ReadData(enc.NewBufferView(certw))
+				certData, certSigCov, err := spec_2022.Spec{}.ReadData(enc.NewBufferView(certWire))
 				if err != nil {
 					log.Error(nil, "Failed to decode certificate", "err", err)
 					continue
 				}
 
-				notBefore, notAfter := cert.Signature().Validity()
+				notBefore, notAfter := certData.Signature().Validity()
 				if !notBefore.IsSet() || !notAfter.IsSet() {
-					log.Error(nil, "Certificate validity not set", "name", cert.Name())
+					log.Error(nil, "Certificate validity not set", "name", certData.Name())
 					continue
 				}
 
-				if notBefore.Unwrap().Before(now) && notAfter.Unwrap().After(now) {
-					log.Info(nil, "Found valid testbed cert", "name", cert.Name())
-					return key.Signer()
+				if notBefore.Unwrap().After(now) || notAfter.Unwrap().Before(now) {
+					continue // expired
 				}
+
+				log.Info(nil, "Found valid testbed cert", "name", certData.Name())
+
+				return key.Signer(), certData, certSigCov
 			}
 		}
 	}
 
-	return nil
+	return nil, nil, nil
 }
 
 func (a *App) SetCmdKey(key ndn.Signer) {
@@ -97,4 +102,18 @@ func (a *App) ConnectTestbed() error {
 	}
 
 	return nil
+}
+
+// ExecWithConnectivity runs the callback when the face is up, or immediately if it is already up.
+// The callback will always be called in a new goroutine.
+func (a *App) ExecWithConnectivity(callback func()) {
+	if a.face.IsRunning() {
+		go callback()
+	} else {
+		var cancel func()
+		cancel = a.face.OnUp(func() {
+			go callback()
+			cancel()
+		})
+	}
 }
