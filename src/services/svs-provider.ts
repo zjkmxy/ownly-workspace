@@ -345,10 +345,11 @@ class NdnAwareness extends awareProto.Awareness {
 
     // Make our own color here based on username
     const username = wksp.name ?? 'Unknown';
-    const hash = utils.cyrb64(username);
-    const r = (hash[0] % 128) + 110;
-    const g = ((hash[0] >> 7) % 128) + 110;
-    const b = (hash[1] % 128) + 110;
+    const hash1 = utils.cyrb64(username + ':1');
+    const hash2 = utils.cyrb64(username + ':2');
+    const r = (hash1[0] % 128) + 110;
+    const g = (hash1[1] % 128) + 110;
+    const b = (hash2[0] % 128) + 110;
 
     // Set the local user state
     const userState: AwarenessLocalState['user'] = {
