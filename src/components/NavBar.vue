@@ -9,10 +9,23 @@
       <template v-if="routeIsDashboard">
         <p class="menu-label">General</p>
         <ul class="menu-list">
-          <li><router-link to="/">Dashboard</router-link></li>
+          <li>
+            <router-link to="/">
+              <FontAwesomeIcon class="mr-1" :icon="faTableCells" size="sm" />
+              Dashboard</router-link
+            >
+          </li>
         </ul>
 
-        <p class="menu-label">v{{ buildVersion() }}</p>
+        <p class="menu-label">About</p>
+        <ul class="menu-list">
+          <li>
+            <a href="https://github.com/pulsejet/ownly" target="_blank">
+              <FontAwesomeIcon class="mr-1" :icon="faGithub" size="sm" />
+              GitHub
+            </a>
+          </li>
+        </ul>
       </template>
 
       <template v-if="routeIsWorkspace">
@@ -81,6 +94,8 @@
           </li>
         </ul>
       </template>
+
+      <p class="menu-label">v{{ buildVersion() }}</p>
     </div>
 
     <div class="bottom-sheet">
@@ -113,7 +128,9 @@ import {
   faHashtag,
   faWifi,
   faGhost,
+  faTableCells,
 } from '@fortawesome/free-solid-svg-icons';
+import { faGithub } from '@fortawesome/free-brands-svg-icons';
 
 import ProjectTree from './ProjectTree.vue';
 import ProjectTreeMenu from './ProjectTreeMenu.vue';
