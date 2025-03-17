@@ -5,6 +5,7 @@ package app
 import (
 	"fmt"
 	"os"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/security/ndncert"
@@ -12,6 +13,12 @@ import (
 )
 
 func (a *App) NdncertEmail(email string, CodeCb func(status string) string) (err error) {
+	// Connect to the testbed
+	if err := a.WaitForConnectivity(time.Second * 5); err != nil {
+		return err
+	}
+
+	// Create NDNCERT client
 	certClient, err := ndncert.NewClient(a.engine, testbedRootCert)
 	if err != nil {
 		return err

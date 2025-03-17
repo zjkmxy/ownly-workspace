@@ -4,6 +4,7 @@ package app
 
 import (
 	_ "embed"
+	"fmt"
 	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
@@ -115,5 +116,24 @@ func (a *App) ExecWithConnectivity(callback func()) {
 			go callback()
 			cancel()
 		})
+	}
+}
+
+// WaitForConnectivity waits for the face to be up.
+func (a *App) WaitForConnectivity(timeout time.Duration) error {
+	if a.face != nil && a.face.IsRunning() {
+		return nil
+	}
+	if err := a.ConnectTestbed(); err != nil {
+		return err
+	}
+	done := make(chan struct{})
+	cancel := a.face.OnUp(func() { close(done) })
+	defer cancel()
+	select {
+	case <-done:
+		return nil
+	case <-time.After(timeout):
+		return fmt.Errorf("timeout waiting for NDN connectivity")
 	}
 }

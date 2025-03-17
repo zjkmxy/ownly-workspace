@@ -47,7 +47,7 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 	wkspStr = wkspName.String()
 
 	// Connect to network
-	if err = a.ConnectTestbed(); err != nil {
+	if err = a.WaitForConnectivity(time.Second * 5); err != nil {
 		return
 	}
 
