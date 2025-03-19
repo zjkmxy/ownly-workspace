@@ -27,6 +27,7 @@ import { ref, watch } from 'vue';
 import QRCode from 'qrcode';
 
 import ModalComponent from '@/components/ModalComponent.vue';
+import ndn from '@/services/ndn';
 
 const props = defineProps({
   show: {
@@ -45,7 +46,7 @@ watch(
 );
 
 async function create() {
-  name.value = await ndn_api.get_identity_name();
+  name.value = await ndn.api.get_identity_name();
 
   const url = new URL(window.location.origin);
   url.searchParams.set('invite', name.value);
