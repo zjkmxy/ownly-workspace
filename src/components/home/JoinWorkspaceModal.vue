@@ -34,14 +34,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import ModalComponent from '@/components/ModalComponent.vue';
 
+import * as utils from '@/utils';
 import { Toast } from '@/utils/toast';
 import { Workspace } from '@/services/workspace';
 
-defineProps({
+const props = defineProps({
   show: {
     type: Boolean,
     required: true,
@@ -53,12 +55,31 @@ const emit = defineEmits<{
   (e: 'join', name: string): void;
 }>();
 
+const route = useRoute();
+
 const loading = ref(false);
 
 const opts = ref({
   label: String(),
   name: String(),
 });
+
+watch(
+  () => props.show,
+  (show) => {
+    if (!show) return;
+
+    opts.value.label = String();
+    opts.value.name = String();
+
+    // Check if URL specifies a workspace
+    if (route.name === 'join') {
+      const space = route.params.space as string;
+      opts.value.name = utils.unescapeUrlName(space || String());
+      opts.value.label = (route.query.label as string) || String();
+    }
+  },
+);
 
 async function join() {
   try {

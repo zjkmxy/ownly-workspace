@@ -4,17 +4,21 @@
 
     <p>
       An invitation will be generated for each email address. Note that Ownly does not automatically
-      send any emails &ndash; you must ask the recipients to join the workspace
-      <code class="wksp-name">{{ wksp?.metadata.name }}</code> using the email address listed below.
+      send any emails &ndash; you must ask the recipients to join the workspace using the email
+      address listed below using the invite link.
     </p>
 
-    <p class="mt-1">Enter upto 100 email addresses below, one on each line</p>
+    <p class="mt-1">
+      <code class="select-all">{{ inviteLink }}</code>
+    </p>
+
+    <p class="mt-2">Enter upto 100 email addresses or NDN names below, one on each line</p>
 
     <div class="field mt-2">
       <textarea
         class="textarea"
         rows="8"
-        placeholder="name@example.com"
+        :placeholder="`name@example.com\n/ndn/user-name`"
         autofocus
         v-model="emails"
         :disabled="!isOwner"
@@ -56,6 +60,7 @@ const emit = defineEmits(['close']);
 const router = useRouter();
 
 const wksp = shallowRef<Workspace | null>(null);
+const inviteLink = ref(String());
 const emails = ref(String());
 const isOwner = computed(() => !!wksp.value?.metadata.owner);
 
@@ -65,57 +70,63 @@ watch(
   () => props.show,
   async () => {
     wksp.value = await Workspace.setupOrRedir(router);
+    if (!wksp.value) return;
+
+    inviteLink.value = await wksp.value.invite.getJoinLink(router);
   },
 );
 
 async function send() {
   if (!wksp.value) return;
 
-  // Transform list of emails - check validity and remove blanks and duplicates
-  const emailSet = new Set<string>();
-  for (let email of emails.value.split('\n')) {
-    email = email.trim();
-    if (!email) continue; // blank line
+  // Transform entries to names
+  // Check validity and remove blanks and duplicates
+  const nameSet = new Set<string>();
+  for (const rawEntry of emails.value.split('\n')) {
+    const entry = rawEntry.trim();
+    if (!entry) continue; // blank line
 
-    if (!utils.validateEmail(email)) {
-      Toast.error(`Invalid email address: ${email}`);
-      return;
+    // Check if this is an NDN name directly
+    if (entry.startsWith('/')) {
+      nameSet.add(entry);
+    } else {
+      // Validate the email address
+      if (!utils.validateEmail(entry)) {
+        Toast.error(`Invalid email address: ${entry}`);
+        return;
+      }
+
+      // Convert email to NDN name
+      const ndnName = utils.convertEmailToNameLegacy(entry);
+      nameSet.add(ndnName);
     }
-
-    emailSet.add(email);
   }
-  if (emailSet.size === 0) {
+  if (nameSet.size === 0) {
     Toast.error('No valid email addresses entered');
     return;
-  } else if (emailSet.size > 100) {
+  } else if (nameSet.size > 100) {
     Toast.error('Maximum of 100 email addresses allowed');
     return;
   }
 
-  for (const email of emailSet) {
-    const ndnName = utils.convertEmailToNameLegacy(email);
-
+  for (const ndnName of nameSet) {
     try {
       // Generate and publish invitation to sync
       await wksp.value.invite.invite(ndnName);
     } catch (err) {
-      Toast.error(`Failed to invite ${email}: ${err}`);
+      Toast.error(`Failed to invite ${ndnName}: ${err}`);
       return; // rare
     }
   }
 
   // Finish
-  Toast.success(`Invited ${emailSet.size} addresses to workpace!`);
+  Toast.success(`Invited ${nameSet.size} users to workspace!`);
   emit('close');
   emails.value = String();
 }
 </script>
 
 <style scoped lang="scss">
-.wksp-name {
-  user-select: all;
-}
-
 .textarea {
   resize: none;
 }

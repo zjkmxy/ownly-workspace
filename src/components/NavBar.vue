@@ -99,6 +99,13 @@
     </div>
 
     <div class="bottom-sheet">
+      <div class="id-share">
+        <a @click="showIdentity = true">
+          <FontAwesomeIcon class="mr-1" :icon="faQrcode" size="sm" />
+          Share your Identity
+        </a>
+      </div>
+
       <div class="connection">
         <template v-if="connState.connected">
           <FontAwesomeIcon class="mr-1" :icon="faWifi" size="sm" />
@@ -114,6 +121,7 @@
     <AddChannelModal :show="showChannelModal" @close="showChannelModal = false" />
     <AddProjectModal :show="showProjectModal" @close="showProjectModal = false" />
     <InvitePeopleModal :show="showInviteModal" @close="showInviteModal = false" />
+    <QRIdentityModal :show="showIdentity" @close="showIdentity = false" />
   </aside>
 </template>
 
@@ -129,6 +137,7 @@ import {
   faWifi,
   faGhost,
   faTableCells,
+  faQrcode,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -142,9 +151,10 @@ import { Toast } from '@/utils/toast';
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
 import InvitePeopleModal from './InvitePeopleModal.vue';
+import QRIdentityModal from './QRIdentityModal.vue';
 
 const route = useRoute();
-const routeIsDashboard = computed(() => route.name === 'dashboard');
+const routeIsDashboard = computed(() => ['dashboard', 'join'].includes(String(route.name)));
 const routeIsWorkspace = computed(() =>
   ['space-home', 'project', 'discuss', 'project-file'].includes(String(route.name)),
 );
@@ -152,6 +162,7 @@ const routeIsWorkspace = computed(() =>
 const showChannelModal = ref(false);
 const showProjectModal = ref(false);
 const showInviteModal = ref(false);
+const showIdentity = ref(false);
 
 // vue-tsc chokes on this type inference
 const projectTree = useTemplateRef<Array<InstanceType<typeof ProjectTree>>>('projectTree');
@@ -240,9 +251,18 @@ function linkDiscuss(channel: IChatChannel) {
     padding: 8px 10px;
     font-size: 0.9rem;
 
+    a {
+      color: #ccc;
+    }
+
+    .id-share {
+      padding: 2px 12px;
+    }
+
     .connection {
       border-radius: 50px;
       padding: 5px 12px;
+      margin-top: 2px;
       color: #ddd;
       cursor: pointer;
 

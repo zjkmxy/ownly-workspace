@@ -52,7 +52,7 @@ export class Workspace {
     // Create general modules
     const chat = await WorkspaceChat.create(api, provider);
     const proj = await WorkspaceProjManager.create(api, provider);
-    const invite = await WorkspaceInviteManager.create(api, provider);
+    const invite = await WorkspaceInviteManager.create(api, metadata, provider);
 
     // Create workspace object
     return new Workspace(metadata, api, provider, chat, proj, invite);
