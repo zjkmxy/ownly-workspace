@@ -320,7 +320,7 @@ export class SvsProvider {
  * Yjs awareness backed by an NDN sync group.
  */
 class NdnAwareness extends awareProto.Awareness {
-  private throttle: number = 0;
+  private throttle: number | NodeJS.Timeout = 0;
   private readonly throttleSet: Set<number> = new Set();
 
   public static async create(

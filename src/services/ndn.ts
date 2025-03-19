@@ -144,7 +144,6 @@ class NDNService {
     } else {
       const fsImport = 'fs/promises';
       const fs = await import(/* @vite-ignore */ fsImport);
-      // @ts-expect-error - relative path to wasm
       const buffer = await fs.readFile(import.meta.dirname + '/../../main.wasm');
       result = await WebAssembly.instantiate(buffer, go.importObject);
     }
