@@ -14,7 +14,6 @@
         </div>
 
         <button
-          v-if="!props.simple"
           ref="button"
           class="button circle-button"
           @click.stop.prevent="wkspMenu?.open($event)"
@@ -28,8 +27,7 @@
 
       <div class="content has-text-right">
         <button class="button is-primary mr-2 is-small-caps soft-if-dark" @click="launch">
-          <span v-if="!props.simple">Launch Workspace</span>
-          <span v-else>Select</span>
+          Launch Workspace
         </button>
       </div>
     </div>
@@ -64,9 +62,6 @@ const props = defineProps({
     type: Object as PropType<IWkspStats>,
     required: true,
   },
-  simple: {
-    type: Boolean
-  }
 });
 
 const emit = defineEmits(['open', 'leave']);

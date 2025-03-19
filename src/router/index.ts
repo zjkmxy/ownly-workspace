@@ -14,6 +14,11 @@ const router = createRouter({
       component: DashboardView,
     },
     {
+      path: '/join/:space/',
+      name: 'join',
+      component: DashboardView,
+    },
+    {
       path: '/:space/',
       name: 'space-home',
       component: SpaceHomeView,

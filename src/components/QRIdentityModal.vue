@@ -1,12 +1,17 @@
 <template>
   <ModalComponent :show="show" @close="emit('close')">
-    <div class="title is-5 mb-4">Share your identity</div>
+    <div class="title is-5 mb-4">Share your Identity</div>
 
     <p>
-      To join a workspace, share this QR code with workspace owners so that they can invite you!
+      To join a workspace, share this QR code or the NDN name identifier below with the workspace
+      owner, so that they can invite you!
     </p>
 
-    <img id="qr" v-bind:src="url" />
+    <p class="my-1">
+      <code class="select-all">{{ name }}</code>
+    </p>
+
+    <img class="qr" v-if="qrimg" :src="qrimg" />
 
     <div class="field has-text-right">
       <div class="control">
@@ -17,29 +22,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
-import ModalComponent from './ModalComponent.vue';
 import QRCode from 'qrcode';
 
-defineProps({
+import ModalComponent from '@/components/ModalComponent.vue';
+
+const props = defineProps({
   show: {
     type: Boolean,
     required: true,
   },
 });
-const emit = defineEmits(['close']);
 
-const url = ref('');
-ndn_api.get_identity_name().then(async (n) => {
-  let u = window.location.protocol + "//" + window.location.host;
-  u += "/?invite=" + encodeURIComponent(n)
-  url.value = await QRCode.toDataURL(u, { scale: 7 });
-});
+const emit = defineEmits(['close']);
+const name = ref(String());
+const qrimg = ref(String());
+
+watch(
+  () => props.show,
+  (show) => show && create(),
+);
+
+async function create() {
+  name.value = await ndn_api.get_identity_name();
+
+  const url = new URL(window.location.origin);
+  url.searchParams.set('invite', name.value);
+
+  qrimg.value = await QRCode.toDataURL(url.toString(), { scale: 6 });
+}
 </script>
 
 <style scoped lang="scss">
-#qr {
-  margin-top: 20px;
+img.qr {
+  display: block;
+  margin: 10px auto;
 }
 </style>

@@ -43,25 +43,24 @@
 
     <CreateWorkspaceModal :show="showCreate" @close="showCreate = false" @create="openByName" />
     <JoinWorkspaceModal :show="showJoin" @close="showJoin = false" @join="openByName" />
-    <InviteWorkspaceModal :show="showInvite" :workspaces="workspaces" @close="showInvite = false" />
+    <InviteWorkspaceModal :show="showInvite" @close="showInvite = false" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import CreateWorkspaceModal from '@/components/home/CreateWorkspaceModal.vue';
 import JoinWorkspaceModal from '@/components/home/JoinWorkspaceModal.vue';
+import InviteWorkspaceModal from '@/components/InviteWorkspaceModal.vue';
 import WorkspaceCard from '@/components/home/WorkspaceCard.vue';
 
 import * as utils from '@/utils';
 import type { IWkspStats } from '@/services/types';
-import { Workspace } from '@/services/workspace';
-import { Toast } from '@/utils/toast';
-import InviteWorkspaceModal from '@/components/InviteWorkspaceModal.vue';
 
 const router = useRouter();
+const route = useRoute();
 
 const showCreate = ref(false);
 const showJoin = ref(false);
@@ -70,9 +69,7 @@ const workspaces = ref([] as IWkspStats[]);
 
 async function refreshList() {
   workspaces.value = await _o.stats.list();
-  workspaces.value.sort((a, b) => {
-    return (b.lastAccess ?? 0) - (a.lastAccess ?? 0);
-  });
+  workspaces.value.sort((a, b) => (b.lastAccess ?? 0) - (a.lastAccess ?? 0));
 
   // Insert a create workspace card
   workspaces.value.splice(1, 0, {
@@ -81,23 +78,15 @@ async function refreshList() {
 }
 
 onMounted(async () => {
-  refreshList();
+  await refreshList();
 
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get("join") && urlParams.get("label")) {
-    try {
-      const name = decodeURIComponent(urlParams.get("join")!);
-      const label = decodeURIComponent(urlParams.get("label")!);
-
-      const finalName = await Workspace.join(label, name, false);
-      Toast.success('Joined workspace successfully!');
-
-      openByName(finalName);
-    } catch (err) {
-      console.error(err);
-      Toast.error(`${err}`);
+  if (route.name === 'join') {
+    // Check if already joined this workspace, then skip
+    const space = utils.unescapeUrlName((route.params.space as string) || String());
+    if (!(await openByName(space))) {
+      showJoin.value = true;
     }
-  } else if (urlParams.get("invite")) {
+  } else if (route.query.invite) {
     showInvite.value = true;
   }
 });
@@ -111,12 +100,12 @@ function open(ws: IWkspStats) {
   });
 }
 
-async function openByName(name: string) {
+async function openByName(name: string): Promise<boolean> {
   await refreshList();
   const ws = workspaces.value.find((w) => w.name === name);
   if (ws) open(ws);
+  return !!ws;
 }
-
 </script>
 
 <style scoped lang="scss">

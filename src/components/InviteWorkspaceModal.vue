@@ -1,73 +1,133 @@
 <template>
   <ModalComponent :show="show" @close="emit('close')">
-    <div class="title is-5 mb-4">Invite user</div>
+    <div class="title is-5 mb-4">
+      Invite <code>{{ name }}</code>
+    </div>
 
-    <p>Select a workspace to invite {{ name }}.</p>
+    <div v-if="joinLink" class="my-2">
+      The user has been invited to the workspace. Share the link below or QR code to join
+      automatically.
 
-    <div class="spacelist">
+      <p class="mt-2">
+        <code class="select-all">{{ joinLink }}</code>
+      </p>
+
+      <img class="qr" v-if="joinLinkQr" :src="joinLinkQr" />
+    </div>
+
+    <div class="spacelist my-2" v-else>
+      <p>Select a workspace to invite the user to.</p>
+
       <span v-if="workspaces.length == 0">Join or create workspaces before inviting users.</span>
+
       <template v-else v-for="ws in workspaces" :key="ws.name">
-        <WorkspaceCard
-          v-if="ws.name != '__create__'"
-          :metadata="ws"
-          :simple="true"
-          @open="invite(ws)"
-        />
+        <div class="wksp p-2" @click="invite(ws)">
+          <p class="has-text-weight-bold">{{ ws.label }}</p>
+          <p>{{ ws.name }}</p>
+        </div>
       </template>
     </div>
 
     <div class="field has-text-right">
       <div class="control">
-        <button class="button mr-2" @click="emit('close')">Cancel</button>
+        <button class="button mr-2" @click="close">Close</button>
       </div>
     </div>
   </ModalComponent>
 </template>
 
 <script setup lang="ts">
-import { type PropType } from 'vue';
+import { ref, shallowRef, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 
-import ModalComponent from './ModalComponent.vue';
-import WorkspaceCard from '@/components/home/WorkspaceCard.vue';
-import type { IWkspStats } from '@/services/types';
-import { Toast } from '@/utils/toast';
+import QRCode from 'qrcode';
+
+import ModalComponent from '@/components/ModalComponent.vue';
+
 import { Workspace } from '@/services/workspace';
+import { Toast } from '@/utils/toast';
 
-defineProps({
+import type { IWkspStats } from '@/services/types';
+
+const props = defineProps({
   show: {
     type: Boolean,
-    required: true,
-  },
-  workspaces: {
-    type: Object as PropType<IWkspStats[]>,
     required: true,
   },
 });
 
 const emit = defineEmits(['close']);
 
-const urlParams = new URLSearchParams(window.location.search);
-const name = decodeURIComponent(urlParams.get('invite')!);
+const router = useRouter();
+const route = useRoute();
 
-const invite = async (ws: IWkspStats) => {
-  try {
-    // Generate and publish invitation to sync
-    const wksp = await Workspace.setup(ws.name, true);
-    await wksp.invite.invite(name);
-    console.log(wksp.metadata.name);
-    console.log(name);
-  } catch (err) {
-    Toast.error(`Failed to invite ${name}: ${err}`);
-    return; // rare
+const name = ref(String());
+const joinLink = ref(String());
+const joinLinkQr = ref(String());
+const workspaces = shallowRef([] as IWkspStats[]);
+
+watch(
+  () => props.show,
+  (show) => show && create(),
+);
+
+async function create() {
+  workspaces.value = [];
+  joinLink.value = String();
+
+  name.value = route.query.invite as string;
+  if (!name.value) {
+    close();
+    return;
   }
 
-  Toast.success(`Invited ${name} to workspace!`);
+  workspaces.value = await _o.stats.list();
+  workspaces.value.sort((a, b) => (b.lastAccess ?? 0) - (a.lastAccess ?? 0));
+}
+
+async function invite(ws: IWkspStats) {
+  try {
+    if (!ws.owner) {
+      throw new Error('You do not have permission to invite users to this workspace');
+    }
+
+    const wksp = await Workspace.setup(ws.name);
+    if (!wksp) return;
+
+    await wksp.invite.invite(name.value);
+    Toast.success(`Invited user to workspace ${ws.label}`);
+
+    joinLink.value = await wksp.invite.getJoinLink(router);
+    joinLinkQr.value = await QRCode.toDataURL(joinLink.value, { scale: 6 });
+  } catch (e) {
+    console.error(e);
+    Toast.error(`Failed to invite user: ${e}`);
+  }
+}
+
+function close() {
+  router.push({ query: {} });
   emit('close');
-};
+}
 </script>
 
 <style scoped lang="scss">
-#qr {
-  margin-top: 20px;
+.spacelist {
+  max-height: 400px;
+  overflow-y: auto;
+  font-size: 0.95em;
+
+  .wksp {
+    cursor: pointer;
+    border-radius: 4px;
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+  }
+}
+
+img.qr {
+  display: block;
+  margin: 10px auto;
 }
 </style>

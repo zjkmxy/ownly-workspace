@@ -52,7 +52,7 @@ export class Workspace {
     // Create general modules
     const chat = await WorkspaceChat.create(api, provider);
     const proj = await WorkspaceProjManager.create(api, provider);
-    const invite = await WorkspaceInviteManager.create(api, provider);
+    const invite = await WorkspaceInviteManager.create(api, metadata, provider);
 
     // Create workspace object
     return new Workspace(metadata, api, provider, chat, proj, invite);
@@ -80,16 +80,15 @@ export class Workspace {
   /**
    * Setup workspace from URL parameter.
    * @param space Workspace name from URL
-   * @param disableEscape Disables URL escaping if passing in NDN name
    * @returns Workspace object or null if not found
    */
-  public static async setup(space: string, disableEscape?: boolean): Promise<Workspace> {
+  public static async setup(space: string): Promise<Workspace> {
     if (!space) {
       throw new Error('No workspace name provided');
     }
 
     // Unescape URL name
-    if (!disableEscape) space = utils.unescapeUrlName(space);
+    space = utils.unescapeUrlName(space);
 
     // Get workspace configuration from storage
     const metadata = await _o.stats.get(space);
