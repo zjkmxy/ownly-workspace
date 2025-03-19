@@ -1,8 +1,8 @@
 import * as utils from '@/utils';
 
+import type { Router } from 'vue-router';
 import type { WorkspaceAPI } from '@/services/ndn';
 import type { SvsProvider } from '@/services/svs-provider';
-import type { Router } from 'vue-router';
 import type { IWkspStats } from '@/services/types';
 
 export class WorkspaceInviteManager {
