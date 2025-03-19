@@ -347,9 +347,9 @@ class NdnAwareness extends awareProto.Awareness {
     const username = wksp.name ?? 'Unknown';
     const hash1 = utils.cyrb64(username + ':1');
     const hash2 = utils.cyrb64(username + ':2');
-    const r = (hash1[0] % 128) + 110;
-    const g = (hash1[1] % 128) + 110;
-    const b = (hash2[0] % 128) + 110;
+    const r = (hash1[0] % 128) + 127;
+    const g = (hash1[1] % 128) + 127;
+    const b = (hash2[0] % 128) + 127;
 
     // Set the local user state
     const userState: AwarenessLocalState['user'] = {
