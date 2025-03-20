@@ -282,6 +282,7 @@ function onChatMessage(channel: string, message: IChatMessage) {
       border-radius: 5px;
       overflow: hidden;
       margin-right: 10px;
+      transform: translateY(4px); // visual hack
 
       > img {
         width: 36px;
