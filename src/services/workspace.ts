@@ -2,13 +2,12 @@ import { WorkspaceChat } from './workspace-chat';
 import { WorkspaceProj, WorkspaceProjManager } from './workspace-proj';
 import { WorkspaceInviteManager } from './workspace-invite';
 
-import { SvsProvider } from '@/services/svs-provider';
-
 import ndn from '@/services/ndn';
+import { SvsProvider } from '@/services/svs-provider';
 import { GlobalBus } from '@/services/event-bus';
 import * as utils from '@/utils/index';
 
-import type { WorkspaceAPI } from '@/services/ndn';
+import type { SvsAloApi, WorkspaceAPI } from '@/services/ndn';
 import type { Router } from 'vue-router';
 import type { IWkspStats } from '@/services/types';
 
@@ -42,20 +41,34 @@ export class Workspace {
     // Start connection to testbed
     await ndn.api.connect_testbed();
 
-    // Set up client and ALO
-    const api = await ndn.api.get_workspace(metadata.name);
-    await api.start();
+    // Set up workspace API and client
+    let api: WorkspaceAPI | null = null;
+    try {
+      api = await ndn.api.get_workspace(metadata.name);
+      await api.start();
 
-    // Create general SVS group
-    const provider = await SvsProvider.create(api, 'root');
+      // Check if we have the encryption keys
+      if (!metadata.psk) throw new Error('Missing PSK');
+      if (!metadata.dsk) await Workspace.findDskRoutine(metadata, api);
 
-    // Create general modules
-    const chat = await WorkspaceChat.create(api, provider);
-    const proj = await WorkspaceProjManager.create(api, provider);
-    const invite = await WorkspaceInviteManager.create(api, metadata, provider);
+      // Set encryption keys
+      await api.set_encrypt_keys(utils.fromHex(metadata.psk), utils.fromHex(metadata.dsk!));
 
-    // Create workspace object
-    return new Workspace(metadata, api, provider, chat, proj, invite);
+      // Create general SVS group
+      const provider = await SvsProvider.create(api, 'root');
+
+      // Create general modules
+      const chat = await WorkspaceChat.create(api, provider);
+      const proj = await WorkspaceProjManager.create(api, provider);
+      const invite = await WorkspaceInviteManager.create(api, metadata, provider);
+
+      // Create workspace object
+      return new Workspace(metadata, api, provider, chat, proj, invite);
+    } catch (e) {
+      // Clean up if we failed to start
+      api?.stop();
+      throw e;
+    }
   }
 
   /**
@@ -156,10 +169,28 @@ export class Workspace {
    * @param label Display name
    * @param wksp Workspace name
    * @param create Create the workspace if it does not exist
+   * @param psk Pre-shared key for encryption
    */
-  public static async join(label: string, wksp: string, create: boolean): Promise<string> {
+  public static async join(
+    label: string,
+    wksp: string,
+    create: boolean,
+    psk: Uint8Array | null,
+  ): Promise<string> {
     const metadata = await _o.stats.get(wksp);
     if (metadata) throw new Error('You have already joined this workspace');
+
+    // Generate or validate PSK
+    if (create) {
+      psk = new Uint8Array(32);
+      globalThis.crypto.getRandomValues(psk);
+    } else if (psk?.length !== 32) {
+      throw new Error('Invalid PSK length != 32');
+    }
+
+    // Generate DSK if creating a new workspace
+    const dsk = create ? new Uint8Array(32) : null;
+    if (create) globalThis.crypto.getRandomValues(dsk);
 
     // Join workspace - this will check invitation etc.
     const finalName = await ndn.api.join_workspace(wksp, create);
@@ -173,8 +204,53 @@ export class Workspace {
       name: finalName,
       owner: isOwner,
       pendingSetup: create ? true : undefined,
+      psk: utils.toHex(psk),
+      dsk: dsk ? utils.toHex(dsk) : null,
     });
 
     return finalName;
+  }
+
+  /**
+   * Routine to get the DSK key if it is not already present.
+   *
+   * @param metadata Metadata of the workspace
+   * @param api Workspace API
+   *
+   * @throws Error if DSK key cannot be obtained
+   */
+  private static async findDskRoutine(metadata: IWkspStats, api: WorkspaceAPI) {
+    // Start the root SVS group without subscribing
+    // This will allow us to publish the DSK key request
+    let rootSvs: SvsAloApi | null = null;
+
+    try {
+      const { svs } = await SvsProvider.createComponents(api, 'root');
+      rootSvs = svs;
+      await rootSvs.start();
+
+      if (!metadata.dskExch) {
+        const dskExch = await rootSvs.pub_dsk_request();
+        metadata.dskExch = utils.toHex(dskExch);
+
+        // Persist the key exchange key so that this process can be asynchronous
+        await globalThis._o.stats.put(metadata.name, metadata);
+      }
+
+      // Wait for DSK key or throw error
+      const dskExch = utils.fromHex(metadata.dskExch);
+      const dsk = await api.wait_for_dsk(dskExch);
+
+      // Persist the DSK key
+      metadata.dsk = utils.toHex(dsk);
+      await globalThis._o.stats.put(metadata.name, metadata);
+
+      // Acknowledge the DSK key
+      await rootSvs.pub_dsk_ack(dskExch);
+    } catch (e) {
+      throw new Error(`No DSK, try again later when others are online: ${e}`);
+    } finally {
+      rootSvs?.stop();
+    }
   }
 }

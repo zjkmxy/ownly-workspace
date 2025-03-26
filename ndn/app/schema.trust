@@ -35,6 +35,9 @@
 // Invitations
 #invite: #owner/wksp/"root"/"32=INVITE"/#user <= #owner_cert
 
+// DSK exchange
+#dsk: #owner/wksp/"root"/"32=DSK"/_ <= #user_cert
+
 // TODO: Repo commands
 #repo_cmd: /"ndnd"/"ucla"/"repo"/_ <= #user_cert
 

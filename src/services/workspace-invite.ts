@@ -45,6 +45,7 @@ export class WorkspaceInviteManager {
       params: { space },
       query: {
         label: this.wsmeta.label,
+        psk: this.wsmeta.psk,
       },
     }).href;
     return `${window.location.origin}${inviteHref}`;

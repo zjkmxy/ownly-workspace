@@ -5,6 +5,7 @@ package app
 import (
 	"fmt"
 	"syscall/js"
+	"time"
 
 	"github.com/named-data/ndnd/std/ndn"
 	"github.com/named-data/ndnd/std/object/storage"
@@ -17,6 +18,9 @@ type App struct {
 	engine   ndn.Engine
 	store    ndn.Store
 	keychain ndn.KeyChain
+
+	// Pending DSK requests -> cancel function
+	dskReqs map[string]*time.Timer
 }
 
 var _ndnd_store_js = js.Global().Get("_ndnd_store_js")
@@ -43,6 +47,7 @@ func NewApp() *App {
 	return &App{
 		store:    store,
 		keychain: kc,
+		dskReqs:  make(map[string]*time.Timer),
 	}
 }
 
@@ -67,6 +72,7 @@ func NewNodeApp() *App {
 	return &App{
 		store:    store,
 		keychain: kc,
+		dskReqs:  make(map[string]*time.Timer),
 	}
 }
 

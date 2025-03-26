@@ -9,7 +9,7 @@
     </p>
 
     <p class="mt-1">
-      <code class="select-all">{{ inviteLink }}</code>
+      <code class="select-all link">{{ inviteLink }}</code>
     </p>
 
     <p class="mt-2">Enter upto 100 email addresses or NDN names below, one on each line</p>
@@ -129,5 +129,8 @@ async function send() {
 <style scoped lang="scss">
 .textarea {
   resize: none;
+}
+code.link {
+  word-break: break-all;
 }
 </style>
