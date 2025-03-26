@@ -3,6 +3,7 @@
 package app
 
 import (
+	"crypto/aes"
 	"crypto/ecdh"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -208,8 +209,10 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	// Create client object for this workspace
 	client := object.NewClient(a.engine, a.store, trust)
 
-	// Encryption keys
-	var psk, dsk []byte = nil, nil
+	// Reset encryption keys
+	a.psk = nil
+	a.dsk = nil
+	a.aes = nil
 
 	var workspaceJs map[string]any
 	workspaceJs = map[string]any{
@@ -221,8 +224,22 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 		// set_encrypt_keys(psk: Uint8Array, dsk: Uint8Array): Promise<void>;
 		"set_encrypt_keys": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			psk = jsutil.JsArrayToSlice(p[0])
-			dsk = jsutil.JsArrayToSlice(p[1])
+			a.psk = jsutil.JsArrayToSlice(p[0])
+			a.dsk = jsutil.JsArrayToSlice(p[1])
+			if len(a.psk) == 0 || len(a.dsk) == 0 {
+				return nil, fmt.Errorf("invalid keys")
+			}
+
+			symKey, err := hkdfSha256(append(a.psk, a.dsk...))
+			if err != nil {
+				return nil, err
+			}
+			a.aes, err = aes.NewCipher(symKey)
+			if err != nil {
+				return nil, err
+			}
+			a.ivb = userKey.KeyName().Hash()
+
 			return nil, nil
 		}),
 
@@ -330,7 +347,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 				Snapshot: &ndn_sync.SnapshotNodeHistory{
 					Client:    client,
 					Threshold: SnapshotThreshold,
-					Compress:  CompressSnapshotYjs,
+					Compress:  a.CompressSnapshotYjs,
 				},
 
 				MulticastPrefix: multicastPrefix,
@@ -340,7 +357,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			}
 
 			// Create JS API for SVS ALO
-			return a.SvsAloJs(client, svsAlo, p[2], psk, dsk), nil
+			return a.SvsAloJs(client, svsAlo, p[2])
 		}),
 
 		// sign_invitation(invitee: string): Promise<Uint8Array>;
@@ -406,14 +423,14 @@ func (a *App) SvsAloJs(
 	client ndn.Client,
 	alo *ndn_sync.SvsALO,
 	persistState js.Value,
-	psk []byte,
-	dsk []byte,
-) (api js.Value) {
+) (api js.Value, err error) {
+	// List of SVS routes to announce
 	routes := []enc.Name{
 		alo.SyncPrefix(),
 		alo.DataPrefix(),
 	}
 
+	// Wrap the SVS ALO instance in a JS API
 	var svsAloJs map[string]any
 	svsAloJs = map[string]any{
 		"sync_prefix": js.ValueOf(alo.SyncPrefix().String()),
@@ -473,12 +490,17 @@ func (a *App) SvsAloJs(
 				},
 			}
 
-			name, state, err := alo.Publish(pub.Encode())
+			// Encrypt the publication
+			epub, err := a.encryptPub(pub, alo.SeqNo())
 			if err != nil {
 				return nil, err
 			}
 
-			// Persist state
+			name, state, err := alo.Publish(epub.Encode())
+			if err != nil {
+				return nil, err
+			}
+
 			jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(state.Join())))
 
 			return js.ValueOf(name.String()), nil
@@ -573,6 +595,12 @@ func (a *App) SvsAloJs(
 						continue
 					}
 
+					pmsg, err = a.decryptPub(pmsg)
+					if err != nil {
+						log.Error(nil, "Failed to decrypt publication", "err", err)
+						continue
+					}
+
 					// All possible message type conversions listed here
 					switch {
 					case pmsg.YjsDelta != nil:
@@ -600,7 +628,7 @@ func (a *App) SvsAloJs(
 							delete(a.dskReqs, pubHex)
 
 							group := alo.GroupPrefix()
-							dskRes := a.processDskRequest(client, group, pub, dsk)
+							dskRes := a.processDskRequest(client, group, pub)
 							if dskRes == nil {
 								return
 							}
@@ -676,7 +704,7 @@ func (a *App) SvsAloJs(
 			}), nil
 		}),
 	}
-	return js.ValueOf(svsAloJs)
+	return js.ValueOf(svsAloJs), nil
 }
 
 func (a *App) AwarenessJs(awareness *Awareness) (api js.Value) {

@@ -2,6 +2,8 @@
 package tlv
 
 type Message struct {
+	//+field:struct:AeadBlock
+	AeadBlock *AeadBlock `tlv:"0xC6"`
 	//+field:struct:YjsDelta
 	YjsDelta *YjsDelta `tlv:"0xC8"`
 	//+field:struct:DSKRequest
@@ -10,6 +12,13 @@ type Message struct {
 	DSKResponse *DSKResponse `tlv:"0xCC"`
 	//+field:struct:DSKACK
 	DSKACK *DSKACK `tlv:"0xCE"`
+}
+
+type AeadBlock struct {
+	//+field:binary
+	IV []byte `tlv:"0xC8"`
+	//+field:binary
+	Ciphertext []byte `tlv:"0xCA"`
 }
 
 type YjsDelta struct {

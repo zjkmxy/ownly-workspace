@@ -3,6 +3,7 @@
 package app
 
 import (
+	"crypto/cipher"
 	"fmt"
 	"syscall/js"
 	"time"
@@ -18,6 +19,12 @@ type App struct {
 	engine   ndn.Engine
 	store    ndn.Store
 	keychain ndn.KeyChain
+
+	// Encryption keys
+	psk []byte
+	dsk []byte
+	aes cipher.Block
+	ivb uint64
 
 	// Pending DSK requests -> cancel function
 	dskReqs map[string]*time.Timer

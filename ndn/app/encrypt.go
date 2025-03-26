@@ -6,7 +6,7 @@ import (
 	"crypto/aes"
 	"crypto/ecdh"
 	"crypto/rand"
-	"crypto/sha256"
+	"encoding/binary"
 	"fmt"
 	"time"
 
@@ -17,34 +17,10 @@ import (
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/types/optional"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
-	"golang.org/x/crypto/hkdf"
 )
 
-func x25519hkdf(pk_ []byte, sk_ []byte) (sym []byte, err error) {
-	pk, err := ecdh.X25519().NewPublicKey(pk_)
-	if err != nil {
-		return nil, err
-	}
-	sk, err := ecdh.X25519().NewPrivateKey(sk_)
-	if err != nil {
-		return nil, err
-	}
-	ss, err := sk.ECDH(pk)
-	if err != nil {
-		return nil, err
-	}
-
-	symReader := hkdf.New(sha256.New, ss, nil, nil)
-	sym = make([]byte, 16) // AES-128
-	if _, err := symReader.Read(sym); err != nil {
-		return nil, err
-	}
-
-	return sym, nil
-}
-
-func (a *App) processDskRequest(client ndn.Client, group enc.Name, pub []byte, dsk []byte) enc.Wire {
-	if len(dsk) != 32 || len(pub) > 64 {
+func (a *App) processDskRequest(client ndn.Client, group enc.Name, pub []byte) enc.Wire {
+	if len(a.dsk) != 32 || len(pub) > 64 {
 		// We are not capable of answering DSK requests
 		return nil
 	}
@@ -54,7 +30,7 @@ func (a *App) processDskRequest(client ndn.Client, group enc.Name, pub []byte, d
 		log.Error(a, "Failed to generate DSK response key", "err", err)
 		return nil
 	}
-	sym, err := x25519hkdf(pub, sk.Bytes())
+	sym, err := x25519HkdfSha256(pub, sk.Bytes())
 	if err != nil {
 		log.Error(a, "Failed to compute DSK response sym key", "err", err)
 		return nil
@@ -67,9 +43,9 @@ func (a *App) processDskRequest(client ndn.Client, group enc.Name, pub []byte, d
 	}
 
 	// Encrypt the DSK, should be multiple of block size
-	ciphertext := make([]byte, len(dsk))
-	for i := 0; i < len(dsk); i += cipher.BlockSize() {
-		cipher.Encrypt(ciphertext[i:], dsk[i:])
+	ciphertext := make([]byte, len(a.dsk))
+	for i := 0; i < len(a.dsk); i += cipher.BlockSize() {
+		cipher.Encrypt(ciphertext[i:], a.dsk[i:])
 	}
 
 	dskRes := &tlv.DSKResponse{
@@ -143,7 +119,7 @@ func (a *App) fetchDsk(client ndn.Client, wksp enc.Name, priv []byte) ([]byte, e
 		return nil, fmt.Errorf("failed to parse DSK response: %w", err)
 	}
 
-	sym, err := x25519hkdf(dskRes.X25519Peer, priv)
+	sym, err := x25519HkdfSha256(dskRes.X25519Peer, priv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute DSK response sym key: %w", err)
 	}
@@ -160,4 +136,43 @@ func (a *App) fetchDsk(client ndn.Client, wksp enc.Name, priv []byte) ([]byte, e
 	}
 
 	return dsk, nil
+}
+
+func (a *App) encryptPub(pub *tlv.Message, seq uint64) (*tlv.Message, error) {
+	if a.aes == nil {
+		return nil, fmt.Errorf("AES key not set")
+	}
+
+	iv := make([]byte, 12) // 96-bit IV
+	binary.BigEndian.PutUint32(iv[0:], uint32(a.ivb))
+	binary.BigEndian.PutUint64(iv[4:], a.ivb+seq)
+	ciphertext, err := aeadSeal(a.aes, iv, pub.Encode().Join())
+	if err != nil {
+		return nil, err
+	}
+
+	return &tlv.Message{
+		AeadBlock: &tlv.AeadBlock{
+			IV:         iv,
+			Ciphertext: ciphertext,
+		},
+	}, nil
+}
+
+func (a *App) decryptPub(pub *tlv.Message) (*tlv.Message, error) {
+	if pub.AeadBlock == nil {
+		return pub, nil
+	}
+	if a.aes == nil {
+		return nil, fmt.Errorf("AES key not set")
+	}
+
+	iv := pub.AeadBlock.IV
+	ct := pub.AeadBlock.Ciphertext
+	plaintext, err := aeadOpen(a.aes, iv, ct)
+	if err != nil {
+		return nil, err
+	}
+
+	return tlv.ParseMessage(enc.NewBufferView(plaintext), true)
 }

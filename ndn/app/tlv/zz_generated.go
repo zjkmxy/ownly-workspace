@@ -12,6 +12,7 @@ import (
 type MessageEncoder struct {
 	Length uint
 
+	AeadBlock_encoder   AeadBlockEncoder
 	YjsDelta_encoder    YjsDeltaEncoder
 	DSKRequest_encoder  DSKRequestEncoder
 	DSKResponse_encoder DSKResponseEncoder
@@ -19,6 +20,7 @@ type MessageEncoder struct {
 }
 
 type MessageParsingContext struct {
+	AeadBlock_context   AeadBlockParsingContext
 	YjsDelta_context    YjsDeltaParsingContext
 	DSKRequest_context  DSKRequestParsingContext
 	DSKResponse_context DSKResponseParsingContext
@@ -26,6 +28,9 @@ type MessageParsingContext struct {
 }
 
 func (encoder *MessageEncoder) Init(value *Message) {
+	if value.AeadBlock != nil {
+		encoder.AeadBlock_encoder.Init(value.AeadBlock)
+	}
 	if value.YjsDelta != nil {
 		encoder.YjsDelta_encoder.Init(value.YjsDelta)
 	}
@@ -40,6 +45,11 @@ func (encoder *MessageEncoder) Init(value *Message) {
 	}
 
 	l := uint(0)
+	if value.AeadBlock != nil {
+		l += 1
+		l += uint(enc.TLNum(encoder.AeadBlock_encoder.Length).EncodingLength())
+		l += encoder.AeadBlock_encoder.Length
+	}
 	if value.YjsDelta != nil {
 		l += 1
 		l += uint(enc.TLNum(encoder.YjsDelta_encoder.Length).EncodingLength())
@@ -65,6 +75,7 @@ func (encoder *MessageEncoder) Init(value *Message) {
 }
 
 func (context *MessageParsingContext) Init() {
+	context.AeadBlock_context.Init()
 	context.YjsDelta_context.Init()
 	context.DSKRequest_context.Init()
 	context.DSKResponse_context.Init()
@@ -75,6 +86,15 @@ func (encoder *MessageEncoder) EncodeInto(value *Message, buf []byte) {
 
 	pos := uint(0)
 
+	if value.AeadBlock != nil {
+		buf[pos] = byte(198)
+		pos += 1
+		pos += uint(enc.TLNum(encoder.AeadBlock_encoder.Length).EncodeInto(buf[pos:]))
+		if encoder.AeadBlock_encoder.Length > 0 {
+			encoder.AeadBlock_encoder.EncodeInto(value.AeadBlock, buf[pos:])
+			pos += encoder.AeadBlock_encoder.Length
+		}
+	}
 	if value.YjsDelta != nil {
 		buf[pos] = byte(200)
 		pos += 1
@@ -125,6 +145,7 @@ func (encoder *MessageEncoder) Encode(value *Message) enc.Wire {
 
 func (context *MessageParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*Message, error) {
 
+	var handled_AeadBlock bool = false
 	var handled_YjsDelta bool = false
 	var handled_DSKRequest bool = false
 	var handled_DSKResponse bool = false
@@ -155,6 +176,12 @@ func (context *MessageParsingContext) Parse(reader enc.WireView, ignoreCritical 
 		err = nil
 		if handled := false; true {
 			switch typ {
+			case 198:
+				if true {
+					handled = true
+					handled_AeadBlock = true
+					value.AeadBlock, err = context.AeadBlock_context.Parse(reader.Delegate(int(l)), ignoreCritical)
+				}
 			case 200:
 				if true {
 					handled = true
@@ -197,6 +224,9 @@ func (context *MessageParsingContext) Parse(reader enc.WireView, ignoreCritical 
 	startPos = reader.Pos()
 	err = nil
 
+	if !handled_AeadBlock && err == nil {
+		value.AeadBlock = nil
+	}
 	if !handled_YjsDelta && err == nil {
 		value.YjsDelta = nil
 	}
@@ -229,6 +259,156 @@ func (value *Message) Bytes() []byte {
 
 func ParseMessage(reader enc.WireView, ignoreCritical bool) (*Message, error) {
 	context := MessageParsingContext{}
+	context.Init()
+	return context.Parse(reader, ignoreCritical)
+}
+
+type AeadBlockEncoder struct {
+	Length uint
+}
+
+type AeadBlockParsingContext struct {
+}
+
+func (encoder *AeadBlockEncoder) Init(value *AeadBlock) {
+
+	l := uint(0)
+	if value.IV != nil {
+		l += 1
+		l += uint(enc.TLNum(len(value.IV)).EncodingLength())
+		l += uint(len(value.IV))
+	}
+	if value.Ciphertext != nil {
+		l += 1
+		l += uint(enc.TLNum(len(value.Ciphertext)).EncodingLength())
+		l += uint(len(value.Ciphertext))
+	}
+	encoder.Length = l
+
+}
+
+func (context *AeadBlockParsingContext) Init() {
+
+}
+
+func (encoder *AeadBlockEncoder) EncodeInto(value *AeadBlock, buf []byte) {
+
+	pos := uint(0)
+
+	if value.IV != nil {
+		buf[pos] = byte(200)
+		pos += 1
+		pos += uint(enc.TLNum(len(value.IV)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], value.IV)
+		pos += uint(len(value.IV))
+	}
+	if value.Ciphertext != nil {
+		buf[pos] = byte(202)
+		pos += 1
+		pos += uint(enc.TLNum(len(value.Ciphertext)).EncodeInto(buf[pos:]))
+		copy(buf[pos:], value.Ciphertext)
+		pos += uint(len(value.Ciphertext))
+	}
+}
+
+func (encoder *AeadBlockEncoder) Encode(value *AeadBlock) enc.Wire {
+
+	wire := make(enc.Wire, 1)
+	wire[0] = make([]byte, encoder.Length)
+	buf := wire[0]
+	encoder.EncodeInto(value, buf)
+
+	return wire
+}
+
+func (context *AeadBlockParsingContext) Parse(reader enc.WireView, ignoreCritical bool) (*AeadBlock, error) {
+
+	var handled_IV bool = false
+	var handled_Ciphertext bool = false
+
+	progress := -1
+	_ = progress
+
+	value := &AeadBlock{}
+	var err error
+	var startPos int
+	for {
+		startPos = reader.Pos()
+		if startPos >= reader.Length() {
+			break
+		}
+		typ := enc.TLNum(0)
+		l := enc.TLNum(0)
+		typ, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+		l, err = reader.ReadTLNum()
+		if err != nil {
+			return nil, enc.ErrFailToParse{TypeNum: 0, Err: err}
+		}
+
+		err = nil
+		if handled := false; true {
+			switch typ {
+			case 200:
+				if true {
+					handled = true
+					handled_IV = true
+					value.IV = make([]byte, l)
+					_, err = reader.ReadFull(value.IV)
+				}
+			case 202:
+				if true {
+					handled = true
+					handled_Ciphertext = true
+					value.Ciphertext = make([]byte, l)
+					_, err = reader.ReadFull(value.Ciphertext)
+				}
+			default:
+				if !ignoreCritical && ((typ <= 31) || ((typ & 1) == 1)) {
+					return nil, enc.ErrUnrecognizedField{TypeNum: typ}
+				}
+				handled = true
+				err = reader.Skip(int(l))
+			}
+			if err == nil && !handled {
+			}
+			if err != nil {
+				return nil, enc.ErrFailToParse{TypeNum: typ, Err: err}
+			}
+		}
+	}
+
+	startPos = reader.Pos()
+	err = nil
+
+	if !handled_IV && err == nil {
+		value.IV = nil
+	}
+	if !handled_Ciphertext && err == nil {
+		value.Ciphertext = nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+func (value *AeadBlock) Encode() enc.Wire {
+	encoder := AeadBlockEncoder{}
+	encoder.Init(value)
+	return encoder.Encode(value)
+}
+
+func (value *AeadBlock) Bytes() []byte {
+	return value.Encode().Join()
+}
+
+func ParseAeadBlock(reader enc.WireView, ignoreCritical bool) (*AeadBlock, error) {
+	context := AeadBlockParsingContext{}
 	context.Init()
 	return context.Parse(reader, ignoreCritical)
 }
