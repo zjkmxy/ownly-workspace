@@ -7,7 +7,7 @@ import { exportWorker } from 'webworker-typed';
  */
 export async function writeContents(
   handle: FileSystemFileHandle,
-  content: Uint8Array,
+  content: ArrayBuffer,
 ): Promise<number> {
   const syncHandle = await handle.createSyncAccessHandle();
   syncHandle.truncate(0);

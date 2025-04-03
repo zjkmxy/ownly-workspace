@@ -1,7 +1,7 @@
 import * as zip from '@zip.js/zip.js';
 export { getFileHandle, getDirectoryHandle } from './opfs-common.ts';
 
-import { importWorker } from 'webworker-typed';
+import { importWorker, transfer } from 'webworker-typed';
 import type MyWorker from './opfs-worker.ts';
 
 const worker = importWorker<typeof MyWorker>(
@@ -17,7 +17,7 @@ export async function writeContents(
   handle: FileSystemFileHandle,
   content: Uint8Array,
 ): Promise<number> {
-  return await worker.writeContents(handle, content);
+  return await worker.writeContents(handle, transfer(content.buffer));
 }
 
 /**
