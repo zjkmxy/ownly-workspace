@@ -1,62 +1,23 @@
 import * as zip from '@zip.js/zip.js';
+export { getFileHandle, getDirectoryHandle } from './opfs-common.ts';
 
-/**
- * Get handle to a file in OPFS recursively
- * @param path Full path of the file
- * @param content File content
- */
-export async function getFileHandle(
-  path: string,
-  opts?: {
-    create?: boolean;
-    root?: FileSystemDirectoryHandle;
-  },
-): Promise<FileSystemFileHandle> {
-  const parts = path.split('/').filter(Boolean);
-  const folder = parts.slice(0, -1).join('/');
-  const folderHandle = await getDirectoryHandle(folder, {
-    create: opts?.create,
-    root: opts?.root,
-  });
+import { importWorker } from 'webworker-typed';
+import type MyWorker from './opfs-worker.ts';
 
-  const basename = parts[parts.length - 1];
-  if (!basename) throw new Error('Invalid file path without basename');
-
-  return await folderHandle.getFileHandle(basename, { create: opts?.create });
-}
+const worker = importWorker<typeof MyWorker>(
+  new Worker(new URL('./opfs-worker.ts', import.meta.url), { type: 'module' }),
+);
 
 /**
  * Write to a file and close it
  * @param handle File handle
  * @param content Content to write
  */
-export async function write(handle: FileSystemFileHandle, content: Uint8Array): Promise<void> {
-  const writable = await handle.createWritable();
-  await writable.truncate(0);
-  await writable.write(content);
-  await writable.close();
-}
-
-/**
- * Get directory handle from OPFS recursively
- * @param path Path to the directory
- * @returns Directory handle
- */
-export async function getDirectoryHandle(
-  path: string,
-  opts?: {
-    create?: boolean;
-    root?: FileSystemDirectoryHandle;
-  },
-): Promise<FileSystemDirectoryHandle> {
-  let folder = opts?.root ?? (await globalThis._o.getStorageRoot());
-  const parts = path.split('/').filter(Boolean);
-  for (const part of parts) {
-    folder = await folder.getDirectoryHandle(part, {
-      create: opts?.create ?? false,
-    });
-  }
-  return folder;
+export async function writeContents(
+  handle: FileSystemFileHandle,
+  content: Uint8Array,
+): Promise<number> {
+  return await worker.writeContents(handle, content);
 }
 
 /**
