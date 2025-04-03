@@ -11,13 +11,28 @@ const worker = importWorker<typeof MyWorker>(
 /**
  * Write to a file and close it
  * @param handle File handle
+ * @param path Full path of file (for Safari)
  * @param content Content to write
  */
 export async function writeContents(
   handle: FileSystemFileHandle,
+  path: string,
   content: Uint8Array,
 ): Promise<number> {
-  return await worker.writeContents(handle, transfer(content.buffer));
+  // This is not available on Safari, in that case fall back to a WebWorker
+  // with a sync write handle. We do this here so no need to handle anything else
+  // in the worker (i.e. node)
+  if ('createWritable' in handle) {
+    const writable = await handle.createWritable();
+    await writable.truncate(0);
+    await writable.write(content);
+    await writable.close();
+    return content.length;
+  }
+
+  // FileSystemFileHandle should be clonable but that is not the case on Safari
+  // Our only option is to ask downstream to provide a path to the file :(
+  return await worker.writeContents(path, transfer(content.buffer));
 }
 
 /**
