@@ -550,10 +550,16 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 
 		// awareness(uuid: string): Promise<AwarenessApi>;
 		"awareness": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			// One awareness instance per document
+			suffix := enc.Name{
+				enc.NewKeywordComponent("aware"),
+				enc.NewGenericComponent(p[0].String()),
+			}
+
 			// Create new Awareness instance
 			return a.AwarenessJs(&Awareness{
-				Group:  alo.SyncPrefix().Append(enc.NewKeywordComponent("aware")),
-				Name:   alo.DataPrefix().Append(enc.NewKeywordComponent("aware")),
+				Group:  alo.SyncPrefix().Append(suffix...),
+				Name:   alo.DataPrefix().Append(suffix...),
 				Client: client,
 			}), nil
 		}),
@@ -567,13 +573,15 @@ func (a *App) AwarenessJs(awareness *Awareness) (api js.Value) {
 	awarenessJs = map[string]any{
 		// start(): Promise<void>;
 		"start": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			awareness.Start()
-			return nil, nil
+			err := awareness.Start()
+			return nil, err
 		}),
 
 		// stop(): Promise<void>;
 		"stop": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			awareness.Stop()
+			if err := awareness.Stop(); err != nil {
+				return nil, err
+			}
 			jsutil.ReleaseMap(awarenessJs)
 			return nil, nil
 		}),
