@@ -95,7 +95,7 @@ import * as utils from '@/utils/index';
 import ndn from '@/services/ndn';
 import { Toast } from '@/utils/toast';
 
-const emit = defineEmits(['login']);
+const emit = defineEmits(['login', 'ready']);
 
 const showLoading = ref(true);
 const showEmail = ref(false);
@@ -204,6 +204,7 @@ async function setup() {
 
     showLoading.value = false;
     showEmail.value = true;
+    emit('ready');
   } catch (err) {
     console.error(err);
   }
