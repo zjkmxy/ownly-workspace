@@ -16,6 +16,7 @@ import {
 } from '@excalidraw/excalidraw/types/types';
 import { channel } from './channel';
 import { ExcalidrawElement } from '@excalidraw/excalidraw/types/element/types';
+import type { ImportedDataState } from '@excalidraw/excalidraw/types/data/types';
 
 function detectTheme() {
   // switch (document.body.className) {
@@ -105,43 +106,51 @@ export default function App(props: {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const listener = async (e: any) => {
       // TODO: Not supported for now.
-      // try {
-      //   const message = e.data;
-      //   switch (message.type) {
-      //     case 'library-change': {
-      //       const blob = new Blob([message.library], {
-      //         type: 'application/json',
-      //       });
-      //       const libraryItems = await loadLibraryFromBlob(blob);
-      //       if (JSON.stringify(libraryItems) == JSON.stringify(libraryItemsRef.current)) {
-      //         return;
-      //       }
-      //       libraryItemsRef.current = libraryItems;
-      //       excalidrawAPI?.updateLibrary({
-      //         libraryItems,
-      //         merge: message.merge,
-      //         openLibraryMenu: !message.merge,
-      //       });
-      //       break;
-      //     }
-      //     case 'theme-change': {
-      //       setThemeConfig(message.theme);
-      //       break;
-      //     }
-      //     case 'language-change': {
-      //       setLangCode(message.langCode);
-      //       break;
-      //     }
-      //     case 'image-params-change': {
-      //       setImageParams(message.imageParams);
-      //     }
-      //   }
-      // } catch (e) {
-      //   channel.postMessage({
-      //     type: 'error',
-      //     content: (e as Error).message,
-      //   });
-      // }
+      try {
+        const message = e.data;
+        switch (message.type) {
+          // case 'library-change': {
+          //   const blob = new Blob([message.library], {
+          //     type: 'application/json',
+          //   });
+          //   const libraryItems = await loadLibraryFromBlob(blob);
+          //   if (JSON.stringify(libraryItems) == JSON.stringify(libraryItemsRef.current)) {
+          //     return;
+          //   }
+          //   libraryItemsRef.current = libraryItems;
+          //   excalidrawAPI?.updateLibrary({
+          //     libraryItems,
+          //     merge: message.merge,
+          //     openLibraryMenu: !message.merge,
+          //   });
+          //   break;
+          // }
+          // case 'theme-change': {
+          //   setThemeConfig(message.theme);
+          //   break;
+          // }
+          // case 'language-change': {
+          //   setLangCode(message.langCode);
+          //   break;
+          // }
+          // case 'image-params-change': {
+          //   setImageParams(message.imageParams);
+          // }
+          case 'change': {
+            const appState = JSON.parse(
+              new TextDecoder().decode(new Uint8Array(message.content))
+            ) as ImportedDataState;
+            excalidrawAPI?.updateScene({
+              elements: appState.elements,
+            });
+          }
+        }
+      } catch (e) {
+        channel.postMessage({
+          type: 'error',
+          content: (e as Error).message,
+        });
+      }
     };
     channel.addEventListener('message', listener);
 

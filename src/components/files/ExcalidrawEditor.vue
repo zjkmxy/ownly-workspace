@@ -3,15 +3,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, type PropType, ref, watch } from 'vue';
+import { onMounted, onBeforeUnmount, type PropType, ref, watch, nextTick } from 'vue';
+import { useBroadcastChannel, pausableWatch } from '@vueuse/core';
 
 import * as Y from 'yjs';
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
-import type { ExcalidrawConfig } from '../../services/excalidraw-types';
+import type { ExcalidrawConfig, ExcalidrawMessage } from '../../services/excalidraw-types';
 import type { ImportedDataState } from '@excalidraw/excalidraw/data/types';
-import { bytesToBase64 } from '../../utils/base64';
+import { bytesToBase64, numberArrayToText, textToNumberArray } from '../../utils/base64';
 import srcDocText from '@/../public/excalidraw/index.html?raw';
-import { loadFromBlob } from '@excalidraw/excalidraw';
 
 const props = defineProps({
   name: {
@@ -24,84 +24,26 @@ const props = defineProps({
   },
 });
 
+const { data /* post */ } = useBroadcastChannel({ name: 'excalidraw' });
+const srcDoc = ref('');
+// TODO(zjkmxy): Make these files managed by Yjs.
+const scene = ref<ImportedDataState>({
+  elements: [],
+  type: 'excalidraw',
+  version: 2,
+  source: 'https://ownly.work/',
+  appState: {
+    gridSize: 20,
+    gridStep: 5,
+    gridModeEnabled: false,
+    viewBackgroundColor: '#ffffff',
+  },
+  files: {},
+});
+
 const convertYjsToFile = (yjson: Y.Map<ExcalidrawElement>): ImportedDataState => {
-  // TODO(zjkmxy): Make these files managed by Yjs.
   return {
-    // elements: Array.from(yjson.values()),
-    elements: [
-      {
-        id: 'fsUqC6J2_3O0y5dKMfVk0',
-        type: 'rectangle',
-        x: 568.69921875,
-        y: 247.44921875,
-        width: 202.08984375,
-        height: 187.42578125,
-        angle: 0,
-        strokeColor: '#1e1e1e',
-        backgroundColor: 'transparent',
-        fillStyle: 'solid',
-        strokeWidth: 2,
-        strokeStyle: 'solid',
-        roughness: 1,
-        opacity: 100,
-        groupIds: [],
-        frameId: null,
-        index: 'a0' as any,
-        roundness: {
-          type: 3,
-        },
-        seed: 1735938517,
-        version: 38,
-        versionNonce: 1601591643,
-        isDeleted: false,
-        boundElements: [
-          {
-            type: 'text',
-            id: 'UpoNSAuoxhm1pcqIkklxP',
-          },
-        ],
-        updated: 1741551086522,
-        link: null,
-        locked: false,
-      },
-      {
-        id: 'UpoNSAuoxhm1pcqIkklxP',
-        type: 'text',
-        x: 635.2641754150391,
-        y: 328.662109375,
-        width: 68.95993041992188,
-        height: 25,
-        angle: 0,
-        strokeColor: '#1e1e1e',
-        backgroundColor: 'transparent',
-        fillStyle: 'solid',
-        strokeWidth: 2,
-        strokeStyle: 'solid',
-        roughness: 1,
-        opacity: 100,
-        groupIds: [],
-        frameId: null,
-        index: 'a1' as any,
-        roundness: null,
-        seed: 393675445,
-        version: 9,
-        versionNonce: 263747067,
-        isDeleted: false,
-        boundElements: [],
-        updated: 1741551086522,
-        link: null,
-        locked: false,
-        text: 'asdsad',
-        fontSize: 20,
-        fontFamily: 5,
-        textAlign: 'center',
-        verticalAlign: 'middle',
-        containerId: 'fsUqC6J2_3O0y5dKMfVk0',
-        originalText: 'asdsad',
-        autoResize: true,
-        lineHeight: 1.25 as any,
-      },
-    ],
+    elements: Array.from(yjson.values()),
     type: 'excalidraw',
     version: 2,
     source: 'https://ownly.work/',
@@ -115,22 +57,9 @@ const convertYjsToFile = (yjson: Y.Map<ExcalidrawElement>): ImportedDataState =>
   };
 };
 
-const srcDoc = ref('');
-
-const textToNumberArray = (jsonText: string): Array<number> => {
-  return Array.from(new TextEncoder().encode(jsonText));
-}
-
-const create = () => {
-  const content = convertYjsToFile(props.yjson);
-  loadFromBlob(new Blob([JSON.stringify(content)], { type: 'application/json' }), null, null).then((result) => {
-    console.log(result);
-  }).catch((err) => {
-    console.log(err);
-  })
-
+const sceneUpdateWatcher = pausableWatch(scene, () => {
   const config: ExcalidrawConfig = {
-    content: textToNumberArray(JSON.stringify(convertYjsToFile(props.yjson))),
+    content: textToNumberArray(JSON.stringify(scene.value)),
     contentType: 'application/json',
     library: '',
     viewModeEnabled: false,
@@ -149,10 +78,81 @@ const create = () => {
       bytesToBase64(new TextEncoder().encode(JSON.stringify(config))),
     )
     .replaceAll('/static/', '/excalidraw/static/');
+});
+
+const compareAndUpdateYMap = (newScene: ImportedDataState, yjson: Y.Map<ExcalidrawElement>) => {
+  const newMap = new Map((newScene.elements ?? []).map((ele) => [ele.id, ele]));
+  Y.transact(
+    yjson.doc!,
+    () => {
+      // console.log('Transacted')
+      for (const [id, ele] of newMap) {
+        if (!yjson.has(id)) {
+          // New item
+          yjson.set(id, ele);
+          continue;
+        }
+        const oldEle = yjson.get(id);
+        if (oldEle !== ele) {
+          // Modified item
+          // Since we do not have finer granularity for now, update the whole element.
+          yjson.set(id, ele);
+        }
+      }
+      // Delete items
+      for (const id of yjson.keys()) {
+        if (!newMap.has(id)) {
+          yjson.delete(id);
+        }
+      }
+    },
+    'excalidraw',
+    true,
+  );
 };
 
-watch(() => props.yjson, create);
+watch(data, () => {
+  if (data.value) {
+    const message = data.value as ExcalidrawMessage;
+    if (message.type === 'change') {
+      const newDocFile = JSON.parse(numberArrayToText(message.content)) as ImportedDataState;
+      // console.log(newDocFile);
+
+      // Update from the editor-side does not trigger reload
+      sceneUpdateWatcher.pause();
+      compareAndUpdateYMap(newDocFile, props.yjson);
+      scene.value = newDocFile;
+      nextTick().then(() => sceneUpdateWatcher.resume());
+    }
+  }
+});
+
+const observer = (event: Y.YMapEvent<ExcalidrawElement>) => {
+  if (event.transaction.origin === 'excalidraw' || event.transaction.local) {
+    // Ignore local changes; do not reload
+    return;
+  }
+  scene.value = convertYjsToFile(props.yjson);
+};
+
+const create = () => {
+  scene.value = convertYjsToFile(props.yjson);
+  props.yjson.observe(observer);
+};
+
+const destroy = () => {
+  props.yjson.unobserve(observer);
+};
+
+watch(
+  () => props.yjson,
+  () => {
+    destroy();
+    create();
+  },
+);
 onMounted(create);
+onBeforeUnmount(destroy);
 </script>
 
 <style scoped lang="scss">

@@ -27,3 +27,8 @@ export type ExcalidrawConfig = {
   /** Diagram name */
   name: string | undefined,
 };
+
+export type ExcalidrawMessage = {
+  type: 'change',
+  content: Array<number>,
+}
