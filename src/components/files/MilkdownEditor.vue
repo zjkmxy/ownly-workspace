@@ -106,6 +106,11 @@ milkdown-latex-inline-edit {
   z-index: 20;
 }
 
+// Workaround bug in milkdown, this should be destroyed
+body > milkdown-slash-menu {
+  display: none !important;
+}
+
 @media (max-width: 1023px) {
   .milkdown .ProseMirror {
     touch-action: manipulation;
