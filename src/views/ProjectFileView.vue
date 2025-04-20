@@ -226,7 +226,7 @@ async function compileLatex() {
   if (resultIsCompiling.value) return;
   try {
     resultIsCompiling.value = true;
-    resultPdf.value = (await latex.compile(proj.value!)) as any;
+    resultPdf.value = await latex.compile(proj.value!);
     resultError.value = String();
   } catch (err) {
     resultError.value = `Failed to compile LaTeX\n\n ${err}`;
