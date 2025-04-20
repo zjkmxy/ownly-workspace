@@ -115,7 +115,7 @@ const contentBlob = shallowRef<IBlobVersion | null>(null);
 const contentBasename = ref<string>(String());
 const contentIsLatex = ref<boolean>(false);
 
-const resultPdf = shallowRef<Uint8Array | null>(null);
+const resultPdf = shallowRef<Uint8Array<ArrayBuffer> | null>(null);
 const resultIsCompiling = ref(false);
 const resultError = ref(String());
 
@@ -226,7 +226,7 @@ async function compileLatex() {
   if (resultIsCompiling.value) return;
   try {
     resultIsCompiling.value = true;
-    resultPdf.value = await latex.compile(proj.value!);
+    resultPdf.value = await latex.compile(proj.value!) as any;
     resultError.value = String();
   } catch (err) {
     resultError.value = `Failed to compile LaTeX\n\n ${err}`;

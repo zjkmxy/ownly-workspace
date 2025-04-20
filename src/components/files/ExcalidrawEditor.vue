@@ -24,7 +24,9 @@ const props = defineProps({
   },
 });
 
-const { data /* post */ } = useBroadcastChannel({ name: 'excalidraw' });
+const { data, post } = useBroadcastChannel<ExcalidrawMessage, ExcalidrawMessage>({
+  name: 'excalidraw',
+});
 const srcDoc = ref('');
 // TODO(zjkmxy): Make these files managed by Yjs.
 const scene = ref<ImportedDataState>({
@@ -132,7 +134,15 @@ const observer = (event: Y.YMapEvent<ExcalidrawElement>) => {
     // Ignore local changes; do not reload
     return;
   }
-  scene.value = convertYjsToFile(props.yjson);
+  // The following statement will cause a reload
+  // So we pause the reload and use a post message instead
+  // sceneUpdateWatcher.pause();
+  // scene.value = convertYjsToFile(props.yjson);
+  // nextTick().then(() => sceneUpdateWatcher.resume());
+  post({
+    type: 'change',
+    content: textToNumberArray(JSON.stringify(convertYjsToFile(props.yjson))),
+  });
 };
 
 const create = () => {

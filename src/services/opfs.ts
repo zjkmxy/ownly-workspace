@@ -32,7 +32,7 @@ export async function writeContents(
 
   // FileSystemFileHandle should be clonable but that is not the case on Safari
   // Our only option is to ask downstream to provide a path to the file :(
-  return await worker.writeContents(path, transfer(content.buffer));
+  return await worker.writeContents(path, transfer(content.buffer) as any);
 }
 
 /**

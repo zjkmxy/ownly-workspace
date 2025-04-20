@@ -56,7 +56,7 @@ const router = useRouter();
 
 const previewLoading = ref(false);
 const previewImage = ref<string | null>(null);
-const previewPdf = shallowRef<Uint8Array | null>(null);
+const previewPdf = shallowRef<Uint8Array<ArrayBuffer> | null>(null);
 
 const props = defineProps<{
   version: IBlobVersion;

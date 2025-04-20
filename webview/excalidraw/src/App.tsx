@@ -157,12 +157,14 @@ export default function App(props: {
     return () => {
       channel.removeEventListener('message', listener);
     };
-  }, []);
+  }, [excalidrawAPI]);
 
   return (
     <div className="excalidraw-wrapper">
       <Excalidraw
-        excalidrawAPI={(api) => setExcalidrawAPI(api)}
+        excalidrawAPI={(api) => {
+          setExcalidrawAPI(api);
+        }}
         UIOptions={{
           canvasActions: {
             loadScene: false,
