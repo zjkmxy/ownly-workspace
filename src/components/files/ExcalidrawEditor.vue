@@ -3,26 +3,20 @@
 </template>
 
 <script setup lang="ts">
-import {
-  onMounted,
-  onBeforeUnmount,
-  type PropType,
-  ref,
-  watch,
-  useTemplateRef,
-} from 'vue';
+import { onMounted, onBeforeUnmount, type PropType, ref, watch, useTemplateRef } from 'vue';
 
 import * as Y from 'yjs';
 import { createRoot, type Root } from 'react-dom/client';
 import React from 'react';
 import '@excalidraw/excalidraw/index.css';
-import { Excalidraw, hashElementsVersion } from '@excalidraw/excalidraw';
+import { Excalidraw } from '@excalidraw/excalidraw';
 import type {
   ExcalidrawElement,
   OrderedExcalidrawElement,
 } from '@excalidraw/excalidraw/element/types';
 import type { ImportedDataState } from '@excalidraw/excalidraw/data/types';
 import type { AppState, ExcalidrawImperativeAPI, BinaryFiles } from '@excalidraw/excalidraw/types';
+import { excalidrawToFile } from '@/services/excalidraw-types';
 import { debounce } from 'lodash-es';
 
 // Define global constants
@@ -42,23 +36,6 @@ const props = defineProps({
 
 const scene = ref<ImportedDataState>();
 const excalidrawAPI = ref<ExcalidrawImperativeAPI>();
-
-const convertYjsToFile = (yjson: Y.Map<ExcalidrawElement>): ImportedDataState => {
-  const elements = Array.from(yjson.values());
-  return {
-    elements,
-    type: 'excalidraw',
-    version: hashElementsVersion(elements),
-    source: globalThis.origin,
-    appState: {
-      gridSize: 20,
-      gridStep: 5,
-      gridModeEnabled: false,
-      viewBackgroundColor: '#ffffff',
-    },
-    files: {},
-  };
-};
 
 const compareAndUpdateYMap = (newScene: ImportedDataState, yjson: Y.Map<ExcalidrawElement>) => {
   const newMap = new Map((newScene.elements ?? []).map((ele) => [ele.id, ele]));
@@ -97,14 +74,7 @@ const onEditorChange = (
   appState: AppState,
   files: BinaryFiles,
 ) => {
-  const newDocFile = {
-    elements,
-    appState,
-    files,
-    type: 'excalidraw',
-    version: hashElementsVersion(elements),
-    source: globalThis.origin,
-  };
+  const newDocFile = excalidrawToFile(elements, appState, files);
   compareAndUpdateYMap(newDocFile, props.yjson);
   scene.value = newDocFile;
 };
@@ -122,7 +92,7 @@ const observer = (event: Y.YMapEvent<ExcalidrawElement>) => {
 let root: Root | undefined;
 const excalidraw = useTemplateRef('excalidraw');
 const create = () => {
-  scene.value = convertYjsToFile(props.yjson);
+  scene.value = excalidrawToFile(Array.from(props.yjson.values()));
   props.yjson.observe(observer);
 
   root = createRoot(excalidraw.value!);

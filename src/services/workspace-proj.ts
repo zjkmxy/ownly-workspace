@@ -9,6 +9,9 @@ import { nanoid } from 'nanoid';
 
 import type { WorkspaceAPI } from './ndn';
 import type { IBlobVersion, IProject, IProjectFile } from './types';
+import { excalidrawToFile } from './excalidraw-types';
+import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
+import type { ImportedDataState } from '@excalidraw/excalidraw/data/types';
 
 /**
  * Project manager for the workspace.
@@ -304,7 +307,8 @@ export class WorkspaceProj {
         // https://github.com/pulsejet/ownly/issues/28
         return Y.encodeStateAsUpdateV2(doc);
       } else if (utils.isExtensionType(path, 'excalidraw')) {
-        throw new Error('Excalidraw export is not supported for now. Check with developers.')
+        const elements = doc.getMap<ExcalidrawElement>('elements');
+        return toUtf8(JSON.stringify(excalidrawToFile(Array.from(elements.values()))));
       }
     } finally {
       doc.destroy();
@@ -334,12 +338,8 @@ export class WorkspaceProj {
     // Check if this is a blob or text file
     const isText = utils.isExtensionType(path, 'code');
     const isMilkdown = utils.isExtensionType(path, 'milkdown');
-    const isBlob = !isText && !isMilkdown;
-
-    // TODO(zjkmxy): Excalidraw does not support export or import for now.
-    if (utils.isExtensionType(path, 'excalidraw')) {
-      throw new Error('Excalidraw export is not supported for now. Check with developers.')
-    }
+    const isExcalidraw = utils.isExtensionType(path, 'excalidraw');
+    const isBlob = !isText && !isMilkdown && !isExcalidraw;
 
     // Get the existing file if present
     let meta = this.fileMap.get(path);
@@ -393,6 +393,27 @@ export class WorkspaceProj {
           // https://github.com/pulsejet/ownly/issues/28
           Y.applyUpdateV2(doc, new Uint8Array(buffer));
         }
+      } finally {
+        // TODO: if the doc is already open, we should not destroy it
+        // Or use some better technique like reference counting
+        doc.destroy();
+      }
+      return;
+    }
+
+    // Import excalidraw figure JSON
+    if (isExcalidraw) {
+      const buffer = await new Response(content).arrayBuffer();
+      const doc = await this.getFile(path);
+      try {
+        const jsonContent = JSON.parse(new TextDecoder().decode(buffer)) as ImportedDataState;
+        const yjson = doc.getMap<ExcalidrawElement>('elements');
+        doc.transact(() => {
+          yjson.clear();
+          for (const ele of jsonContent.elements ?? []) {
+            yjson.set(ele.id, JSON.parse(JSON.stringify(ele)));
+          }
+        });
       } finally {
         // TODO: if the doc is already open, we should not destroy it
         // Or use some better technique like reference counting
