@@ -1,17 +1,33 @@
 <template>
-  <iframe class="outer" :srcdoc="srcDoc"></iframe>
+  <div ref="excalidraw" class="excalidraw-wrapper">Loading...</div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, type PropType, ref, watch, nextTick } from 'vue';
-import { useBroadcastChannel, pausableWatch } from '@vueuse/core';
+import {
+  onMounted,
+  onBeforeUnmount,
+  type PropType,
+  ref,
+  watch,
+  useTemplateRef,
+} from 'vue';
 
 import * as Y from 'yjs';
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
-import type { ExcalidrawConfig, ExcalidrawMessage } from '../../services/excalidraw-types';
+import { createRoot, type Root } from 'react-dom/client';
+import React from 'react';
+import '@excalidraw/excalidraw/index.css';
+import { Excalidraw, hashElementsVersion } from '@excalidraw/excalidraw';
+import type {
+  ExcalidrawElement,
+  OrderedExcalidrawElement,
+} from '@excalidraw/excalidraw/element/types';
 import type { ImportedDataState } from '@excalidraw/excalidraw/data/types';
-import { bytesToBase64, numberArrayToText, textToNumberArray } from '../../utils/base64';
-import srcDocText from '@/../public/excalidraw/index.html?raw';
+import type { AppState, ExcalidrawImperativeAPI, BinaryFiles } from '@excalidraw/excalidraw/types';
+import { debounce } from 'lodash-es';
+
+// Define global constants
+(window as any).EXCALIDRAW_EXPORT_SOURCE = globalThis.origin;
+(window as any).EXCALIDRAW_ASSET_PATH = '/';
 
 const props = defineProps({
   name: {
@@ -24,31 +40,16 @@ const props = defineProps({
   },
 });
 
-const { data, post } = useBroadcastChannel<ExcalidrawMessage, ExcalidrawMessage>({
-  name: 'excalidraw',
-});
-const srcDoc = ref('');
-// TODO(zjkmxy): Make these files managed by Yjs.
-const scene = ref<ImportedDataState>({
-  elements: [],
-  type: 'excalidraw',
-  version: 2,
-  source: 'https://ownly.work/',
-  appState: {
-    gridSize: 20,
-    gridStep: 5,
-    gridModeEnabled: false,
-    viewBackgroundColor: '#ffffff',
-  },
-  files: {},
-});
+const scene = ref<ImportedDataState>();
+const excalidrawAPI = ref<ExcalidrawImperativeAPI>();
 
 const convertYjsToFile = (yjson: Y.Map<ExcalidrawElement>): ImportedDataState => {
+  const elements = Array.from(yjson.values());
   return {
-    elements: Array.from(yjson.values()),
+    elements,
     type: 'excalidraw',
-    version: 2,
-    source: 'https://ownly.work/',
+    version: hashElementsVersion(elements),
+    source: globalThis.origin,
     appState: {
       gridSize: 20,
       gridStep: 5,
@@ -59,46 +60,24 @@ const convertYjsToFile = (yjson: Y.Map<ExcalidrawElement>): ImportedDataState =>
   };
 };
 
-const sceneUpdateWatcher = pausableWatch(scene, () => {
-  const config: ExcalidrawConfig = {
-    content: textToNumberArray(JSON.stringify(scene.value)),
-    contentType: 'application/json',
-    library: '',
-    viewModeEnabled: false,
-    theme: 'light',
-    imageParams: {
-      exportScale: 1,
-      exportBackground: true,
-      exportWithDarkMode: false,
-    },
-    langCode: 'en',
-    name: props.name,
-  };
-  srcDoc.value = srcDocText
-    .replace(
-      '{{data-excalidraw-config}}',
-      bytesToBase64(new TextEncoder().encode(JSON.stringify(config))),
-    )
-    .replaceAll('/static/', '/excalidraw/static/');
-});
-
 const compareAndUpdateYMap = (newScene: ImportedDataState, yjson: Y.Map<ExcalidrawElement>) => {
   const newMap = new Map((newScene.elements ?? []).map((ele) => [ele.id, ele]));
   Y.transact(
     yjson.doc!,
     () => {
-      // console.log('Transacted')
       for (const [id, ele] of newMap) {
+        const eleJson = JSON.stringify(ele);
         if (!yjson.has(id)) {
-          // New item
-          yjson.set(id, ele);
+          // New item, needs deep copy
+          yjson.set(id, JSON.parse(eleJson));
           continue;
         }
         const oldEle = yjson.get(id);
-        if (oldEle !== ele) {
-          // Modified item
+        // Tried to compare version / versionNonce, not working since shallow copy issue
+        if (JSON.stringify(oldEle) !== eleJson) {
+          // Modified item, needs deep copy
           // Since we do not have finer granularity for now, update the whole element.
-          yjson.set(id, ele);
+          yjson.set(id, JSON.parse(eleJson));
         }
       }
       // Delete items
@@ -113,44 +92,79 @@ const compareAndUpdateYMap = (newScene: ImportedDataState, yjson: Y.Map<Excalidr
   );
 };
 
-watch(data, () => {
-  if (data.value) {
-    const message = data.value as ExcalidrawMessage;
-    if (message.type === 'change') {
-      const newDocFile = JSON.parse(numberArrayToText(message.content)) as ImportedDataState;
-      // console.log(newDocFile);
-
-      // Update from the editor-side does not trigger reload
-      sceneUpdateWatcher.pause();
-      compareAndUpdateYMap(newDocFile, props.yjson);
-      scene.value = newDocFile;
-      nextTick().then(() => sceneUpdateWatcher.resume());
-    }
-  }
-});
+const onEditorChange = (
+  elements: readonly OrderedExcalidrawElement[],
+  appState: AppState,
+  files: BinaryFiles,
+) => {
+  const newDocFile = {
+    elements,
+    appState,
+    files,
+    type: 'excalidraw',
+    version: hashElementsVersion(elements),
+    source: globalThis.origin,
+  };
+  compareAndUpdateYMap(newDocFile, props.yjson);
+  scene.value = newDocFile;
+};
 
 const observer = (event: Y.YMapEvent<ExcalidrawElement>) => {
   if (event.transaction.origin === 'excalidraw' || event.transaction.local) {
     // Ignore local changes; do not reload
     return;
   }
-  // The following statement will cause a reload
-  // So we pause the reload and use a post message instead
-  // sceneUpdateWatcher.pause();
-  // scene.value = convertYjsToFile(props.yjson);
-  // nextTick().then(() => sceneUpdateWatcher.resume());
-  post({
-    type: 'change',
-    content: textToNumberArray(JSON.stringify(convertYjsToFile(props.yjson))),
+  excalidrawAPI.value?.updateScene({
+    elements: Array.from(props.yjson.values()),
   });
 };
 
+let root: Root | undefined;
+const excalidraw = useTemplateRef('excalidraw');
 const create = () => {
   scene.value = convertYjsToFile(props.yjson);
   props.yjson.observe(observer);
+
+  root = createRoot(excalidraw.value!);
+  root.render(
+    React.createElement(Excalidraw, {
+      UIOptions: {
+        canvasActions: {
+          loadScene: false,
+          saveToActiveFile: false,
+        },
+      },
+      langCode: 'en',
+      name: props.name,
+      theme: 'light',
+      viewModeEnabled: false,
+      initialData: {
+        ...scene.value,
+        scrollToContent: true,
+      },
+      excalidrawAPI: (api) => (excalidrawAPI.value = api),
+      onLinkOpen: (element, event) => {
+        // TODO
+        event.preventDefault();
+      },
+      onLibraryChange: () => {
+        // TODO
+      },
+      onChange: debounce(
+        (elements: readonly OrderedExcalidrawElement[], appState: AppState, files: BinaryFiles) => {
+          // TODO(zjkmxy): Also listen to appstate and files.
+          onEditorChange(elements, appState, files);
+        },
+        250,
+      ),
+    }),
+  );
 };
 
 const destroy = () => {
+  if (root) {
+    root.unmount();
+  }
   props.yjson.unobserve(observer);
 };
 
@@ -166,8 +180,8 @@ onBeforeUnmount(destroy);
 </script>
 
 <style scoped lang="scss">
-.outer {
-  height: 100%;
+.excalidraw-wrapper {
   width: 100%;
+  height: 100%;
 }
 </style>
