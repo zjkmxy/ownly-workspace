@@ -42,7 +42,7 @@
     </Suspense>
 
     <Suspense v-else-if="contentMilk">
-      <MilkdownEditor :yxml="contentMilk" :awareness="awareness!" />
+      <MilkdownEditor :yxml="contentMilk" :path="filepath" :awareness="awareness!" />
 
       <template #fallback>
         <LoadingSpinner class="absolute-center" text="Loading document editor ..." />

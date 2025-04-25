@@ -4,6 +4,7 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, useTemplateRef, watch, type PropType } from 'vue';
+import { useRouter } from 'vue-router';
 
 import * as Y from 'yjs';
 import type { Awareness } from 'y-protocols/awareness.js';
@@ -13,7 +14,10 @@ import { Crepe } from '@milkdown/crepe';
 import { collab, CollabService, collabServiceCtx } from '@milkdown/plugin-collab';
 import '@milkdown/crepe/theme/common/style.css';
 
+import { Workspace } from '@/services/workspace';
+import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
+import type { WorkspaceProj } from '@/services/workspace-proj';
 
 const props = defineProps({
   yxml: {
@@ -24,12 +28,20 @@ const props = defineProps({
     type: Object as PropType<Awareness>,
     required: true,
   },
+  path: {
+    type: String,
+    required: true,
+  },
 });
 
 const outer = useTemplateRef('outer');
+const router = useRouter();
 
 let crepe: Crepe | null = null;
 let collabService: CollabService | null = null;
+let opfsPath: string | null = null;
+let proj: WorkspaceProj | null = null;
+const objectURLs: Map<string, string> = new Map();
 
 watch(
   () => props.yxml,
@@ -41,7 +53,33 @@ watch(
 onMounted(create);
 onBeforeUnmount(destroy);
 
+const onUpload = async (file: File): Promise<string> => {
+  const parts = props.path.split('/').filter(Boolean);
+  const baseFolder = parts.slice(0, -1).join('/');
+  const path = `${baseFolder}/${file.name}`;
+  await proj?.importFile(path, file.stream());
+  await new Promise((r) => setTimeout(r, 100)); // Otherwise the image won't load
+  await proj?.syncFs({ path: path });
+  return path;
+};
+
+const proxyDomURL = async (url: string): Promise<string> => {
+  const path = decodeURIComponent(url);
+  const existingUrl = objectURLs.get(path);
+  if (existingUrl) {
+    return existingUrl;
+  }
+  const handle = await opfs.getFileHandle(opfsPath! + path);
+  const file = await handle.getFile();
+  const ret = URL.createObjectURL(file);
+  objectURLs.set(path, ret);
+  return ret;
+};
+
 async function create() {
+  proj = await Workspace.setupAndGetActiveProj(router);
+  opfsPath = await proj.syncFs();
+
   if (utils.themeIsDark()) {
     await import('@milkdown/crepe/theme/frame-dark.css');
   } else {
@@ -51,7 +89,13 @@ async function create() {
   crepe = new Crepe({
     root: outer.value!,
     features: {
-      [Crepe.Feature.ImageBlock]: false,
+      [Crepe.Feature.ImageBlock]: true,
+    },
+    featureConfigs: {
+      [Crepe.Feature.ImageBlock]: {
+        onUpload: onUpload,
+        proxyDomURL: proxyDomURL,
+      },
     },
   });
   crepe.editor.use(collab);
@@ -87,6 +131,10 @@ async function create() {
 async function destroy() {
   collabService?.disconnect();
   await crepe?.destroy();
+
+  for (const url of objectURLs.values()) {
+    URL.revokeObjectURL(url);
+  }
 }
 </script>
 
