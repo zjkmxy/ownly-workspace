@@ -29,8 +29,12 @@
       </template>
     </Suspense>
 
-    <Suspense v-else-if="contentExcalidraw">
-      <ExcalidrawEditor :yjson="contentExcalidraw" :name="contentBasename" />
+    <Suspense v-else-if="contentExcalidrawElements !== null && contentExcalidrawFiles !== null">
+      <ExcalidrawEditor
+        :yeles="contentExcalidrawElements"
+        :yfiles="contentExcalidrawFiles"
+        :name="contentBasename"
+      />
 
       <template #fallback>
         <LoadingSpinner class="absolute-center" text="Loading excalidraw editor ..." />
@@ -69,6 +73,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import * as Y from 'yjs';
 import * as awareProto from 'y-protocols/awareness.js';
+import type { ExcalidrawElementYMap, ExcalidrawFilesYMap } from '@/services/excalidraw-types';
 
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 const CodeEditor = defineAsyncComponent({
@@ -92,7 +97,6 @@ import { Toast } from '@/utils/toast';
 
 import type { WorkspaceProj } from '@/services/workspace-proj';
 import type { IBlobVersion } from '@/services/types';
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
 
 const route = useRoute();
 const router = useRouter();
@@ -108,7 +112,8 @@ const awareness = shallowRef<awareProto.Awareness | null>(null);
 
 const contentCode = shallowRef<Y.Text | null>(null);
 const contentMilk = shallowRef<Y.XmlFragment | null>(null);
-const contentExcalidraw = shallowRef<Y.Map<ExcalidrawElement> | null>(null);
+const contentExcalidrawElements = shallowRef<ExcalidrawElementYMap | null>(null);
+const contentExcalidrawFiles = shallowRef<ExcalidrawFilesYMap | null>(null);
 const contentBlob = shallowRef<IBlobVersion | null>(null);
 
 // These are refs to prevent ui glitch when switching views
@@ -131,7 +136,8 @@ async function create() {
   let newContentCode: Y.Text | null = null;
   let newContentMilk: Y.XmlFragment | null = null;
   let newContentBlob: IBlobVersion | null = null;
-  let newContentExcalidraw: Y.Map<ExcalidrawElement> | null = null;
+  let newContentExcalidrawElements: ExcalidrawElementYMap | null = null;
+  let newContentExcalidrawFiles: ExcalidrawFilesYMap | null = null;
 
   try {
     loading.value = true;
@@ -164,9 +170,10 @@ async function create() {
       newAwareness = await proj.value.getAwareness(filepath.value);
       newContentMilk = newDoc.getXmlFragment('milkdown');
     } else if (utils.isExtensionType(basename, 'excalidraw')) {
-      // Excalidraw JSON content. For now, we only handle Elements.
+      // Excalidraw JSON content. We handle elements and files, but leave appstate.
       newDoc = await proj.value.getFile(filepath.value);
-      newContentExcalidraw = newDoc.getMap('elements');
+      newContentExcalidrawElements = newDoc.getMap('elements');
+      newContentExcalidrawFiles = newDoc.getMap('files');
     } else {
       throw new Error(`Unsupported content extension: ${basename}`);
     }
@@ -190,7 +197,8 @@ async function create() {
     awareness.value = newAwareness;
     contentCode.value = newContentCode;
     contentMilk.value = newContentMilk;
-    contentExcalidraw.value = newContentExcalidraw;
+    contentExcalidrawElements.value = newContentExcalidrawElements;
+    contentExcalidrawFiles.value = newContentExcalidrawFiles;
     contentBlob.value = newContentBlob;
   } catch (err) {
     console.error(err);
@@ -207,7 +215,8 @@ async function create() {
 function resetDoc() {
   contentCode.value = null;
   contentMilk.value = null;
-  contentExcalidraw.value = null;
+  contentExcalidrawElements.value = null;
+  contentExcalidrawFiles.value = null;
   contentBlob.value = null;
   awareness.value = null;
 
@@ -253,9 +262,11 @@ async function compileLatex() {
   .editor {
     width: 100%;
   }
+
   &:has(.result) > .editor {
     width: 50%;
   }
+
   > .result {
     width: calc(100% - 50%);
   }

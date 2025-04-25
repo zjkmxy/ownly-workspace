@@ -9,14 +9,23 @@ import * as Y from 'yjs';
 import { createRoot, type Root } from 'react-dom/client';
 import React from 'react';
 import '@excalidraw/excalidraw/index.css';
-import { Excalidraw } from '@excalidraw/excalidraw';
+import { CaptureUpdateAction, Excalidraw } from '@excalidraw/excalidraw';
 import type {
   ExcalidrawElement,
   OrderedExcalidrawElement,
 } from '@excalidraw/excalidraw/element/types';
 import type { ImportedDataState } from '@excalidraw/excalidraw/data/types';
-import type { AppState, ExcalidrawImperativeAPI, BinaryFiles } from '@excalidraw/excalidraw/types';
-import { excalidrawToFile } from '@/services/excalidraw-types';
+import type {
+  AppState,
+  ExcalidrawImperativeAPI,
+  BinaryFiles,
+  BinaryFileData,
+} from '@excalidraw/excalidraw/types';
+import {
+  excalidrawToFile,
+  type ExcalidrawElementYMap,
+  type ExcalidrawFilesYMap,
+} from '@/services/excalidraw-types';
 import { debounce } from 'lodash-es';
 
 // Define global constants
@@ -28,8 +37,12 @@ const props = defineProps({
     type: String,
     required: true,
   },
-  yjson: {
-    type: Object as PropType<Y.Map<ExcalidrawElement>>,
+  yeles: {
+    type: Object as PropType<ExcalidrawElementYMap>,
+    required: true,
+  },
+  yfiles: {
+    type: Object as PropType<ExcalidrawFilesYMap>,
     required: true,
   },
 });
@@ -37,32 +50,45 @@ const props = defineProps({
 const scene = ref<ImportedDataState>();
 const excalidrawAPI = ref<ExcalidrawImperativeAPI>();
 
-const compareAndUpdateYMap = (newScene: ImportedDataState, yjson: Y.Map<ExcalidrawElement>) => {
-  const newMap = new Map((newScene.elements ?? []).map((ele) => [ele.id, ele]));
+const compareAndUpdateSingleYMap = <T,>(newMap: Map<string, T>, yMap: Y.Map<T>) => {
+  // New & Updated Items
+  for (const [id, val] of newMap) {
+    // TODO: Use version / versionNonce to compare
+    const eleJson = JSON.stringify(val);
+    if (!yMap.has(id)) {
+      // New item, needs deep copy
+      yMap.set(id, JSON.parse(eleJson));
+      continue;
+    }
+    const oldEle = yMap.get(id);
+    if (JSON.stringify(oldEle) !== eleJson) {
+      // Modified item, needs deep copy
+      // Since we do not have finer granularity for now, update the whole element.
+      yMap.set(id, JSON.parse(eleJson));
+    }
+  }
+  // Delete items
+  for (const id of yMap.keys()) {
+    if (!newMap.has(id)) {
+      yMap.delete(id);
+    }
+  }
+};
+
+const compareAndUpdateYDoc = (
+  newScene: ImportedDataState,
+  yeles: ExcalidrawElementYMap,
+  yfiles: ExcalidrawFilesYMap,
+) => {
+  const newElesMap = new Map((newScene.elements ?? []).map((ele) => [ele.id, ele]));
+  const newFilesMap = new Map(Object.entries(newScene.files ?? []));
   Y.transact(
-    yjson.doc!,
+    yeles.doc!,
     () => {
-      for (const [id, ele] of newMap) {
-        const eleJson = JSON.stringify(ele);
-        if (!yjson.has(id)) {
-          // New item, needs deep copy
-          yjson.set(id, JSON.parse(eleJson));
-          continue;
-        }
-        const oldEle = yjson.get(id);
-        // Tried to compare version / versionNonce, not working since shallow copy issue
-        if (JSON.stringify(oldEle) !== eleJson) {
-          // Modified item, needs deep copy
-          // Since we do not have finer granularity for now, update the whole element.
-          yjson.set(id, JSON.parse(eleJson));
-        }
-      }
-      // Delete items
-      for (const id of yjson.keys()) {
-        if (!newMap.has(id)) {
-          yjson.delete(id);
-        }
-      }
+      // Elements
+      compareAndUpdateSingleYMap(newElesMap, yeles);
+      // Files
+      compareAndUpdateSingleYMap(newFilesMap, yfiles);
     },
     'excalidraw',
     true,
@@ -75,25 +101,41 @@ const onEditorChange = (
   files: BinaryFiles,
 ) => {
   const newDocFile = excalidrawToFile(elements, appState, files);
-  compareAndUpdateYMap(newDocFile, props.yjson);
+  compareAndUpdateYDoc(newDocFile, props.yeles, props.yfiles);
   scene.value = newDocFile;
 };
 
-const observer = (event: Y.YMapEvent<ExcalidrawElement>) => {
+const observerElements = (event: Y.YMapEvent<ExcalidrawElement>) => {
   if (event.transaction.origin === 'excalidraw' || event.transaction.local) {
     // Ignore local changes; do not reload
     return;
   }
   excalidrawAPI.value?.updateScene({
-    elements: Array.from(props.yjson.values()),
+    elements: Array.from(props.yeles.values()),
+    // NEVER means the local user cannot undo the remote change
+    // By default, it is EVENTUALLY, which means this action will roll back with the last user change.
+    captureUpdate: CaptureUpdateAction.NEVER,
   });
+};
+
+const observerFiles = (event: Y.YMapEvent<BinaryFileData>) => {
+  if (event.transaction.origin === 'excalidraw' || event.transaction.local) {
+    // Ignore local changes; do not reload
+    return;
+  }
+  excalidrawAPI.value?.addFiles(Array.from(props.yfiles.values()));
 };
 
 let root: Root | undefined;
 const excalidraw = useTemplateRef('excalidraw');
 const create = () => {
-  scene.value = excalidrawToFile(Array.from(props.yjson.values()));
-  props.yjson.observe(observer);
+  scene.value = excalidrawToFile(
+    Array.from(props.yeles.values()),
+    undefined,
+    props.yfiles.toJSON(),
+  );
+  props.yeles.observe(observerElements);
+  props.yfiles.observe(observerFiles);
 
   root = createRoot(excalidraw.value!);
   root.render(
@@ -135,11 +177,12 @@ const destroy = () => {
   if (root) {
     root.unmount();
   }
-  props.yjson.unobserve(observer);
+  props.yeles.unobserve(observerElements);
+  props.yfiles.unobserve(observerFiles);
 };
 
 watch(
-  () => props.yjson,
+  () => props.yeles,
   () => {
     destroy();
     create();
