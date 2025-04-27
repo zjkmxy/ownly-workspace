@@ -3,41 +3,24 @@
     <LoadingSpinner v-if="!items" class="absolute-center" text="Loading your messages ..." />
 
     <template v-else>
-      <DynamicScroller
-        class="scroller"
-        ref="scroller"
-        :items="items"
-        :min-item-size="15"
-        key-field="uuid"
-        @scroll-end="unreadCount = 0"
-      >
+      <DynamicScroller class="scroller" ref="scroller" :items="items" :min-item-size="15" key-field="uuid"
+        @scroll-end="unreadCount = 0">
         <template #before>
           <div class="title px-4 py-4">#{{ channelName }}</div>
         </template>
 
         <template #default="{ item, index, active }">
-          <DynamicScrollerItem
-            :item="item"
-            :active="active"
-            :data-index="index"
-            :data-active="active"
-            class="chat-message"
-          >
-            <div
-              :class="{
-                'px-4': true,
-                'pt-2': !skipHeader(item, index),
-                'pb-1': true,
-              }"
-            >
+          <DynamicScrollerItem :item="item" :active="active" :data-index="index" :data-active="active"
+            class="chat-message">
+            <div :class="{
+              'px-4': true,
+              'pt-2': !skipHeader(item, index),
+              'pb-1': true,
+            }">
               <div class="holder">
                 <div class="avatar">
-                  <img
-                    v-if="!skipHeader(item, index)"
-                    :src="utils.makeAvatar(item.user)"
-                    :key="item.user"
-                    alt="avatar"
-                  />
+                  <img v-if="!skipHeader(item, index)" :src="utils.makeAvatar(item.user)" :key="item.user"
+                    alt="avatar" />
                 </div>
 
                 <div class="message">
@@ -55,25 +38,16 @@
       </DynamicScroller>
 
       <div class="chatbox mt-2 px-4">
-        <textarea
-          ref="chatbox"
-          class="textarea"
-          rows="2"
-          placeholder="Send a message to start discussing!"
-          v-model="outMessage"
-          @keydown.enter="send"
-        ></textarea>
+        <textarea ref="chatbox" class="textarea" rows="2" placeholder="Send a message to start discussing!"
+          v-model="outMessage" @keydown.enter="send"></textarea>
         <button class="button mt-2 send" @click="send">
           <FontAwesomeIcon :icon="faPaperPlane" />
         </button>
       </div>
 
       <Transition name="fade-2">
-        <div
-          class="new-unread tag is-primary"
-          v-if="unreadCount > 0"
-          @click="(scroller?.scrollToBottom(), (unreadCount = 0))"
-        >
+        <div class="new-unread tag is-primary" v-if="unreadCount > 0"
+          @click="(scroller?.scrollToBottom(), (unreadCount = 0))">
           <span class="mr-2">{{ unreadCount }} Unread Messages</span>
           <FontAwesomeIcon :icon="faArrowDown" />
         </div>
@@ -99,6 +73,9 @@ import { useRoute, useRouter } from 'vue-router';
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { faPaperPlane, faArrowDown } from '@fortawesome/free-solid-svg-icons';
+import { createOllama } from 'ollama-ai-provider';
+import { type LanguageModel, generateText, tool, type ToolSet } from 'ai';
+import { z } from 'zod';
 
 import LoadingSpinner from '@/components/LoadingSpinner.vue';
 
@@ -126,11 +103,16 @@ const outMessage = ref(String());
 // Show the unread scroll button if the user is not at the bottom
 const unreadCount = ref(0);
 
+const ollamaModel = ref(null as LanguageModel | null);
+const tools = ref({} as ToolSet);
+
 onMounted(async () => {
   await setup();
 
   // Subscribe to chat messages
   wksp.value?.chat.events.addListener('chat', onChatMessage);
+
+  setupOllama();
 });
 
 onUnmounted(() => {
@@ -161,6 +143,56 @@ async function setup() {
   globalThis.setTimeout(() => scroller.value?.scrollToBottom(), 100); // why
   globalThis.setTimeout(() => scroller.value?.scrollToBottom(), 500); // uhh
 }
+
+/** Setup Ollama Model connection */
+const setupOllama = () => {
+  const ollama = createOllama({
+    baseURL: 'http://localhost:11434/api', // Default URL
+  });
+  ollamaModel.value = ollama('llama3.2');
+
+  tools.value = {
+    listFiles: tool({
+      description: 'List file paths from the knowledge base.',
+      parameters: z.object({}),
+      execute: async (): Promise<string[]> => {
+        try {
+          const proj = await Workspace.setupAndGetActiveProj(router);
+          const files = proj.getFileList();
+          return files
+            .map((file) => file.path)
+            .filter(
+              (path) =>
+                utils.isExtensionType(path, 'code') || utils.isExtensionType(path, 'milkdown'),
+            );
+        } catch {
+          return [];
+        }
+      },
+    }),
+    readFiles: tool({
+      description: 'Read a file from the knowledge base.',
+      parameters: z.object({
+        filePath: z.string().describe('The path of the file to read'),
+      }),
+      execute: async ({ filePath }): Promise<string> => {
+        try {
+          const proj = await Workspace.setupAndGetActiveProj(router);
+          const doc = await proj.getFile(filePath);
+          if (utils.isExtensionType(filePath, 'code')) {
+            return doc.getText('text').toString();
+          } else if (utils.isExtensionType(filePath, 'milkdown')) {
+            return doc.getXmlFragment('milkdown').toString();
+          } else {
+            return '';
+          }
+        } catch {
+          return '';
+        }
+      },
+    }),
+  };
+};
 
 /** Skip the header if the user is the same and the message is within a minute */
 function skipHeader(item: IChatMessage, index: number) {
@@ -200,6 +232,25 @@ async function send(event: Event) {
     message: outMessage.value,
   };
   await wksp.value?.chat.sendMessage(channelName.value, message);
+
+  // Inject: if it is an AI call, send to Ollama
+  if (outMessage.value.startsWith('/bot:') && ollamaModel.value) {
+    const response = await generateText({
+      system:
+        'You are a computer scientist writing an article. Load existing files when necessary.',
+      model: ollamaModel.value,
+      prompt: outMessage.value.substring('/bot:'.length),
+      tools: tools.value,
+      maxSteps: 10,
+    });
+    const botMessage = {
+      uuid: String(), // auto
+      user: wksp.value!.username,
+      ts: Date.now(),
+      message: '/fromBot:' + response.text,
+    };
+    await wksp.value?.chat.sendMessage(channelName.value, botMessage);
+  }
 
   // Add the message to the chat and reset
   outMessage.value = String();
@@ -259,6 +310,7 @@ function onChatMessage(channel: string, message: IChatMessage) {
       right: calc(16px + 6px);
       width: 32px;
       opacity: 0.5;
+
       &:hover {
         opacity: 1;
       }
@@ -284,7 +336,7 @@ function onChatMessage(channel: string, message: IChatMessage) {
       margin-right: 10px;
       transform: translateY(4px); // visual hack
 
-      > img {
+      >img {
         width: 36px;
         height: 36px;
       }
