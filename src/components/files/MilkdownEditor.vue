@@ -18,6 +18,7 @@ import { Workspace } from '@/services/workspace';
 import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
 import type { WorkspaceProj } from '@/services/workspace-proj';
+import * as pathjs from 'path-browserify';
 
 const props = defineProps({
   yxml: {
@@ -56,23 +57,22 @@ onBeforeUnmount(destroy);
 const onUpload = async (file: File): Promise<string> => {
   const parts = props.path.split('/').filter(Boolean);
   const baseFolder = parts.slice(0, -1).join('/');
-  const path = `${baseFolder}/${file.name}`;
-  await proj?.importFile(path, file.stream());
+  const url = `${baseFolder}/${file.name}`;
+  await proj?.importFile(url, file.stream());
   await new Promise((r) => setTimeout(r, 100)); // Otherwise the image won't load
-  await proj?.syncFs({ path: path });
-  return path;
+  await proj?.syncFs({ path: url });
+  return url;
 };
 
 const proxyDomURL = async (url: string): Promise<string> => {
-  const path = decodeURIComponent(url);
-  const existingUrl = objectURLs.get(path);
+  const existingUrl = objectURLs.get(url);
   if (existingUrl) {
     return existingUrl;
   }
-  const handle = await opfs.getFileHandle(opfsPath! + path);
+  const handle = await opfs.getFileHandle(pathjs.join(opfsPath!, url));
   const file = await handle.getFile();
   const ret = URL.createObjectURL(file);
-  objectURLs.set(path, ret);
+  objectURLs.set(url, ret);
   return ret;
 };
 
