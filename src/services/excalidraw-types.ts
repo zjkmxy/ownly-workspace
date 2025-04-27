@@ -1,11 +1,12 @@
 import type * as Y from 'yjs';
 import { hashElementsVersion } from '@excalidraw/excalidraw';
 import type { ExcalidrawElement, Theme } from '@excalidraw/excalidraw/element/types';
-import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types';
+import type { AppState, BinaryFileData, BinaryFiles } from '@excalidraw/excalidraw/types';
 import type { ImportedDataState } from '@excalidraw/excalidraw/data/types';
 import type { Language } from '@excalidraw/excalidraw/i18n';
 
-export type ExcalidrawYMap = Y.Map<ExcalidrawElement>;
+export type ExcalidrawElementYMap = Y.Map<ExcalidrawElement>;
+export type ExcalidrawFilesYMap = Y.Map<BinaryFileData>;
 
 /** The config passed to data-excalidraw-config as initial config to Excalidraw editor in BASE64 */
 export type ExcalidrawConfig = {

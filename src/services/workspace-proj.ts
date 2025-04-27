@@ -9,8 +9,11 @@ import { nanoid } from 'nanoid';
 
 import type { WorkspaceAPI } from './ndn';
 import type { IBlobVersion, IProject, IProjectFile } from './types';
-import { excalidrawToFile } from './excalidraw-types';
-import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types';
+import {
+  excalidrawToFile,
+  type ExcalidrawElementYMap,
+  type ExcalidrawFilesYMap,
+} from './excalidraw-types';
 import type { ImportedDataState } from '@excalidraw/excalidraw/data/types';
 
 /**
@@ -307,8 +310,13 @@ export class WorkspaceProj {
         // https://github.com/pulsejet/ownly/issues/28
         return Y.encodeStateAsUpdateV2(doc);
       } else if (utils.isExtensionType(path, 'excalidraw')) {
-        const elements = doc.getMap<ExcalidrawElement>('elements');
-        return toUtf8(JSON.stringify(excalidrawToFile(Array.from(elements.values()))));
+        const elements: ExcalidrawElementYMap = doc.getMap('elements');
+        const files: ExcalidrawFilesYMap = doc.getMap('files');
+        return toUtf8(
+          JSON.stringify(
+            excalidrawToFile(Array.from(elements.values()), undefined, files.toJSON()),
+          ),
+        );
       }
     } finally {
       doc.destroy();
@@ -407,11 +415,16 @@ export class WorkspaceProj {
       const doc = await this.getFile(path);
       try {
         const jsonContent = JSON.parse(new TextDecoder().decode(buffer)) as ImportedDataState;
-        const yjson = doc.getMap<ExcalidrawElement>('elements');
+        const elements: ExcalidrawElementYMap = doc.getMap('elements');
+        const files: ExcalidrawFilesYMap = doc.getMap('files');
         doc.transact(() => {
-          yjson.clear();
+          elements.clear();
           for (const ele of jsonContent.elements ?? []) {
-            yjson.set(ele.id, JSON.parse(JSON.stringify(ele)));
+            elements.set(ele.id, JSON.parse(JSON.stringify(ele)));
+          }
+          files.clear();
+          for (const [fid, file] of Object.entries(jsonContent.files ?? {})) {
+            files.set(fid, JSON.parse(JSON.stringify(file)));
           }
         });
       } finally {
