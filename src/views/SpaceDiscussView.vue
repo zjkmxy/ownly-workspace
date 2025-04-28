@@ -46,7 +46,7 @@
                     <span class="time">{{ formatTime(item) }}</span>
                   </div>
 
-                  <div class="content">{{ item.message }}</div>
+                  <div class="content" v-html="marked(item.message)"></div>
                 </div>
               </div>
             </div>
@@ -107,6 +107,8 @@ import * as utils from '@/utils';
 import { Toast } from '@/utils/toast';
 
 import type { IChatMessage } from '@/services/types';
+import { marked } from 'marked';
+import 'highlight.js/styles/vs.min.css';
 
 const route = useRoute();
 const router = useRouter();
@@ -308,7 +310,7 @@ function onChatMessage(channel: string, message: IChatMessage) {
       }
 
       .content {
-        white-space: pre-wrap;
+        white-space: wrap;
       }
     }
   }
