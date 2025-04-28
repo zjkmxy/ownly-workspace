@@ -310,7 +310,7 @@ function onChatMessage(channel: string, message: IChatMessage) {
       }
 
       .content {
-        white-space: wrap;
+        white-space: normal;
       }
     }
   }
