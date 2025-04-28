@@ -65,6 +65,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.20",
     "@types/react-dom": "^18.3.6",
+    "@types/reveal.js": "^5.0.5",
     "@types/streamsaver": "^2.0.5",
     "@vitejs/plugin-vue": "^5.2.1",
     "@vue/eslint-config-prettier": "^10.2.0",

@@ -1,7 +1,7 @@
 <template>
   <div class="mdviewer" ref="mdviewer">
-    <!-- PDF Viewer -->
-    <div class="content" ref="mdcontent">
+    <!-- Markdown Viewer -->
+    <div class="content">
       <div v-html="mdHtml"></div>
     </div>
   </div>
@@ -35,9 +35,7 @@ const observeText = async () => {
 
 const create = async () => {
   props.ytext.observe(observeText);
-
-  mdText.value = props.ytext.toString();
-  mdHtml.value = await marked(mdText.value);
+  await observeText();
 };
 
 const destroy = () => {
