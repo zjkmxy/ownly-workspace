@@ -59,5 +59,6 @@
     "bpg",
     "flif"
   ],
-  "excalidraw": ["excalidraw"]
+  "excalidraw": ["excalidraw"],
+  "markdown": ["md"]
 }

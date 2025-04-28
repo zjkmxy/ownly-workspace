@@ -22,6 +22,18 @@
           :error="resultError"
           @compile="compileLatex"
         />
+        <MarkdownViewer
+          v-if="contentIsMarkdown"
+          class="result"
+          :basename="contentBasename"
+          :ytext="contentCode"
+        />
+        <RevealSlidesViewer
+          v-if="contentIsRevealJS"
+          class="result"
+          :basename="contentBasename"
+          :ytext="contentCode"
+        />
       </div>
 
       <template #fallback>
@@ -85,6 +97,9 @@ const MilkdownEditor = defineAsyncComponent({
 const PdfViewer = defineAsyncComponent({
   loader: () => import('@/components/files/PdfViewer.vue'),
 });
+const MarkdownViewer = defineAsyncComponent({
+  loader: () => import('@/components/files/MarkdownViewer.vue'),
+});
 const ExcalidrawEditor = defineAsyncComponent({
   loader: () => import('@/components/files/ExcalidrawEditor.vue'),
 });
@@ -97,6 +112,7 @@ import { Toast } from '@/utils/toast';
 
 import type { WorkspaceProj } from '@/services/workspace-proj';
 import type { IBlobVersion } from '@/services/types';
+import RevealSlidesViewer from '@/components/files/RevealSlidesViewer.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -119,6 +135,8 @@ const contentBlob = shallowRef<IBlobVersion | null>(null);
 // These are refs to prevent ui glitch when switching views
 const contentBasename = ref<string>(String());
 const contentIsLatex = ref<boolean>(false);
+const contentIsRevealJS = ref<boolean>(false);
+const contentIsMarkdown = ref<boolean>(false);
 
 const resultPdf = shallowRef<Uint8Array<ArrayBuffer> | null>(null);
 const resultIsCompiling = ref(false);
@@ -181,6 +199,13 @@ async function create() {
     // Always update these, since the filename might have changed
     contentBasename.value = basename;
     contentIsLatex.value = utils.isExtensionType(basename, 'latex');
+    if (utils.isExtensionType(basename, 'markdown')) {
+      contentIsRevealJS.value = basename.endsWith('slides.md');
+      contentIsMarkdown.value = !contentIsRevealJS.value;
+    } else {
+      contentIsRevealJS.value = false;
+      contentIsMarkdown.value = false;
+    }
 
     // If the content doc is the same, then do not reset the doc
     // The provider returns the same doc if the file is already loaded
