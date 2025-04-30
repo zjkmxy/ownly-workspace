@@ -36,11 +36,11 @@ const debouncedRefresh = async () => {
     embedded: true,
     slideNumber: true,
     plugins: [Markdown, Highlight],
-    transition: "none",
+    transition: 'none',
   });
   await revealDeck.value.initialize();
   // Scroll to current slide
-  if(state) {
+  if (state) {
     revealDeck.value.setState(state);
   }
 };
