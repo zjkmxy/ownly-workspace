@@ -52,3 +52,9 @@ watch(
 onMounted(create);
 onBeforeUnmount(destroy);
 </script>
+
+<style scoped lang="scss">
+.mdviewer {
+  overflow-y: auto;
+}
+</style>
