@@ -56,5 +56,12 @@ onBeforeUnmount(destroy);
 <style scoped lang="scss">
 .mdviewer {
   overflow-y: auto;
+  padding: 1em;
+
+  // Override bulma's overly aggressive font-weight
+  // for headings in markdown
+  :deep(:is(h1, h2, h3, h4, h5, h6)) {
+    font-weight: 500;
+  }
 }
 </style>
