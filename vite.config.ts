@@ -24,8 +24,17 @@ export default defineConfig({
 /** Configuration for PWA service worker */
 function pwa() {
   return VitePWA({
-    strategies: 'generateSW',
+    strategies: 'injectManifest',
+    srcDir: 'src/services/service-worker',
+    filename: 'sw.ts',
     registerType: 'autoUpdate',
+    injectRegister: 'auto',
+    devOptions: {
+      enabled: true,
+      // The following seems necessary to use `npm run dev` on Chrome
+      // But Firefox/Safari does not support module webworker.
+      type: 'module',
+    },
     includeAssets: ['*.wasm', '*.js', '*.png'],
     workbox: {
       maximumFileSizeToCacheInBytes: 10485760, // increasing the file size to cached 10mb
@@ -69,6 +78,9 @@ function pwa() {
       background_color: '#673ab7',
       theme_color: '#673ab7',
       description: 'A workspace you own',
+    },
+    injectManifest: {
+      maximumFileSizeToCacheInBytes: 10485760, // increasing the file size to cached 10mb
     },
   });
 }
