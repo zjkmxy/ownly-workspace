@@ -78,6 +78,9 @@ async function refreshList() {
 }
 
 onMounted(async () => {
+  // Update tab name
+  document.title = 'Dashboard - Ownly';
+
   await refreshList();
 
   if (route.name === 'join') {

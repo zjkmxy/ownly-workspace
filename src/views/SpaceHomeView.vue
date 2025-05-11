@@ -53,6 +53,9 @@ async function setup() {
   wksp.value = await Workspace.setupOrRedir(router);
   if (!wksp.value) return;
 
+  // Update tab name
+  document.title = wksp.value.metadata.label + ' - Ownly';
+
   if (wksp.value.metadata.pendingSetup) {
     showWelcome.value = true;
 
