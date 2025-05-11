@@ -54,7 +54,7 @@ async function setup() {
   if (!wksp.value) return;
 
   // Update tab name
-  document.title = wksp.value.metadata.label + ' - Ownly'
+  document.title = wksp.value.metadata.label + ' - Ownly';
 
   if (wksp.value.metadata.pendingSetup) {
     showWelcome.value = true;

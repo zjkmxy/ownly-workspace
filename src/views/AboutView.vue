@@ -5,7 +5,7 @@ import { onMounted } from 'vue';
 onMounted(() => {
   // Update tab name
   document.title = 'About - Ownly';
-})
+});
 </script>
 
 <template>
