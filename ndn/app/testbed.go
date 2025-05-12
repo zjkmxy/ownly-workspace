@@ -12,7 +12,11 @@ import (
 	"github.com/named-data/ndnd/std/engine/face"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
-	"github.com/named-data/ndnd/std/ndn/spec_2022"
+	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
+	"github.com/named-data/ndnd/std/object"
+	"github.com/named-data/ndnd/std/security"
+	"github.com/named-data/ndnd/std/types/optional"
+	"github.com/named-data/ndnd/std/utils"
 )
 
 //go:embed testbed.root.cert
@@ -24,10 +28,10 @@ var testbedPrefix = enc.Name{enc.NewGenericComponent("ndn")}
 
 // GetTestbedKey returns the testbed key, or nil if not found.
 // Returns (signer, certData, certSigCov)
-func (a *App) GetTestbedKey() (ndn.Signer, ndn.Data, enc.Wire) {
+func (a *App) GetTestbedKey() ndn.Signer {
 	// TODO: move most of this to NDNd
-	now := time.Now()
 
+	// Check all certificates in the keychain
 	for _, id := range a.keychain.Identities() {
 		if !testbedPrefix.IsPrefix(id.Name()) {
 			continue
@@ -41,35 +45,27 @@ func (a *App) GetTestbedKey() (ndn.Signer, ndn.Data, enc.Wire) {
 					continue
 				}
 
-				// TODO: actually validate the certificate with testbed root cert
+				// Check if the certificate is a testbed certificate
 				if certName.At(-2).String() != "NDNCERT" {
 					continue
 				}
 
-				certData, certSigCov, err := spec_2022.Spec{}.ReadData(enc.NewBufferView(certWire))
+				// Verify the certificate chain
+				certData, err := a.verifyTestbedCert(enc.Wire{certWire}, false)
 				if err != nil {
-					log.Error(nil, "Failed to decode certificate", "err", err)
+					log.Error(nil, "Failed to validate certificate", "err", err)
 					continue
 				}
 
-				notBefore, notAfter := certData.Signature().Validity()
-				if !notBefore.IsSet() || !notAfter.IsSet() {
-					log.Error(nil, "Certificate validity not set", "name", certData.Name())
-					continue
-				}
-
-				if notBefore.Unwrap().After(now) || notAfter.Unwrap().Before(now) {
-					continue // expired
-				}
-
+				// Certificate is usable
 				log.Info(nil, "Found valid testbed cert", "name", certData.Name())
 
-				return key.Signer(), certData, certSigCov
+				return key.Signer()
 			}
 		}
 	}
 
-	return nil, nil, nil
+	return nil
 }
 
 func (a *App) SetCmdKey(key ndn.Signer) {
@@ -136,4 +132,40 @@ func (a *App) WaitForConnectivity(timeout time.Duration) error {
 	case <-time.After(timeout):
 		return fmt.Errorf("timeout waiting for NDN connectivity")
 	}
+}
+
+func (a *App) verifyTestbedCert(certWire enc.Wire, fetch bool) (ndn.Data, error) {
+	certData, certSigCov, err := spec.Spec{}.ReadData(enc.NewWireView(certWire))
+	if err != nil {
+		return nil, err
+	}
+
+	ch := make(chan error, 1)
+	a.trust.Validate(security.TrustConfigValidateArgs{
+		Data:              certData,
+		DataSigCov:        certSigCov,
+		UseDataNameFwHint: optional.Some(false), // directly available
+		Fetch: func(name enc.Name, cfg *ndn.InterestConfig, callback ndn.ExpressCallbackFunc) {
+			if !fetch {
+				cfg.Lifetime.Set(1 * time.Millisecond) // no block
+			}
+
+			object.ExpressR(a.engine, ndn.ExpressRArgs{
+				Name:     name,
+				Config:   cfg,
+				Retries:  utils.If(fetch, 3, 0),
+				TryStore: a.store,
+				Callback: callback,
+			})
+		}, Callback: func(valid bool, err error) {
+			if err != nil {
+				ch <- err
+			} else if !valid {
+				ch <- fmt.Errorf("certificate is not valid")
+			} else {
+				ch <- nil
+			}
+		},
+	})
+	return certData, <-ch
 }

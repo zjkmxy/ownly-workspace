@@ -20,7 +20,6 @@ import (
 	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/security/trust_schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
-	"github.com/named-data/ndnd/std/types/optional"
 	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
@@ -55,7 +54,7 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 	// If not existing, check the create flag and proceed
 
 	// Get a valid identity key to sign the certificate
-	idSigner, _, _ := a.GetTestbedKey()
+	idSigner := a.GetTestbedKey()
 	if idSigner == nil {
 		err = fmt.Errorf("no identity key found")
 		return
@@ -151,7 +150,7 @@ func (a *App) IsWorkspaceOwner(wkspStr string) (bool, error) {
 		return false, err
 	}
 
-	idKey, _, _ := a.GetTestbedKey()
+	idKey := a.GetTestbedKey()
 	if idKey == nil {
 		return false, fmt.Errorf("no testbed key")
 	}
@@ -171,18 +170,13 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	}
 
 	// Create trust configuration
-	schema, err := trust_schema.NewLvsSchema(SchemaBytes)
+	trust, err := getTrustConfig(a.keychain)
 	if err != nil {
 		return
 	}
-	trust, err := security.NewTrustConfig(a.keychain, schema, []enc.Name{testbedRootName})
-	if err != nil {
-		return
-	}
-	trust.UseDataNameFwHint = true
 
 	// Get identity key to use (same as testbed key)
-	idKey, idCertData, idCertSigCov := a.GetTestbedKey()
+	idKey := a.GetTestbedKey()
 	if idKey == nil {
 		err = fmt.Errorf("no valid testbed key found")
 		return
@@ -217,25 +211,6 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			if err := client.Start(); err != nil {
 				return nil, err
 			}
-
-			// When connected to testbed, verify the identity certificate
-			// (so that the certs get fetched)
-			a.ExecWithConnectivity(func() {
-				client.ValidateExt(ndn.ValidateExtArgs{
-					Data:       idCertData,
-					SigCovered: idCertSigCov,
-					Callback: func(b bool, err error) {
-						if err != nil {
-							log.Error(a, "Failed to validate identity cert", "err", err)
-						} else {
-							log.Info(a, "Identity cert validated", "name", idName)
-						}
-					},
-
-					// Testbed configuration - announce site CA certs directly
-					UseDataNameFwHint: optional.Some(false),
-				})
-			})
 
 			return nil, nil
 		}),

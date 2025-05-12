@@ -194,6 +194,9 @@ async function setup() {
     loadStatus.value = 'Setting up NDN service ...';
     await ndn.setup();
 
+    // Connect to testbed
+    await ndn.api.connect_testbed();
+
     // Check if we are already certified
     if (await ndn.api.has_testbed_key()) {
       showLoading.value = false;
