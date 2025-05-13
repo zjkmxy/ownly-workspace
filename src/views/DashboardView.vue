@@ -79,7 +79,7 @@ async function refreshList() {
 
 onMounted(async () => {
   // Update tab name
-  document.title = 'Dashboard - Ownly';
+  document.title = utils.formTabName('Dashboard');
 
   await refreshList();
 

@@ -149,6 +149,9 @@ async function setup() {
     wksp.value = await Workspace.setupOrRedir(router);
     if (!wksp.value) return;
 
+    // Update tab name
+    document.title = utils.formTabName(wksp.value.metadata.label);
+
     // Load the chat messages
     items.value = null;
     items.value = await wksp.value.chat.getMessages(channelName.value);
