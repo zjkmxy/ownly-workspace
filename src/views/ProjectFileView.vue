@@ -160,13 +160,30 @@ async function create() {
   try {
     loading.value = true;
 
-    const newProj = await Workspace.setupAndGetActiveProj(router);
+    const wksp = await Workspace.setupOrRedir(router);
+    if (!wksp) throw new Error('Workspace not found');
+
+    let newProj;
+
+    if (wksp.proj.active) newProj = wksp.proj.active;
+    else {
+      // No active project, try to get it from the URL
+      const projName = router.currentRoute.value.params.project as string;
+      if (!projName) throw new Error('No project name provided');
+
+      newProj = await wksp.proj.get(projName);
+      await newProj.activate();
+    }
+
     if (proj.value?.uuid !== newProj.uuid) await destroy();
     proj.value = newProj;
 
     // Load file metadata
     const metadata = proj.value.getFileMeta(filepath.value);
     if (!metadata) throw new Error(`File not found: ${filepath.value}`);
+
+    // Update tab name
+    document.title = utils.formTabName(wksp.metadata.label);
 
     // Get file path attributes
     const basename = filename.value[filename.value.length - 1];

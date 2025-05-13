@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import AboutComponent from '@/components/landing/AboutComponent.vue';
+import { formTabName } from '@/utils';
 import { onMounted } from 'vue';
 
 onMounted(() => {
   // Update tab name
-  document.title = 'About - Ownly';
+  document.title = formTabName('About');
 });
 </script>
 
