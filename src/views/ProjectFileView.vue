@@ -163,14 +163,17 @@ async function create() {
     const wksp = await Workspace.setupOrRedir(router);
     if (!wksp) throw new Error('Workspace not found');
 
-    if (wksp.proj.active) return wksp.proj.active;
+    let newProj;
 
-    // No active project, try to get it from the URL
-    const projName = router.currentRoute.value.params.project as string;
-    if (!projName) throw new Error('No project name provided');
+    if (wksp.proj.active) newProj = wksp.proj.active;
+    else {
+      // No active project, try to get it from the URL
+      const projName = router.currentRoute.value.params.project as string;
+      if (!projName) throw new Error('No project name provided');
 
-    const newProj = await wksp.proj.get(projName);
-    await newProj.activate();
+      newProj = await wksp.proj.get(projName);
+      await newProj.activate();
+    }
 
     if (proj.value?.uuid !== newProj.uuid) await destroy();
     proj.value = newProj;
