@@ -78,6 +78,15 @@ export class Workspace {
   }
 
   /**
+   * Get the members of the workspace.
+   * This currently returns the names in the root svs group;
+   * this may not include everyone, e.g. if they never published.
+   */
+  public async getMembers(): Promise<string[]> {
+    return await this.provider.svs.names();
+  }
+
+  /**
    * Setup workspace from URL parameter.
    * @param space Workspace name from URL
    * @returns Workspace object or null if not found

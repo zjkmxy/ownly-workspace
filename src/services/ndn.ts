@@ -79,7 +79,9 @@ export interface SvsAloApi {
   /** Stop the SVS instance */
   stop(): Promise<void>;
   /** Set the error callback */
-  set_on_error(): Promise<void>;
+  set_on_error(): void;
+  /** Get list of names in the group */
+  names(): Promise<string[]>;
 
   /** Publish chat message to SVS ALO */
   pub_yjs_delta(uuid: string, binary: Uint8Array): Promise<void>;

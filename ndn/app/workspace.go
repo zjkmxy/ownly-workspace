@@ -402,12 +402,24 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 			return nil, nil
 		}),
 
-		// set_on_error(): Promise<void>;
+		// set_on_error(): void;
 		"set_on_error": js.FuncOf(func(this js.Value, p []js.Value) any {
 			alo.SetOnError(func(err error) {
 				p[0].Invoke(js.ValueOf(err.Error()))
 			})
 			return nil
+		}),
+
+		// names(): Promise<string[]>;
+		"names": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			names := alo.SVS().GetNames()
+
+			arr := js.Global().Get("Array").New()
+			for _, name := range names {
+				arr.Call("push", js.ValueOf(name.String()))
+			}
+
+			return arr, nil
 		}),
 
 		// pub_yjs_delta(binary: Uint8Array): Promise<void>;

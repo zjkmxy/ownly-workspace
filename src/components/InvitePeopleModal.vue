@@ -37,6 +37,12 @@
         </button>
       </div>
     </div>
+
+    <div class="title is-6 mb-4">Current Workspace Members</div>
+    This list currenly only shows members who have published messages in discussions.
+    <p v-if="members.length > 0" class="mt-4">
+      <pre>{{ members.join('\n') }}</pre>
+    </p>
   </ModalComponent>
 </template>
 
@@ -63,6 +69,7 @@ const wksp = shallowRef<Workspace | null>(null);
 const inviteLink = ref(String());
 const emails = ref(String());
 const isOwner = computed(() => !!wksp.value?.metadata.owner);
+const members = ref([] as string[]);
 
 // Do not use the onMounted hook since this component is always mounted
 // in the sidebar (the inner modal has the v-if directive)
@@ -73,6 +80,7 @@ watch(
     if (!wksp.value) return;
 
     inviteLink.value = await wksp.value.invite.getJoinLink(router);
+    members.value = await wksp.value.getMembers();
   },
 );
 
