@@ -64,10 +64,10 @@
                 </div>
 
                 <button class="button invitee-list-action" v-if="item.pending"
-                  @click="() => { removeInvitee(item.name) }" title="Remove this pending invitee">
+                  @click="removeInvitee(item.name)" title="Remove this pending invitee">
                   <FontAwesomeIcon :icon="faXmark" />
                 </button>
-                <button class="button invitee-list-action" v-else @click="() => { /*TODO: menu*/ }" title="Menu">
+                <button class="button invitee-list-action" v-else @click="() => { /*TODO: menu*/ }" title="Menu" disabled="true">
                   <FontAwesomeIcon :icon="faBars" />
                 </button>
               </div>
@@ -222,7 +222,7 @@ function addInvitees(input: string) {
 // Add an invitee to the pending list
 function addInvitee(invitee: string) {
   // Check maximum invitees per invitation
-  if (pendingInvitees.value.length > 100) {
+  if (pendingInvitees.value.length >= 100) {
     Toast.error("Maximum of 100 invitees allowed in one time")
     return;
   }
@@ -253,7 +253,7 @@ function addInvitee(invitee: string) {
 
   // Check repetition
   if (allInvitees.value.some((profile) => profile.name === new_profile.name)) {
-    Toast.error(`${new_profile.name} already in the invitaiton list`);
+    Toast.error(`${new_profile.name} already in the invitation list`);
     return;
   }
 
