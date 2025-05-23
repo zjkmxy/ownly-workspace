@@ -63,3 +63,12 @@ export type IBlobVersion = {
   /** Size of the blob */
   size: number;
 };
+
+export type IProfile = {
+  /* NDN name of the user */
+  name: string;
+  /* OPTIONAL: Email address of the user */
+  email?: string;
+  /* OPTIONAL: Whether the user is the owner of the workspace */
+  owner?: boolean;
+};
