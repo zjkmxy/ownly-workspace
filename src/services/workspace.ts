@@ -32,7 +32,7 @@ export class Workspace {
     public readonly chat: WorkspaceChat,
     public readonly proj: WorkspaceProjManager,
     public readonly invite: WorkspaceInviteManager,
-  ) {}
+  ) { }
 
   /**
    * Start the workspace.
@@ -67,6 +67,7 @@ export class Workspace {
     await this.chat.destroy();
     await this.provider?.destroy();
     await this.api?.stop();
+    await this.invite.destroy();
   }
 
   /**
