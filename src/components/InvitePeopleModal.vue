@@ -94,7 +94,7 @@
     <div class="title is-6 mb-4">Current Workspace Members</div>
     This list currenly only shows members who have published messages in discussions.
     <p v-if="members.length > 0" class="mt-4">
-      <pre>{{ members.join('\n') }}</pre>
+      <code>{{ members.join('\n') }}</code>
     </p>
   </ModalComponent>
 </template>
