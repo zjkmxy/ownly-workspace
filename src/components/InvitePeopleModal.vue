@@ -20,6 +20,43 @@
     </div>
 
     <div class="invitee-management">
+      <div class="title is-6 mb-4" v-if="pendingRequests.length > 0">
+        Access Requests ({{ pendingRequests.length }})
+      </div>
+      <DynamicScroller class="scroller" ref="scroller" :items="pendingRequests" :min-item-size="10" key-field="name">
+        <template #default="{ item, index, active }">
+          <DynamicScrollerItem :item="item" :active="active" :data-index="index" class="invitee-profile">
+            <div :class="{
+              'px-4': true,
+              'pt-2': true,
+              'pb-2': true,
+              pending: item.pending,
+            }">
+              <div class="holder">
+                <div class="avatar">
+                  <img :src="utils.makeAvatar(item.name)" :key="item.name" alt="avatar" />
+                </div>
+
+                <div class="Info">
+                  <div class="header">
+                    <span class="name">{{ item.name }}</span>
+                  </div>
+
+                  <div class="email" v-if="item.email">{{ item.email }}</div>
+                </div>
+                <button class="button invitee-list-action"
+                  @click="acceptRequest(item)" title="Accept">
+                  <FontAwesomeIcon :icon="faCheck" />
+                </button>
+                <button class="button invitee-list-action"
+                  @click="denyRequest(item)" title="Deny">
+                  <FontAwesomeIcon :icon="faXmark" />
+                </button>
+              </div>
+            </div>
+          </DynamicScrollerItem>
+        </template>
+      </DynamicScroller>
       <div class="title is-6 mb-4">
         People with Access to this Workspace ({{ invitees.length }}<span v-if="pendingInvitees.length > 0"> + {{
           pendingInvitees.length }}</span>)
@@ -111,7 +148,7 @@ import { Workspace } from '@/services/workspace';
 import { Toast } from '@/utils/toast';
 import type { IProfile } from '@/services/types';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faBars, faClipboard, faCopy, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faCheck, faClipboard, faCopy, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 const props = defineProps({
   show: {
@@ -132,6 +169,7 @@ const isOwner = computed(() => !!wksp.value?.metadata.owner);
 const members = ref([] as string[]);
 const invitees = ref([] as IProfile[]);
 const pendingInvitees = ref([] as IProfile[]);
+const pendingRequests = ref([] as IProfile[]);
 
 const allInvitees = computed(() => {
   return [
@@ -166,6 +204,10 @@ watch(
 
     invitees.value = wksp.value.invite.getInviteArray();
     pendingInvitees.value.length = 0; // clear pending invitees
+    pendingRequests.value.length = 0;
+    _access_requests.forEach((requester) => {
+      addRequest(requester);
+    })
 
     inviteLink.value = await wksp.value.invite.getJoinLink(router);
     members.value = await wksp.value.getMembers();
@@ -259,6 +301,97 @@ function addInvitee(invitee: string) {
 
   // Add to pending invitee list
   pendingInvitees.value.push(new_profile);
+}
+
+// Add an invitee to the pending list
+function addRequest(invitee: string) {
+  // Check maximum invitees per invitation
+  if (pendingRequests.value.length >= 100) {
+    Toast.error("Maximum of 100 requests allowed in one time")
+    return;
+  }
+
+  // Transform the entry to a name
+  // Check validity and ignore blank
+  const entry = invitee.trim()
+  if (!entry) return; // blank line
+
+  let new_profile: IProfile;
+
+  // Check if it is an NDN name
+  if (entry.startsWith('/')) {
+    new_profile = { name: entry };
+  } else {
+    // Validate the email address
+    if (!utils.validateEmail(entry)) {
+      Toast.error(`Invalid email address: ${entry}`);
+      return;
+    }
+
+    // Convert email to NDN name
+    const ndnName = utils.convertEmailToNameLegacy(entry);
+
+    // Form profile
+    new_profile = { name: ndnName, email: entry };
+  }
+
+  // Check if already invited/pending
+  if (allInvitees.value.some((profile) => profile.name === new_profile.name)) {
+    console.log("Received access request from already added member");
+    return;
+  }
+
+  // Check for repetition
+  if (pendingRequests.value.some((profile) => profile.name === new_profile.name)) {
+    console.log("Received duplicate access request");
+    return;
+  }
+
+  // Add to pending requests list
+  pendingRequests.value.push(new_profile);
+}
+
+async function acceptRequest(invitee: IProfile) {
+  console.log(invitee);
+  if (!wksp.value) return;
+
+  // Remove from global and local list to prevent accidental duplicates
+  var idx = _access_requests.indexOf(invitee.name, 0);
+  if (idx > -1) {
+    _access_requests.splice(idx, 1);
+  }
+
+  idx = pendingRequests.value.indexOf(invitee, 0);
+  if (idx > -1) {
+    pendingRequests.value.splice(idx, 1);
+  }
+
+  // Publish invitation
+  try {
+    // Generate and publish invitation to sync
+    await wksp.value.invite.tryInvite(invitee);
+  } catch (err) {
+    Toast.error(`Failed to invite ${invitee.name}: ${err}`);
+    return; // rare
+  }
+
+  invitees.value.push(invitee);
+
+  // Finish
+  Toast.success(`Invited 1 user to workspace!`);
+}
+
+function denyRequest(invitee: IProfile) {
+  // Remove from global list to prevent accidental duplicates
+  var idx = _access_requests.indexOf(invitee.name, 0);
+  if (idx > -1) {
+    _access_requests.splice(idx, 1);
+  }
+
+  idx = pendingRequests.value.indexOf(invitee, 0);
+  if (idx > -1) {
+    pendingRequests.value.splice(idx, 1);
+  }
 }
 
 // Sign the invitations and send them to the server
