@@ -54,7 +54,7 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 	// If not existing, check the create flag and proceed
 
 	// Get a valid identity key to sign the certificate
-	idSigner := a.GetTestbedKey()
+	idSigner, _ := a.GetTestbedKey()
 	if idSigner == nil {
 		err = fmt.Errorf("no identity key found")
 		return
@@ -150,7 +150,7 @@ func (a *App) IsWorkspaceOwner(wkspStr string) (bool, error) {
 		return false, err
 	}
 
-	idKey := a.GetTestbedKey()
+	idKey, _ := a.GetTestbedKey()
 	if idKey == nil {
 		return false, fmt.Errorf("no testbed key")
 	}
@@ -176,7 +176,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	}
 
 	// Get identity key to use (same as testbed key)
-	idKey := a.GetTestbedKey()
+	idKey, _ := a.GetTestbedKey()
 	if idKey == nil {
 		err = fmt.Errorf("no valid testbed key found")
 		return
