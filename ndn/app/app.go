@@ -5,6 +5,7 @@ package app
 import (
 	"fmt"
 	"syscall/js"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
@@ -97,13 +98,20 @@ func (a *App) JsApi() js.Value {
 	api := map[string]any{
 		// has_testbed_key(): Promise<boolean>;
 		"has_testbed_key": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			key := a.GetTestbedKey()
+			key, _ := a.GetTestbedKey()
 			return key != nil, nil
+		}),
+
+		// is_testbed_cert_expiring_soon(): Promise<boolean>;
+		"is_testbed_cert_expiring_soon": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			// Check if certificate expires within one week
+			_, notAfter := a.GetTestbedKey()
+			return notAfter.Before(time.Now().Add(7 * 24 * time.Hour)), nil
 		}),
 
 		// get_identity_name(): Promise<string>;
 		"get_identity_name": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			key := a.GetTestbedKey()
+			key, _ := a.GetTestbedKey()
 			if key == nil {
 				return nil, fmt.Errorf("no testbed key")
 			}
