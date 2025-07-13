@@ -3,6 +3,7 @@
 package app
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/named-data/ndnd/std/engine/face"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/ndn/fch"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security"
@@ -87,8 +89,22 @@ func (a *App) ConnectTestbed() error {
 		return nil
 	}
 
-	// TODO: fch
+	// set default router to suns
 	endpoint := "wss://suns.cs.ucla.edu/ws/"
+	// if FCH returns a router, connect to that instead
+	res, err := fch.Query(context.Background(), fch.Request{
+		"",
+		"wss",
+		1,
+		"",
+	})
+	if err != nil {
+		return err
+	}
+	if res.Routers != nil {
+		// TODO: give the option for which testbed node to connect to, for debugging
+		endpoint = res.Routers[0].Connect
+	}
 
 	face := face.NewWasmWsFace(endpoint, false)
 	face.OnUp(func() {
@@ -100,7 +116,7 @@ func (a *App) ConnectTestbed() error {
 
 	a.face = face
 	a.engine = engine.NewBasicEngine(a.face)
-	err := a.engine.Start()
+	err = a.engine.Start()
 	if err != nil {
 		return err
 	}
