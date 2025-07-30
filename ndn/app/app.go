@@ -3,6 +3,7 @@
 package app
 
 import (
+	"crypto/cipher"
 	"fmt"
 	"syscall/js"
 	"time"
@@ -26,6 +27,15 @@ type App struct {
 	// In practice all trust configs are currently the same, but
 	// each workspace could theoretically have a different trust config.
 	trust *security.TrustConfig
+
+	// Encryption keys
+	psk []byte
+	dsk []byte
+	aes cipher.Block
+	ivb uint64
+
+	// Pending DSK requests -> cancel function
+	dskReqs map[string]*time.Timer
 }
 
 var _ndnd_store_js = js.Global().Get("_ndnd_store_js")
@@ -47,6 +57,7 @@ func NewApp() *App {
 	a := &App{
 		store:    store,
 		keychain: kc,
+		dskReqs:  make(map[string]*time.Timer),
 	}
 	a.initialize()
 	return a
@@ -68,6 +79,7 @@ func NewNodeApp() *App {
 	a := &App{
 		store:    store,
 		keychain: kc,
+		dskReqs:  make(map[string]*time.Timer),
 	}
 
 	a.initialize()

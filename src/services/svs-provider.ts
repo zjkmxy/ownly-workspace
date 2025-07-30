@@ -34,6 +34,28 @@ export class SvsProvider {
    * @param project Project name
    */
   public static async create(wksp: WorkspaceAPI, project: string): Promise<SvsProvider> {
+    const { db, svs } = await SvsProvider.createComponents(wksp, project);
+
+    const provider = new SvsProvider(db, wksp, svs);
+    await provider.start();
+
+    return provider;
+  }
+
+  /**
+   * Create the SVS instance for the provider.
+   * The SVS instance will not be started.
+   *
+   * @param wksp Workspace API
+   * @param project Project name
+   */
+  public static async createComponents(
+    wksp: WorkspaceAPI,
+    project: string,
+  ): Promise<{
+    db: ProjDb;
+    svs: SvsAloApi;
+  }> {
     const slug = utils.escapeUrlName(wksp.group);
     const db = new _o.ProjDb(`${slug}-${project}`);
 
@@ -46,10 +68,7 @@ export class SvsProvider {
       },
     );
 
-    const provider = new SvsProvider(db, wksp, svs);
-    await provider.start();
-
-    return provider;
+    return { db, svs };
   }
 
   /**

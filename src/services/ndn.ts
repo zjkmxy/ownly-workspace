@@ -48,6 +48,9 @@ export interface WorkspaceAPI {
   /** Overall prefix of workspace */
   group: string;
 
+  /** Set the encryption keys */
+  set_encrypt_keys(psk: Uint8Array, dsk: Uint8Array): Promise<void>;
+
   /** Start the workspace */
   start(): Promise<void>;
   /** Stop the workspace */
@@ -67,6 +70,9 @@ export interface WorkspaceAPI {
 
   /** Sign an invitation for a given NDN name */
   sign_invitation(invitee: string): Promise<Uint8Array>;
+
+  /** Wait for DSK to appear for the given key */
+  wait_for_dsk(key: Uint8Array): Promise<Uint8Array>;
 }
 
 /** API of the SVS ALO instance */
@@ -89,6 +95,10 @@ export interface SvsAloApi {
   pub_yjs_delta(uuid: string, binary: Uint8Array): Promise<void>;
   /** Publish blob fetch command */
   pub_blob_fetch(name: string, encapsulate: Uint8Array | undefined): Promise<string>;
+  /** Publish request for the DSK */
+  pub_dsk_request(): Promise<Uint8Array>;
+  /** Publish ack for the DSK response */
+  pub_dsk_ack(key: Uint8Array): Promise<void>;
 
   /** Set SVS ALO subscription callbacks */
   subscribe(params: {
