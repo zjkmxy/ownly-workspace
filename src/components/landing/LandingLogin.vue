@@ -199,6 +199,17 @@ async function setup() {
 
     // Check if we are already certified
     if (await ndn.api.has_testbed_key()) {
+      // Check if certificate is expiring soon (within a week)
+      const isExpiringSoon = await ndn.api.is_testbed_cert_expiring_soon();
+      if (isExpiringSoon) {
+        console.log('latest certificate is expiring soon');
+        // Certificate is expiring soon, show email page to refresh it
+        showLoading.value = false;
+        showEmail.value = true;
+        emit('ready');
+        return;
+      }
+
       showLoading.value = false;
       showSuccess.value = true;
       setTimeout(() => emit('login'), 250);

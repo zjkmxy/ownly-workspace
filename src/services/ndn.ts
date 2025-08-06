@@ -23,6 +23,8 @@ declare global {
 interface NDNAPI {
   /** Check if there is a valid testbed key in the keychain */
   has_testbed_key(): Promise<boolean>;
+  /** Check if the testbed certificate is expiring soon (within a week) */
+  is_testbed_cert_expiring_soon(): Promise<boolean>;
   /** Get the user's identity key */
   get_identity_name(): Promise<string>;
 
@@ -38,7 +40,7 @@ interface NDNAPI {
   is_workspace_owner(wksp: string): Promise<boolean>;
 
   /** Get a Workspace API */
-  get_workspace(name: string): Promise<WorkspaceAPI>;
+  get_workspace(name: string, ignore: boolean): Promise<WorkspaceAPI>;
 }
 
 export interface WorkspaceAPI {
