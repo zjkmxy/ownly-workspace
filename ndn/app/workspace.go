@@ -78,43 +78,34 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 			Append(idName...)
 		log.Info(a, "Fetching workspace invite", "name", inviteName)
 
-		accessRequestPrefix, _ := enc.NameFromStr("/ndn/multicast" + wkspStr)
+		// accessRequestPrefix, _ := enc.NameFromStr("/ndn/multicast" + wkspStr) // Uncomment if you want to use multicast
+		accessRequestPrefix, _ := enc.NameFromStr(wkspStr)
 
-		// Other namespace - check for invitation
+		// Name to request access from workspace initiator
 		accessRequestName := accessRequestPrefix.
 			Append(enc.NewGenericComponent("root")).
 			Append(enc.NewKeywordComponent("INVITE")).
 			Append(idName...)
 		log.Info(a, "Fetching workspace invite", "name", inviteName)
 
-		// Fetch the invitation from the network
+		// Fetch the invitation from the repo
 		ch := make(chan ndn.ExpressCallbackArgs)
 		object.ExpressR(a.engine, ndn.ExpressRArgs{
 			Name: inviteName,
 			Config: &ndn.InterestConfig{
-				MustBeFresh: true,
-				CanBePrefix: true,
+				MustBeFresh:    true,
+				CanBePrefix:    true,
+				ForwardingHint: []enc.Name{repoName},
 			},
-			Retries:  0,
+			Retries:  1,
 			Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
 		})
 		args := <-ch
 		if args.Result != ndn.InterestResultData {
-			// If the invite is not found, request access from the owner
-			object.ExpressR(a.engine, ndn.ExpressRArgs{
-				Name: accessRequestName,
-				Config: &ndn.InterestConfig{
-					MustBeFresh: true,
-					CanBePrefix: true,
-				},
-				Retries:  0,
-				Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
-			})
-
-			// Attempt to get invite again
+			// If the invite is not found, request access from the workspace initiator
 			ch2 := make(chan ndn.ExpressCallbackArgs)
 			object.ExpressR(a.engine, ndn.ExpressRArgs{
-				Name: inviteName,
+				Name: accessRequestName,
 				Config: &ndn.InterestConfig{
 					MustBeFresh: true,
 					CanBePrefix: true,
@@ -281,7 +272,8 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	}
 	log.Info(nil, "Checking if isowner:", "isowner", isOwner)
 	if isOwner {
-		prefix, _ := enc.NameFromStr("/ndn/multicast" + groupStr)
+		// prefix, _ := enc.NameFromStr("/ndn/multicast" + groupStr) // Uncomment if you want to use multicast
+		prefix, _ := enc.NameFromStr(groupStr)
 		accessRequestPrefix := prefix.
 			Append(enc.NewGenericComponent("root")).
 			Append(enc.NewKeywordComponent("INVITE"))
