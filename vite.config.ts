@@ -28,7 +28,7 @@ function pwa() {
     registerType: 'autoUpdate',
     includeAssets: ['*.wasm', '*.js', '*.png'],
     workbox: {
-      maximumFileSizeToCacheInBytes: 10485760, // increasing the file size to cached 10mb
+      maximumFileSizeToCacheInBytes: 33554432, // increasing the file size to cached 33.55 (2^25)
       globPatterns: ['**/*.{svg,png,css,html}', 'assets/index*.js', '*.js', '*.wasm'],
     },
 

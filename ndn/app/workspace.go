@@ -20,6 +20,7 @@ import (
 	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/security/trust_schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
+	"github.com/named-data/ndnd/std/types/optional"
 	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
@@ -54,7 +55,7 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 	// If not existing, check the create flag and proceed
 
 	// Get a valid identity key to sign the certificate
-	idSigner := a.GetTestbedKey()
+	idSigner, _ := a.GetTestbedKey()
 	if idSigner == nil {
 		err = fmt.Errorf("no identity key found")
 		return
@@ -177,7 +178,7 @@ func (a *App) IsWorkspaceOwner(wkspStr string) (bool, error) {
 		return false, err
 	}
 
-	idKey := a.GetTestbedKey()
+	idKey, _ := a.GetTestbedKey()
 	if idKey == nil {
 		return false, fmt.Errorf("no testbed key")
 	}
@@ -230,7 +231,7 @@ func (a *App) onAccessRequest(args ndn.InterestHandlerArgs) {
 }
 
 // GetWorkspace returns a JS object representing the workspace with the given name.
-func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
+func (a *App) GetWorkspace(groupStr string, ignoreValidity bool) (api js.Value, err error) {
 	group, err := enc.NameFromStr(groupStr)
 	if err != nil {
 		return
@@ -243,7 +244,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	}
 
 	// Get identity key to use (same as testbed key)
-	idKey := a.GetTestbedKey()
+	idKey, _ := a.GetTestbedKey()
 	if idKey == nil {
 		err = fmt.Errorf("no valid testbed key found")
 		return
@@ -338,9 +339,10 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			// Fetch the content from the network
 			ch := make(chan ndn.ConsumeState)
 			client.ConsumeExt(ndn.ConsumeExtArgs{
-				Name:     name,
-				TryStore: true,
-				Callback: func(state ndn.ConsumeState) { ch <- state },
+				Name:           name,
+				TryStore:       true,
+				IgnoreValidity: optional.Some(ignoreValidity),
+				Callback:       func(state ndn.ConsumeState) { ch <- state },
 			})
 			state := <-ch
 			if err := state.Error(); err != nil {
@@ -372,14 +374,16 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 				InitialState: stateWire,
 
 				Svs: ndn_sync.SvSyncOpts{
-					Client:      client,
-					GroupPrefix: svsAloGroup,
+					Client:         client,
+					GroupPrefix:    svsAloGroup,
+					IgnoreValidity: optional.Some(ignoreValidity),
 				},
 
 				Snapshot: &ndn_sync.SnapshotNodeHistory{
-					Client:    client,
-					Threshold: SnapshotThreshold,
-					Compress:  CompressSnapshotYjs,
+					Client:         client,
+					Threshold:      SnapshotThreshold,
+					Compress:       CompressSnapshotYjs,
+					IgnoreValidity: optional.Some(ignoreValidity),
 				},
 
 				MulticastPrefix: multicastPrefix,
