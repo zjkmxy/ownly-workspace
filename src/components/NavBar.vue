@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, onMounted, onUnmounted, reactive, ref, useTemplateRef, watch, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, useTemplateRef } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -213,8 +213,8 @@ onMounted(async () => {
   GlobalBus.addListener('conn-change', busListeners['conn-change']);
   interval = setInterval(() => {
     setNotification();
-  }),
-  250
+  },
+  250)
 });
 
 onUnmounted(() => {
@@ -250,8 +250,6 @@ function linkDiscuss(channel: IChatChannel) {
     },
   };
 }
-
-const requests = reactive(_access_requests)
 
 function setNotification() {
   if (_access_requests.length > 0)
