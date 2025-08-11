@@ -204,7 +204,7 @@ const busListeners = {
 
 const showNotifBubble = ref(false);
 
-let interval;
+let interval: ReturnType<typeof setInterval> ;
 
 onMounted(async () => {
   GlobalBus.addListener('project-list', busListeners['project-list']);
