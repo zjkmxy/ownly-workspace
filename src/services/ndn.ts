@@ -13,6 +13,7 @@ declare global {
   var _yjs_merge_updates: (updates: Uint8Array[]) => Uint8Array;
   var _ndnd_conn_change_js: (connected: boolean, router: string) => void;
   var _ndnd_conn_state: { connected: boolean; router: string };
+  var _access_requests: string[];
 
   var set_ndn: undefined | ((ndn: NDNAPI) => void);
   var ndn_api: NDNAPI;
@@ -148,6 +149,7 @@ class NDNService {
     globalThis._yjs_merge_updates = Y.mergeUpdatesV2;
     globalThis._ndnd_conn_change_js = _ndnd_conn_change_js;
     globalThis._ndnd_conn_state = { connected: false, router: String() };
+    globalThis._access_requests = new Array<string>();
 
     // Load the Go WASM module
     const go = new Go();

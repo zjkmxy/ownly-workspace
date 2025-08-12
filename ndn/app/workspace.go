@@ -84,22 +84,49 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 			Append(idName...)
 		log.Info(a, "Fetching workspace invite", "name", inviteName)
 
-		// Fetch the invitation from the network
+		// accessRequestPrefix, _ := enc.NameFromStr("/ndn/multicast" + wkspStr) // Uncomment if you want to use multicast
+		accessRequestPrefix, _ := enc.NameFromStr(wkspStr)
+
+		// Name to request access from workspace initiator
+		accessRequestName := accessRequestPrefix.
+			Append(enc.NewGenericComponent("root")).
+			Append(enc.NewKeywordComponent("INVITE")).
+			Append(idName...)
+		log.Info(a, "Fetching workspace invite", "name", inviteName)
+
+		// Fetch the invitation from the repo
 		ch := make(chan ndn.ExpressCallbackArgs)
 		object.ExpressR(a.engine, ndn.ExpressRArgs{
 			Name: inviteName,
 			Config: &ndn.InterestConfig{
-				MustBeFresh: true,
-				CanBePrefix: true,
+				MustBeFresh:    true,
+				CanBePrefix:    true,
+				ForwardingHint: []enc.Name{repoName},
 			},
-			Retries:  3,
+			Retries:  1,
 			Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
 		})
 		args := <-ch
 		if args.Result != ndn.InterestResultData {
-			err = fmt.Errorf("failed to get invitation, make sure %s is invited to %s (%s)",
-				idName, wkspName, args.Result)
-			return
+			// If the invite is not found, request access from the workspace initiator
+			ch2 := make(chan ndn.ExpressCallbackArgs)
+			object.ExpressR(a.engine, ndn.ExpressRArgs{
+				Name: accessRequestName,
+				Config: &ndn.InterestConfig{
+					MustBeFresh: true,
+					CanBePrefix: true,
+				},
+				Retries:  4,
+				Callback: func(args ndn.ExpressCallbackArgs) { ch2 <- args },
+			})
+			args = <-ch2
+
+			if args.Result != ndn.InterestResultData {
+				// Failed if both attempts do not return data
+				err = fmt.Errorf("failed to get invitation, make sure %s is invited to %s (%s)",
+					idName, wkspName, args.Result)
+				return
+			}
 		}
 
 		// TODO: validate the invitation itself
@@ -168,6 +195,46 @@ func (a *App) IsWorkspaceOwner(wkspStr string) (bool, error) {
 	return idName.IsPrefix(wkspName), nil
 }
 
+// onAccessRequest handles incoming access requests if the user is owner of the workspace.
+func (a *App) onAccessRequest(args ndn.InterestHandlerArgs) {
+	interest := args.Interest
+	log.Info(nil, "Received interest", "name", interest.Name())
+
+	// Get list of access requests, add the new one if not a duplicate
+	access_requests := js.Global().Get("_access_requests")
+	name := interest.Name()
+	requester := ""
+	for c := 0; c < name.EncodingLength(); c++ {
+		if name[c].Equal(enc.NewKeywordComponent("INVITE")) {
+			requester = name[c+1:].String()
+			break
+		}
+	}
+
+	log.Info(nil, "Received access request", "requester", requester)
+
+	r := 0
+	duplicate := false
+
+	for r < access_requests.Length() {
+		if access_requests.Index(r).Equal(js.ValueOf(requester)) {
+			duplicate = true
+		}
+		r++
+	}
+
+	log.Info(nil, "Duplicate =", "duplicate", duplicate)
+
+	if !duplicate {
+		access_requests.Call("push", js.ValueOf(requester))
+	}
+
+	js.Global().Set("_access_requests", access_requests)
+
+	log.Info(nil, "Access requests:", "requests", access_requests)
+
+}
+
 // GetWorkspace returns a JS object representing the workspace with the given name.
 func (a *App) GetWorkspace(groupStr string, ignoreValidity bool) (api js.Value, err error) {
 	group, err := enc.NameFromStr(groupStr)
@@ -204,10 +271,32 @@ func (a *App) GetWorkspace(groupStr string, ignoreValidity bool) (api js.Value, 
 	// Create client object for this workspace
 	client := object.NewClient(a.engine, a.store, trust)
 
+
 	// Reset encryption keys
 	a.psk = nil
 	a.dsk = nil
 	a.aes = nil
+
+	// If owner, watch for access request interests
+	isOwner, err := a.IsWorkspaceOwner(groupStr)
+	if err != nil {
+		return
+	}
+	log.Info(nil, "Checking if isowner:", "isowner", isOwner)
+	if isOwner {
+		// prefix, _ := enc.NameFromStr("/ndn/multicast" + groupStr) // Uncomment if you want to use multicast
+		prefix, _ := enc.NameFromStr(groupStr)
+		accessRequestPrefix := prefix.
+			Append(enc.NewGenericComponent("root")).
+			Append(enc.NewKeywordComponent("INVITE"))
+		a.engine.AttachHandler(accessRequestPrefix, a.onAccessRequest)
+		client.AnnouncePrefix(ndn.Announcement{
+			Name:    accessRequestPrefix,
+			Expose:  true,
+			OnError: nil, // TODO
+		})
+		log.Info(nil, "Attached access request handler for", "name", accessRequestPrefix)
+	}
 
 	var workspaceJs map[string]any
 	workspaceJs = map[string]any{
@@ -424,6 +513,7 @@ func (a *App) SvsAloJs(
 					Expose:  true,
 					OnError: nil, // TODO
 				})
+				log.Info(nil, "Announcing prefix", "name", "prefix", route)
 			}
 
 			// Notify repo to start
