@@ -11,6 +11,13 @@ export type IWkspStats = {
   pendingSetup?: boolean;
   /** Last access time */
   lastAccess?: number;
+
+  /** Pre-shared key */
+  psk: string;
+  /** Dynamic-shared key */
+  dsk: string | null;
+  /** DSK request key */
+  dskExch?: string;
 };
 
 export type IChatMessage = {

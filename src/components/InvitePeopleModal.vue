@@ -9,7 +9,7 @@
     </p>
 
     <p class="mt-1">
-      <code class="select-all">{{ inviteLink }}</code>
+      <code class="select-all link">{{ inviteLink }}</code>
     </p>
 
     <p class="mt-2">Enter an email address or NDN name below</p>

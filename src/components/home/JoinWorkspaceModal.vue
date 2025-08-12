@@ -21,7 +21,15 @@
       <div class="control">
         <input class="input" type="text" placeholder="/my/awesome/workspace" v-model="opts.name" />
       </div>
-      <p class="help">The owner of the workspace should know this</p>
+      <p class="help">Unique network identifier of the workspace</p>
+    </div>
+
+    <div class="field">
+      <label class="label">Pre-Shared Key</label>
+      <div class="control">
+        <input class="input" type="text" placeholder="..." v-model="opts.psk" />
+      </div>
+      <p class="help">Ask the owner of the workspace for the key</p>
     </div>
 
     <div class="field has-text-right">
@@ -62,6 +70,7 @@ const loading = ref(false);
 const opts = ref({
   label: String(),
   name: String(),
+  psk: String(),
 });
 
 watch(
@@ -77,6 +86,7 @@ watch(
       const space = route.params.space as string;
       opts.value.name = utils.unescapeUrlName(space || String());
       opts.value.label = (route.query.label as string) || String();
+      opts.value.psk = (route.query.psk as string) || String();
     }
   },
 );
@@ -88,12 +98,14 @@ async function join() {
     // Validate the inputs
     const label = opts.value.label.trim();
     const name = opts.value.name.trim();
-    if (!label || !name) {
+    const psk = opts.value.psk.trim();
+    if (!label || !name || !psk) {
       throw new Error('Please fill in all the fields');
     }
 
     // Join the workspace without attempting create
-    const finalName = await Workspace.join(label, name, false, false);
+    const pskBuf = utils.fromHex(psk);
+    const finalName = await Workspace.join(label, name, false, false, pskBuf);
 
     emit('join', finalName);
     emit('close');
