@@ -65,5 +65,6 @@ export function toHex(u8: Uint8Array): string {
  * @returns Uint8Array
  */
 export function fromHex(hex: string): Uint8Array {
+  if (hex.length == 0) return new Uint8Array()
   return new Uint8Array(hex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)));
 }
