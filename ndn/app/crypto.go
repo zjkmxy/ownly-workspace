@@ -27,7 +27,7 @@ func x25519HkdfSha256(pk_ []byte, sk_ []byte) (sym []byte, err error) {
 
 func hkdfSha256(ss []byte) (sym []byte, err error) {
 	r := hkdf.New(sha256.New, ss, nil, nil)
-	sym = make([]byte, 16)
+	sym = make([]byte, 32)
 	if _, err := r.Read(sym); err != nil {
 		return nil, err
 	}
