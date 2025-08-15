@@ -96,7 +96,7 @@ func (a *App) ConnectTestbed() error {
 		"",
 		"wss",
 		1,
-		"",
+		"ndn",
 	})
 	if err != nil {
 		return err
