@@ -96,8 +96,12 @@
             <a @click="showInviteModal = true">
               <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
               Invite people
-              
+
               <FontAwesomeIcon v-show="showNotifBubble" class="mr-1" :icon="faCircleExclamation" size="sm"></FontAwesomeIcon>
+            </a>
+            <a @click="showAgentInviteModal = true">
+              <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
+              Invite agents
             </a>
           </li>
         </ul>
@@ -129,6 +133,7 @@
     <AddChannelModal :show="showChannelModal" @close="showChannelModal = false" />
     <AddProjectModal :show="showProjectModal" @close="showProjectModal = false" />
     <InvitePeopleModal :show="showInviteModal" @close="showInviteModal = false" />
+    <InviteAgentsModal :show="showAgentInviteModal" @close="showAgentInviteModal = false" />
     <QRIdentityModal :show="showIdentity" @close="showIdentity = false" />
   </aside>
 </template>
@@ -161,6 +166,7 @@ import { Toast } from '@/utils/toast';
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
 import InvitePeopleModal from './InvitePeopleModal.vue';
+import InviteAgentsModal from './InviteAgentsModal.vue';
 import QRIdentityModal from './QRIdentityModal.vue';
 
 const route = useRoute();
@@ -174,6 +180,7 @@ const routeIsWorkspace = computed(() =>
 const showChannelModal = ref(false);
 const showProjectModal = ref(false);
 const showInviteModal = ref(false);
+const showAgentInviteModal = ref(false);
 const showIdentity = ref(false);
 
 // vue-tsc chokes on this type inference

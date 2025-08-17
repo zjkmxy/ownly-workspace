@@ -58,6 +58,47 @@ export class WorkspaceInviteManager {
   }
 
   /**
+   * Try to invite an agent to the workspace
+   *
+   * @param invitee Profile of the invitee
+   * @param inviteChannel The channel to assign
+   * @param inviteUrl The external server URL for the agent
+   */
+  public async tryAgentInvite(invitee: IProfile, inviteChannel: string, inviteUrl: string): Promise<void> {
+    this.tryInvite(invitee);
+
+    if (!inviteUrl) {
+      console.warn("No inviteUrl provided for agent invite — skipping external request.");
+      return;
+    }
+
+    try {
+      const body = {
+        wkspName: this.wsmeta.name,
+        psk: this.wsmeta.psk,
+        channel: inviteChannel,
+      };
+
+      const response = await fetch(inviteUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status} ${response.statusText}`);
+      }
+
+      console.log(`Agent invite sent successfully to ${inviteUrl} for ${invitee.name}`);
+    } catch (err) {
+      console.error(`Failed to send agent invite to ${inviteUrl}:`, err);
+      throw err; // rethrow so UI can display Toast error
+    }
+  }
+
+  /**
    * Generate and publish an invitation for a name
    *
    * @param name NDN name to invite
