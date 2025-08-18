@@ -98,11 +98,24 @@ export class WorkspaceAgent{
     this. messages.observeDeep((events)=> {
       if (this.events.listenerCount(('chat'))=== 0) return;
       for (const ev of events){
-        const channel = String(ev.path[0]);
-        for (const delta of ev.changes.added){
-          for (const msg of delta.content.getContent()){
-            this.events.emit('chat',channel, msg as AgentMessage)
-          }
+        if (ev.path.length > 0) {
+          const channel = String(ev.path[0]);
+
+          // Use Set.forEach instead of for...of
+          ev.changes.added.forEach(delta => {
+            try {
+              const content = delta.content.getContent();
+              const messages = Array.isArray(content) ? content : [content];
+
+              messages.forEach(msg => {
+                if (msg) {
+                  this.events.emit('chat', channel, msg as AgentMessage);
+                }
+              });
+            } catch (error) {
+              console.warn('Error processing message delta:', error);
+            }
+          });
         }
       }
     });
@@ -263,19 +276,19 @@ export class WorkspaceAgent{
    */
   private async invokeAgent(agent: AgentCard, userMsg: AgentMessage, channel: string): Promise<void>{
     // Check if agent uses JSON-RPC protocol
-    const useJsonRpc = agent.preferredTransport === 'JSONRPC' || 
+    const useJsonRpc = agent.preferredTransport === 'JSONRPC' ||
                        (agent as any).preferredTransport === 'JSONRPC' ||
                        agent.protocolVersion === '0.3.0' ||  // Your agent card has this
                        (agent as any).protocolVersion === '0.3.0';
-    
+
     console.log('Agent card properties:', Object.keys(agent));
     console.log('preferredTransport:', agent.preferredTransport || (agent as any).preferredTransport);
     console.log('protocolVersion:', agent.protocolVersion || (agent as any).protocolVersion);
     console.log('Will use JSON-RPC:', useJsonRpc);
-    
+
     let payload: any;
     let endpoint: string;
-    
+
     if (useJsonRpc) {
       // Use JSON-RPC 2.0 format
       payload = {
@@ -300,14 +313,14 @@ export class WorkspaceAgent{
       };
       endpoint = `${agent.url.replace(/\/+$/, '')}/invoke`;
     }
-    
+
     let responseText: string | undefined;
 
     try {
       console.log(`Invoking agent at: ${endpoint}`);
       console.log('Protocol:', useJsonRpc ? 'JSON-RPC' : 'REST');
       console.log('Payload:', payload);
-      
+
       const res = await fetch(endpoint, {
         method: 'POST',
         mode: 'cors',
@@ -317,23 +330,23 @@ export class WorkspaceAgent{
         },
         body: JSON.stringify(payload),
       });
-      
+
       console.log('Response status:', res.status);
-      
+
       if (!res.ok) {
         throw new Error(`HTTP ${res.status} ${res.statusText}`);
       }
-      
+
       // Parse response based on protocol
       const data = await res.json();
       console.log('Response data:', data);
-      
+
       if (useJsonRpc) {
         // Handle JSON-RPC response
         if (data.error) {
           throw new Error(`JSON-RPC Error: ${data.error.message || JSON.stringify(data.error)}`);
         }
-        
+
         const result = data.result;
         if (typeof result === 'string') {
           responseText = result;
@@ -367,13 +380,13 @@ export class WorkspaceAgent{
 
     } catch (e) {
       console.error('Agent invocation error:', e);
-      
-      if (e instanceof TypeError && e.message.includes('Failed to fetch')) {
-        responseText = `❌ CORS Error: Cannot connect to agent at ${agent.url}. The agent server needs to allow cross-origin requests from your domain. Please contact the agent provider to add CORS headers.`;
+
+      if (e instanceof TypeError && e.message.includes('Failed to fetch') && e.message.includes('CORS')) {
+        responseText = `CORS Error: Cannot connect to agent at ${agent.url}. The agent server needs to allow cross-origin requests from your domain. Please contact the agent provider to add CORS headers.`;
       } else if (e instanceof Error) {
-        responseText = `❌ Error from agent: ${e.message}`;
+        responseText = `Error from agent: ${e.message}`;
       } else {
-        responseText = `❌ Unknown error: ${e}`;
+        responseText = `Unknown error: ${e}`;
       }
     }
     // Append the agent's reply to the channel
