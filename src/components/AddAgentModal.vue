@@ -253,27 +253,31 @@ async function saveAgentCardToWorkspace(wksp: Workspace, agentCard: AgentCard) {
       }
     }
 
-    // Get current agent.json content or create empty array
+    // Get current agent.json content or create empty array using Y.js document
     let agentCards: AgentCard[] = [];
+    const agentFilePath = 'agent.json';
+    
     try {
-      // Check if file exists (try flat filename first)
-      let agentFilePath = 'agent.json';
+      // Check if file exists, if not create it
       let existingMeta = proj.getFileMeta(agentFilePath);
-      
-      // Fallback to nested path
       if (!existingMeta) {
-        agentFilePath = '.well-known/agent.json';
-        existingMeta = proj.getFileMeta(agentFilePath);
+        console.log('Creating new agent.json file...');
+        await proj.newFile(agentFilePath, false); // false = text file, not blob
       }
       
-      if (existingMeta) {
-        const content = await proj.exportFile(agentFilePath);
-        if (content) {
-          const text = new TextDecoder().decode(content);
-          agentCards = JSON.parse(text);
-        }
+      // Read existing content from Y.js document directly
+      const doc = await proj.getFile(agentFilePath);
+      const text = doc.getText('text');
+      const existingContent = text.toString();
+      
+      if (existingContent.trim()) {
+        agentCards = JSON.parse(existingContent);
       }
-    } catch {
+      
+      // Don't destroy the doc yet - we'll reuse it below
+      doc.destroy();
+    } catch (error) {
+      console.warn('Error reading existing agent cards:', error);
       // File doesn't exist or is invalid, start with empty array
       agentCards = [];
     }
@@ -286,13 +290,10 @@ async function saveAgentCardToWorkspace(wksp: Workspace, agentCard: AgentCard) {
     // Add new agent card
     agentCards.push(agentCard);
 
-    // Try a different approach - create file through project system first
-    const agentFilePath = 'agent.json';
-    
-    // Check if file exists, if not create it
+    // Ensure file exists for writing (reuse the same path)
     let existingMeta = proj.getFileMeta(agentFilePath);
     if (!existingMeta) {
-      console.log('Creating new agent.json file...');
+      console.log('Creating new agent.json file during save...');
       await proj.newFile(agentFilePath, false); // false = text file, not blob
     }
     

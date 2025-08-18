@@ -276,9 +276,11 @@ export class WorkspaceAgent{
    */
   private async invokeAgent(agent: AgentCard, userMsg: AgentMessage, channel: string): Promise<void>{
     // Check if agent uses JSON-RPC protocol
+    // requries auto-detection update later
     const useJsonRpc = agent.preferredTransport === 'JSONRPC' ||
                        (agent as any).preferredTransport === 'JSONRPC' ||
-                       agent.protocolVersion === '0.3.0' ||  // Your agent card has this
+                       agent.protocolVersion === '0.3.0' ||  // Our agent card at llama server currently has this
+
                        (agent as any).protocolVersion === '0.3.0';
 
     console.log('Agent card properties:', Object.keys(agent));
@@ -381,7 +383,7 @@ export class WorkspaceAgent{
     } catch (e) {
       console.error('Agent invocation error:', e);
 
-      if (e instanceof TypeError && e.message.includes('Failed to fetch') && e.message.includes('CORS')) {
+      if (e instanceof TypeError && e.message.includes('Failed to fetch') ) {
         responseText = `CORS Error: Cannot connect to agent at ${agent.url}. The agent server needs to allow cross-origin requests from your domain. Please contact the agent provider to add CORS headers.`;
       } else if (e instanceof Error) {
         responseText = `Error from agent: ${e.message}`;
