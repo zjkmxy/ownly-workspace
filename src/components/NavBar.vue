@@ -76,7 +76,7 @@
 
         <p class="menu-label">Discussion</p>
         <ul class="menu-list">
-          <li v-for="chan in channels" :key="chan.uuid">
+          <li v-for="chan in chatChannels" :key="chan.uuid">
             <router-link :to="linkDiscuss(chan)">
               <FontAwesomeIcon class="mr-1" :icon="faHashtag" size="sm" />
               {{ chan.name }}
@@ -86,6 +86,22 @@
             <a @click="showChannelModal = true">
               <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
               Add channel
+            </a>
+          </li>
+        </ul>
+
+        <p class="menu-label">AI Agents</p>
+        <ul class="menu-list">
+          <li v-for="chan in agentChannels" :key="chan.uuid">
+            <router-link :to="linkDiscuss(chan)">
+              <FontAwesomeIcon class="mr-1" :icon="faRobot" size="sm" />
+              {{ chan.name }}
+            </router-link>
+          </li>
+          <li>
+            <a @click="showAgentModal = true">
+              <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
+              Browse agents
             </a>
           </li>
         </ul>
@@ -128,6 +144,10 @@
     <AddProjectModal :show="showProjectModal" @close="showProjectModal = false" />
     <InvitePeopleModal :show="showInviteModal" @close="showInviteModal = false" />
     <QRIdentityModal :show="showIdentity" @close="showIdentity = false" />
+    
+    <ModalComponent :show="showAgentModal" @close="showAgentModal = false">
+      <AgentBrowser />
+    </ModalComponent>
   </aside>
 </template>
 
@@ -145,6 +165,7 @@ import {
   faTableCells,
   faQrcode,
   faCircleInfo,
+  faRobot,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -152,11 +173,14 @@ import ProjectTree from './ProjectTree.vue';
 import ProjectTreeMenu from './ProjectTreeMenu.vue';
 import AddChannelModal from './AddChannelModal.vue';
 import AddProjectModal from './AddProjectModal.vue';
+import AgentBrowser from './AgentBrowser.vue';
+import ModalComponent from './ModalComponent.vue';
 
 import { GlobalBus } from '@/services/event-bus';
 import { Toast } from '@/utils/toast';
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
+import type { AgentChannel } from '@/services/workspace-agent';
 import InvitePeopleModal from './InvitePeopleModal.vue';
 import QRIdentityModal from './QRIdentityModal.vue';
 
@@ -172,11 +196,16 @@ const showChannelModal = ref(false);
 const showProjectModal = ref(false);
 const showInviteModal = ref(false);
 const showIdentity = ref(false);
+const showAgentModal = ref(false);
 
 // vue-tsc chokes on this type inference
 const projectTree = useTemplateRef<Array<InstanceType<typeof ProjectTree>>>('projectTree');
 
 const channels = ref([] as IChatChannel[]);
+const agentChannels = ref([] as AgentChannel[]);
+
+// Use channels directly as chatChannels since they're now separate
+const chatChannels = computed(() => channels.value);
 
 const projects = ref([] as IProject[]);
 const activeProjectName = ref(null as string | null);
@@ -191,6 +220,7 @@ const busListeners = {
     projectFiles.value = files;
   },
   'chat-channels': (chans: IChatChannel[]) => (channels.value = chans),
+  'agent-channels': (chans: AgentChannel[]) => (agentChannels.value = chans),
   'conn-change': () => {
     connState.value = globalThis._ndnd_conn_state;
     if (!connState.value.connected) {
@@ -203,6 +233,7 @@ onMounted(async () => {
   GlobalBus.addListener('project-list', busListeners['project-list']);
   GlobalBus.addListener('project-files', busListeners['project-files']);
   GlobalBus.addListener('chat-channels', busListeners['chat-channels']);
+  GlobalBus.addListener('agent-channels', busListeners['agent-channels']);
   GlobalBus.addListener('conn-change', busListeners['conn-change']);
 });
 
@@ -210,6 +241,7 @@ onUnmounted(() => {
   GlobalBus.removeListener('project-list', busListeners['project-list']);
   GlobalBus.removeListener('project-files', busListeners['project-files']);
   GlobalBus.removeListener('chat-channels', busListeners['chat-channels']);
+  GlobalBus.removeListener('agent-channels', busListeners['agent-channels']);
   GlobalBus.removeListener('conn-change', busListeners['conn-change']);
 });
 

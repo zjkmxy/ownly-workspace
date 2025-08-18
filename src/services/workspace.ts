@@ -1,6 +1,7 @@
 import { WorkspaceChat } from './workspace-chat';
 import { WorkspaceProj, WorkspaceProjManager } from './workspace-proj';
 import { WorkspaceInviteManager } from './workspace-invite';
+import {WorkspaceAgent} from './workspace-agent'
 
 import { SvsProvider } from '@/services/svs-provider';
 
@@ -32,6 +33,7 @@ export class Workspace {
     public readonly chat: WorkspaceChat,
     public readonly proj: WorkspaceProjManager,
     public readonly invite: WorkspaceInviteManager,
+    public readonly agent: WorkspaceAgent
   ) { }
 
   /**
@@ -51,11 +53,12 @@ export class Workspace {
 
     // Create general modules
     const chat = await WorkspaceChat.create(api, provider);
+    const agent = await WorkspaceAgent.create(api, provider);
     const proj = await WorkspaceProjManager.create(api, provider);
     const invite = await WorkspaceInviteManager.create(api, metadata, provider);
 
     // Create workspace object
-    return new Workspace(metadata, api, provider, chat, proj, invite);
+    return new Workspace(metadata, api, provider, chat, proj, invite, agent);
   }
 
   /**
@@ -66,6 +69,7 @@ export class Workspace {
     await this.proj.destroy();
     await this.chat.destroy();
     await this.provider?.destroy();
+    await this.agent.destroy();
     await this.api?.stop();
     await this.invite.destroy();
   }
