@@ -46,7 +46,7 @@
         <div v-if="loading" class="has-text-centered py-4">
           <LoadingSpinner text="Loading agent cards..." />
         </div>
-        
+
         <div v-else-if="agentCards.length === 0" class="empty-state">
           <div class="has-text-centered py-6">
             <FontAwesomeIcon :icon="faRobot" size="3x" class="has-text-grey-light mb-3" />
@@ -120,8 +120,8 @@
             />
           </div>
           <div class="control">
-            <button 
-              class="button is-primary" 
+            <button
+              class="button is-primary"
               @click="discoverAgent"
               :class="{ 'is-loading': discovering }"
               :disabled="!discoverUrl.trim()"
@@ -168,9 +168,9 @@
             <li>The system will look for <code>/.well-known/agent.json</code></li>
             <li>Compatible agents will be automatically detected</li>
           </ul>
-          
+
           <div class="notification is-warning mt-3">
-            <strong>CORS Issues?</strong> If you get a "Failed to fetch" error, the agent server doesn't allow cross-origin requests. 
+            <strong>CORS Issues?</strong> If you get a "Failed to fetch" error, the agent server doesn't allow cross-origin requests.
             You can:
             <ol class="mt-2">
               <li>Ask the agent provider to add CORS headers</li>
@@ -183,15 +183,15 @@
     </div>
 
     <!-- Add Agent Modal -->
-    <AddAgentModal 
-      :show="showAddModal" 
+    <AddAgentModal
+      :show="showAddModal"
       @close="showAddModal = false"
     />
 
     <!-- Add Channel Modal -->
     <ModalComponent :show="showChannelModal" @close="showChannelModal = false">
       <div class="title is-5 mb-4">Add Agent Channel</div>
-      
+
       <div class="field">
         <label class="label">Channel Name</label>
         <div class="control">
@@ -222,13 +222,13 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { 
-  faRobot, 
-  faPlus, 
-  faLink, 
-  faFlask, 
-  faTrash, 
-  faSearch, 
+import {
+  faRobot,
+  faPlus,
+  faLink,
+  faFlask,
+  faTrash,
+  faSearch,
   faComments,
   faRefresh
 } from '@fortawesome/free-solid-svg-icons';
@@ -281,7 +281,7 @@ async function switchProject() {
 async function repairAgentFile(proj: any, existingMeta: any) {
   // Delete the corrupted file entry
   await proj.deleteFile('.well-known/agent.json');
-  
+
   // Create an empty agent.json file with proper structure
   const emptyAgentJson = JSON.stringify([], null, 2);
   const stream = new ReadableStream<Uint8Array>({
@@ -290,7 +290,7 @@ async function repairAgentFile(proj: any, existingMeta: any) {
       controller.close();
     }
   });
-  
+
   // Import the file properly
   await proj.importFile('.well-known/agent.json', stream);
   console.log('Agent file repaired with empty structure');
@@ -306,11 +306,11 @@ async function loadAgentCards() {
     const allProjects = wksp.proj.getProjects();
     availableProjects.value = allProjects;
     console.log('All projects:', allProjects.map(p => p.name));
-    
+
     // Determine which project to use
     let proj = wksp.proj.active;
     let targetProjectName = selectedProjectName.value;
-    
+
     // If no project selected, use active or first available
     if (!targetProjectName) {
       if (proj) {
@@ -320,31 +320,31 @@ async function loadAgentCards() {
       }
       selectedProjectName.value = targetProjectName;
     }
-    
+
     // Get the target project
     if (targetProjectName && (!proj || proj.name !== targetProjectName)) {
       proj = await wksp.proj.get(targetProjectName);
       await proj.activate();
       console.log('Switched to project:', proj.name);
     }
-    
+
     console.log('Currently active project:', proj?.name || 'none');
-    
+
     if (!proj) {
       agentCards.value = [];
       return;
     }
 
     try {
-      // Check if file exists (try flat filename first)  
+      // Check if file exists (try flat filename first)
       let agentFilePath = 'agent.json';
       let existingMeta = proj.getFileMeta(agentFilePath);
-      
+
       // Debug: Check what files exist in the project
       console.log('Active project:', proj.name);
       console.log('All files in project:', proj.getFileList().map(f => f.path));
       console.log('Full file list with metadata:', proj.getFileList());
-      
+
       // Let's check if other files work
       const allFiles = proj.getFileList();
       for (const file of allFiles) {
@@ -357,16 +357,16 @@ async function loadAgentCards() {
           }
         }
       }
-      
+
       // Fallback to nested path
       if (!existingMeta) {
         agentFilePath = '.well-known/agent.json';
         existingMeta = proj.getFileMeta(agentFilePath);
       }
-      
+
       console.log('Agent file path:', agentFilePath);
       console.log('Agent file meta:', existingMeta);
-      
+
       if (existingMeta) {
         try {
           // Try reading directly from Y.js document
@@ -374,9 +374,9 @@ async function loadAgentCards() {
           const doc = await proj.getFile(agentFilePath);
           const text = doc.getText('text');
           const content = text.toString();
-          
+
           console.log('Y.js text content:', content);
-          
+
           if (content.trim()) {
             agentCards.value = JSON.parse(content);
             console.log('Parsed agent cards:', agentCards.value);
@@ -386,12 +386,12 @@ async function loadAgentCards() {
           }
         } catch (docError) {
           console.error('Failed to read Y.js document:', docError);
-          
+
           // Fallback: try export method
           try {
             const content = await proj.exportFile(agentFilePath);
             console.log('Fallback export content:', content);
-            
+
             if (content) {
               const text = new TextDecoder().decode(content);
               agentCards.value = JSON.parse(text);
@@ -471,7 +471,7 @@ async function addDiscoveredAgent() {
         agentFilePath = '.well-known/agent.json';
         existingMeta = proj.getFileMeta(agentFilePath);
       }
-      
+
       if (existingMeta) {
         const content = await proj.exportFile(agentFilePath);
         if (content) {
@@ -506,7 +506,7 @@ async function addDiscoveredAgent() {
 
     // Reload the list
     await loadAgentCards();
-    
+
     Toast.success(`Added agent "${discoveredAgent.value.name}" to workspace`);
     discoveredAgent.value = null;
     discoverUrl.value = '';
@@ -531,9 +531,9 @@ async function createAgentChannel() {
     if (!wksp) return;
 
     const name = channelName.value.trim() || selectedAgent.value.name;
-    
+
     await wksp.agent.addAgentChannel(selectedAgent.value, name);
-    
+
     Toast.success(`Created agent channel: ${name}`);
     showChannelModal.value = false;
     channelName.value = '';
@@ -547,7 +547,7 @@ async function createAgentChannel() {
 async function testAgent(agent: AgentCard) {
   try {
     Toast.info(`Testing connection to ${agent.name}...`);
-    
+
     const response = await fetch(`${agent.url}/.well-known/agent.json`);
     if (response.ok) {
       Toast.success(`✅ ${agent.name} is responding correctly`);
@@ -555,7 +555,7 @@ async function testAgent(agent: AgentCard) {
       Toast.warning(`⚠️ ${agent.name} returned status ${response.status}`);
     }
   } catch (error) {
-    Toast.error(`❌ Failed to connect to ${agent.name}: ${error}`);
+    Toast.error(`Failed to connect to ${agent.name}: ${error}`);
   }
 }
 
@@ -573,7 +573,7 @@ async function removeAgent(agent: AgentCard) {
 
     // Remove from the list
     const updatedCards = agentCards.value.filter(card => card.name !== agent.name);
-    
+
     // Create the JSON content
     const jsonContent = JSON.stringify(updatedCards, null, 2);
     const stream = new ReadableStream<Uint8Array>({
@@ -585,10 +585,10 @@ async function removeAgent(agent: AgentCard) {
 
     // Save updated list (use flat path)
     await proj.importFile('agent.json', stream);
-    
+
     // Update local state
     agentCards.value = updatedCards;
-    
+
     Toast.success(`Removed agent "${agent.name}"`);
   } catch (error) {
     console.error('Failed to remove agent:', error);
@@ -604,7 +604,7 @@ async function removeAgent(agent: AgentCard) {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
-    
+
     .header-controls {
       display: flex;
       align-items: center;
@@ -668,7 +668,7 @@ async function removeAgent(agent: AgentCard) {
 
     ul {
       margin-left: 1rem;
-      
+
       li {
         margin-bottom: 0.25rem;
       }

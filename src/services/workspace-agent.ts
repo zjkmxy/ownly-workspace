@@ -202,9 +202,9 @@ export class WorkspaceAgent{
     const channel: AgentChannel ={
       uuid: nanoid(),
       name: chanName,
-      agent,
+      agent: agent,
     };
-    this. channels.push([channel]);
+    this.channels.push([channel]);
     this.messages.set(channel.name, new Y.Array<AgentMessage>());
     this.events.emit('channelAdded', channel);
     //Add a system message announcing the new channel
@@ -235,8 +235,30 @@ export class WorkspaceAgent{
   }
 
   /**
+   * Delete an agent channel and all its messages.
+   * @param channelName Name of the channel to delete
+   */
+  public async deleteAgentChannel(channelName: string): Promise<void> {
+    const channelIndex = this.channels.toArray().findIndex((ch) => ch.name === channelName);
+    if (channelIndex === -1) {
+      throw new Error('Channel not found');
+    }
+
+    // Perform all deletions in a single Y.js transaction for atomicity
+    this.doc.transact(() => {
+      // Remove the channel from the list
+      this.channels.delete(channelIndex);
+      
+      // Remove the message history
+      this.messages.delete(channelName);
+    });
+
+    console.log(`Deleted agent channel: ${channelName}`);
+  }
+
+  /**
    * Send a message to a channel.
-   * if the message role is user it iwll be forwarded to the underlying agent via {@link invokeAgent}
+   * if the message role is user it will be forwarded to the underlying agent via {@link invokeAgent}
    * Reply will be appended to the same channel once received.
    * @param channel Name of the channel ot send to
    * @param message The message to send. 'uuid' and 'ts' will be auto set.
@@ -252,7 +274,7 @@ export class WorkspaceAgent{
       role: message.role,
     };
     (await this.getMsgArray(channel)).push([msg]);
-    //If this is a suer message, forward it to the agent asynchronously
+    //If this is a user message, forward it to the agent asynchronously
     if (msg.role === 'user'){
       const chan = this.channels.toArray().find((c) => c.name === channel);
       if (chan){
@@ -280,7 +302,6 @@ export class WorkspaceAgent{
     const useJsonRpc = agent.preferredTransport === 'JSONRPC' ||
                        (agent as any).preferredTransport === 'JSONRPC' ||
                        agent.protocolVersion === '0.3.0' ||  // Our agent card at llama server currently has this
-
                        (agent as any).protocolVersion === '0.3.0';
 
     console.log('Agent card properties:', Object.keys(agent));

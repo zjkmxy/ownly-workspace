@@ -94,8 +94,18 @@
         <ul class="menu-list">
           <li v-for="chan in agentChannels" :key="chan.uuid">
             <router-link :to="linkDiscuss(chan)">
-              <FontAwesomeIcon class="mr-1" :icon="faRobot" size="sm" />
-              {{ chan.name }}
+              <div class="link-inner">
+                <FontAwesomeIcon class="mr-1" :icon="faRobot" size="sm" />
+                {{ chan.name }}
+              </div>
+
+              <button
+                class="link-button delete-button"
+                @click.prevent="deleteAgentChannel(chan)"
+                :title="`Delete ${chan.name} channel`"
+              >
+                <FontAwesomeIcon :icon="faTrash" size="sm" />
+              </button>
             </router-link>
           </li>
           <li>
@@ -144,7 +154,7 @@
     <AddProjectModal :show="showProjectModal" @close="showProjectModal = false" />
     <InvitePeopleModal :show="showInviteModal" @close="showInviteModal = false" />
     <QRIdentityModal :show="showIdentity" @close="showIdentity = false" />
-    
+
     <ModalComponent :show="showAgentModal" @close="showAgentModal = false">
       <AgentBrowser />
     </ModalComponent>
@@ -153,7 +163,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, useTemplateRef } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import {
@@ -166,6 +176,7 @@ import {
   faQrcode,
   faCircleInfo,
   faRobot,
+  faTrash,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -178,6 +189,7 @@ import ModalComponent from './ModalComponent.vue';
 
 import { GlobalBus } from '@/services/event-bus';
 import { Toast } from '@/utils/toast';
+import { Workspace } from '@/services/workspace';
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
 import type { AgentChannel } from '@/services/workspace-agent';
@@ -185,6 +197,7 @@ import InvitePeopleModal from './InvitePeopleModal.vue';
 import QRIdentityModal from './QRIdentityModal.vue';
 
 const route = useRoute();
+const router = useRouter();
 const routeIsDashboard = computed(() =>
   ['dashboard', 'join', 'about'].includes(String(route.name)),
 );
@@ -270,6 +283,23 @@ function linkDiscuss(channel: IChatChannel) {
     },
   };
 }
+
+async function deleteAgentChannel(channel: AgentChannel) {
+  if (!confirm(`Are you sure you want to delete the "${channel.name}" agent channel? This will permanently remove all messages.`)) {
+    return;
+  }
+
+  try {
+    const wksp = await Workspace.setupOrRedir(router);
+    if (!wksp) return;
+
+    await wksp.agent.deleteAgentChannel(channel.name);
+    Toast.success(`Deleted agent channel: ${channel.name}`);
+  } catch (error) {
+    console.error('Failed to delete agent channel:', error);
+    Toast.error(`Failed to delete channel: ${error}`);
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -329,6 +359,9 @@ function linkDiscuss(channel: IChatChannel) {
   :deep(li > a) {
     background-color: transparent;
     color: white;
+    display: flex;
+    align-items: center;
+    //justify-content: space-between;
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.1);
@@ -339,6 +372,32 @@ function linkDiscuss(channel: IChatChannel) {
       background-color: var(--highlight-on-primary-color);
       color: var(--bulma-white-on-scheme);
     }
+    .link-inner {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .link-button {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      opacity: 0;
+
+      &:hover {
+      background-color: rgba(255, 69, 69, 0.2);
+      color: #ff4545;
+      }
+    }
+
+    &:hover .link-button {
+      opacity: 1;
+    }
+
   }
 }
 </style>
