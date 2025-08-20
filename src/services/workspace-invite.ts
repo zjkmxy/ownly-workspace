@@ -64,9 +64,7 @@ export class WorkspaceInviteManager {
    * @param inviteChannel The channel to assign
    * @param inviteUrl The external server URL for the agent
    */
-  public async tryAgentInvite(invitee: IProfile, inviteChannel: string, inviteUrl: string): Promise<void> {
-    this.tryInvite(invitee);
-
+  public async invokeAgent(inviteChannel: string, inviteUrl: string): Promise<void> {
     if (!inviteUrl) {
       console.warn("No inviteUrl provided for agent invite — skipping external request.");
       return;
