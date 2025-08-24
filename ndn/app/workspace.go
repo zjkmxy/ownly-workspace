@@ -3,9 +3,14 @@
 package app
 
 import (
+	"crypto/aes"
+	"crypto/ecdh"
 	"crypto/elliptic"
+	"crypto/rand"
 	_ "embed"
+	"encoding/hex"
 	"fmt"
+	math_rand "math/rand/v2"
 	"syscall/js"
 	"time"
 
@@ -20,6 +25,7 @@ import (
 	sig "github.com/named-data/ndnd/std/security/signer"
 	"github.com/named-data/ndnd/std/security/trust_schema"
 	ndn_sync "github.com/named-data/ndnd/std/sync"
+	"github.com/named-data/ndnd/std/types/optional"
 	jsutil "github.com/named-data/ndnd/std/utils/js"
 	"github.com/pulsejet/ownly/ndn/app/tlv"
 )
@@ -54,7 +60,7 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 	// If not existing, check the create flag and proceed
 
 	// Get a valid identity key to sign the certificate
-	idSigner := a.GetTestbedKey()
+	idSigner, _ := a.GetTestbedKey()
 	if idSigner == nil {
 		err = fmt.Errorf("no identity key found")
 		return
@@ -78,22 +84,49 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 			Append(idName...)
 		log.Info(a, "Fetching workspace invite", "name", inviteName)
 
-		// Fetch the invitation from the network
+		// accessRequestPrefix, _ := enc.NameFromStr("/ndn/multicast" + wkspStr) // Uncomment if you want to use multicast
+		accessRequestPrefix, _ := enc.NameFromStr(wkspStr)
+
+		// Name to request access from workspace initiator
+		accessRequestName := accessRequestPrefix.
+			Append(enc.NewGenericComponent("root")).
+			Append(enc.NewKeywordComponent("INVITE")).
+			Append(idName...)
+		log.Info(a, "Fetching workspace invite", "name", inviteName)
+
+		// Fetch the invitation from the repo
 		ch := make(chan ndn.ExpressCallbackArgs)
 		object.ExpressR(a.engine, ndn.ExpressRArgs{
 			Name: inviteName,
 			Config: &ndn.InterestConfig{
-				MustBeFresh: true,
-				CanBePrefix: true,
+				MustBeFresh:    true,
+				CanBePrefix:    true,
+				ForwardingHint: []enc.Name{repoName},
 			},
-			Retries:  3,
+			Retries:  1,
 			Callback: func(args ndn.ExpressCallbackArgs) { ch <- args },
 		})
 		args := <-ch
 		if args.Result != ndn.InterestResultData {
-			err = fmt.Errorf("failed to get invitation, make sure %s is invited to %s (%s)",
-				idName, wkspName, args.Result)
-			return
+			// If the invite is not found, request access from the workspace initiator
+			ch2 := make(chan ndn.ExpressCallbackArgs)
+			object.ExpressR(a.engine, ndn.ExpressRArgs{
+				Name: accessRequestName,
+				Config: &ndn.InterestConfig{
+					MustBeFresh: true,
+					CanBePrefix: true,
+				},
+				Retries:  4,
+				Callback: func(args ndn.ExpressCallbackArgs) { ch2 <- args },
+			})
+			args = <-ch2
+
+			if args.Result != ndn.InterestResultData {
+				// Failed if both attempts do not return data
+				err = fmt.Errorf("failed to get invitation, make sure %s is invited to %s (%s)",
+					idName, wkspName, args.Result)
+				return
+			}
 		}
 
 		// TODO: validate the invitation itself
@@ -150,7 +183,7 @@ func (a *App) IsWorkspaceOwner(wkspStr string) (bool, error) {
 		return false, err
 	}
 
-	idKey := a.GetTestbedKey()
+	idKey, _ := a.GetTestbedKey()
 	if idKey == nil {
 		return false, fmt.Errorf("no testbed key")
 	}
@@ -162,8 +195,48 @@ func (a *App) IsWorkspaceOwner(wkspStr string) (bool, error) {
 	return idName.IsPrefix(wkspName), nil
 }
 
+// onAccessRequest handles incoming access requests if the user is owner of the workspace.
+func (a *App) onAccessRequest(args ndn.InterestHandlerArgs) {
+	interest := args.Interest
+	log.Info(nil, "Received interest", "name", interest.Name())
+
+	// Get list of access requests, add the new one if not a duplicate
+	access_requests := js.Global().Get("_access_requests")
+	name := interest.Name()
+	requester := ""
+	for c := 0; c < name.EncodingLength(); c++ {
+		if name[c].Equal(enc.NewKeywordComponent("INVITE")) {
+			requester = name[c+1:].String()
+			break
+		}
+	}
+
+	log.Info(nil, "Received access request", "requester", requester)
+
+	r := 0
+	duplicate := false
+
+	for r < access_requests.Length() {
+		if access_requests.Index(r).Equal(js.ValueOf(requester)) {
+			duplicate = true
+		}
+		r++
+	}
+
+	log.Info(nil, "Duplicate =", "duplicate", duplicate)
+
+	if !duplicate {
+		access_requests.Call("push", js.ValueOf(requester))
+	}
+
+	js.Global().Set("_access_requests", access_requests)
+
+	log.Info(nil, "Access requests:", "requests", access_requests)
+
+}
+
 // GetWorkspace returns a JS object representing the workspace with the given name.
-func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
+func (a *App) GetWorkspace(groupStr string, ignoreValidity bool) (api js.Value, err error) {
 	group, err := enc.NameFromStr(groupStr)
 	if err != nil {
 		return
@@ -176,7 +249,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	}
 
 	// Get identity key to use (same as testbed key)
-	idKey := a.GetTestbedKey()
+	idKey, _ := a.GetTestbedKey()
 	if idKey == nil {
 		err = fmt.Errorf("no valid testbed key found")
 		return
@@ -198,6 +271,33 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 	// Create client object for this workspace
 	client := object.NewClient(a.engine, a.store, trust)
 
+
+	// Reset encryption keys
+	a.psk = nil
+	a.dsk = nil
+	a.aes = nil
+
+	// If owner, watch for access request interests
+	isOwner, err := a.IsWorkspaceOwner(groupStr)
+	if err != nil {
+		return
+	}
+	log.Info(nil, "Checking if isowner:", "isowner", isOwner)
+	if isOwner {
+		// prefix, _ := enc.NameFromStr("/ndn/multicast" + groupStr) // Uncomment if you want to use multicast
+		prefix, _ := enc.NameFromStr(groupStr)
+		accessRequestPrefix := prefix.
+			Append(enc.NewGenericComponent("root")).
+			Append(enc.NewKeywordComponent("INVITE"))
+		a.engine.AttachHandler(accessRequestPrefix, a.onAccessRequest)
+		client.AnnouncePrefix(ndn.Announcement{
+			Name:    accessRequestPrefix,
+			Expose:  true,
+			OnError: nil, // TODO
+		})
+		log.Info(nil, "Attached access request handler for", "name", accessRequestPrefix)
+	}
+
 	var workspaceJs map[string]any
 	workspaceJs = map[string]any{
 		// name: string;
@@ -205,6 +305,27 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 		// group: string;
 		"group": js.ValueOf(group.String()),
+
+		// set_encrypt_keys(psk: Uint8Array, dsk: Uint8Array): Promise<void>;
+		"set_encrypt_keys": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			a.psk = jsutil.JsArrayToSlice(p[0])
+			a.dsk = jsutil.JsArrayToSlice(p[1])
+			if len(a.psk) == 0 || len(a.dsk) == 0 {
+				return nil, fmt.Errorf("invalid keys")
+			}
+
+			symKey, err := hkdfSha256(append(a.psk, a.dsk...))
+			if err != nil {
+				return nil, err
+			}
+			a.aes, err = aes.NewCipher(symKey)
+			if err != nil {
+				return nil, err
+			}
+			a.ivb = userKey.KeyName().Hash()
+
+			return nil, nil
+		}),
 
 		// start(): Promise<void>;
 		"start": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
@@ -250,9 +371,10 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			// Fetch the content from the network
 			ch := make(chan ndn.ConsumeState)
 			client.ConsumeExt(ndn.ConsumeExtArgs{
-				Name:     name,
-				TryStore: true,
-				Callback: func(state ndn.ConsumeState) { ch <- state },
+				Name:           name,
+				TryStore:       true,
+				IgnoreValidity: optional.Some(ignoreValidity),
+				Callback:       func(state ndn.ConsumeState) { ch <- state },
 			})
 			state := <-ch
 			if err := state.Error(); err != nil {
@@ -284,14 +406,16 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 				InitialState: stateWire,
 
 				Svs: ndn_sync.SvSyncOpts{
-					Client:      client,
-					GroupPrefix: svsAloGroup,
+					Client:         client,
+					GroupPrefix:    svsAloGroup,
+					IgnoreValidity: optional.Some(ignoreValidity),
 				},
 
 				Snapshot: &ndn_sync.SnapshotNodeHistory{
-					Client:    client,
-					Threshold: SnapshotThreshold,
-					Compress:  CompressSnapshotYjs,
+					Client:         client,
+					Threshold:      SnapshotThreshold,
+					Compress:       a.CompressSnapshotYjs,
+					IgnoreValidity: optional.Some(ignoreValidity),
 				},
 
 				MulticastPrefix: multicastPrefix,
@@ -301,7 +425,7 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 			}
 
 			// Create JS API for SVS ALO
-			return a.SvsAloJs(client, svsAlo, p[2]), nil
+			return a.SvsAloJs(client, svsAlo, p[2])
 		}),
 
 		// sign_invitation(invitee: string): Promise<Uint8Array>;
@@ -349,17 +473,32 @@ func (a *App) GetWorkspace(groupStr string) (api js.Value, err error) {
 
 			return jsutil.SliceToJsArray(wire.Join()), nil
 		}),
+
+		// wait_for_dsk(key: Uint8Array): Promise<Uint8Array>;
+		"wait_for_dsk": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			dsk, err := a.fetchDsk(client, group, jsutil.JsArrayToSlice(p[0]))
+			if err != nil {
+				return nil, err
+			}
+			return jsutil.SliceToJsArray(dsk), nil
+		}),
 	}
 
 	return js.ValueOf(workspaceJs), nil
 }
 
-func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.Value) (api js.Value) {
+func (a *App) SvsAloJs(
+	client ndn.Client,
+	alo *ndn_sync.SvsALO,
+	persistState js.Value,
+) (api js.Value, err error) {
+	// List of SVS routes to announce
 	routes := []enc.Name{
 		alo.SyncPrefix(),
 		alo.DataPrefix(),
 	}
 
+	// Wrap the SVS ALO instance in a JS API
 	var svsAloJs map[string]any
 	svsAloJs = map[string]any{
 		"sync_prefix": js.ValueOf(alo.SyncPrefix().String()),
@@ -374,6 +513,7 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 					Expose:  true,
 					OnError: nil, // TODO
 				})
+				log.Info(nil, "Announcing prefix", "name", "prefix", route)
 			}
 
 			// Notify repo to start
@@ -431,7 +571,13 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 				},
 			}
 
-			name, state, err := alo.Publish(pub.Encode())
+			// Encrypt the publication
+			epub, err := a.encryptPub(pub, alo.SeqNo())
+			if err != nil {
+				return nil, err
+			}
+
+			name, state, err := alo.Publish(epub.Encode())
 			if err != nil {
 				return nil, err
 			}
@@ -473,6 +619,51 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 			return js.ValueOf(blobName.String()), nil
 		}),
 
+		// pub_dsk_request(): Promise<Uint8Array>;
+		"pub_dsk_request": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			sk, err := ecdh.X25519().GenerateKey(rand.Reader)
+			if err != nil {
+				return nil, err
+			}
+			pub := &tlv.Message{
+				DSKRequest: &tlv.DSKRequest{
+					X25519Pub: sk.PublicKey().Bytes(),
+					Expiry:    uint64(time.Now().Add(24 * time.Hour).Unix()),
+				},
+			}
+			_, state, err := alo.Publish(pub.Encode())
+			if err != nil {
+				return nil, err
+			}
+
+			// Persist state
+			jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(state.Join())))
+
+			return jsutil.SliceToJsArray(sk.Bytes()), nil
+		}),
+
+		// pub_dsk_ack(key: Uint8Array): Promise<void>;
+		"pub_dsk_ack": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			sk, err := ecdh.X25519().NewPrivateKey(jsutil.JsArrayToSlice(p[0]))
+			if err != nil {
+				return nil, err
+			}
+			pub := &tlv.Message{
+				DSKACK: &tlv.DSKACK{
+					X25519Peer: sk.PublicKey().Bytes(),
+				},
+			}
+			_, state, err := alo.Publish(pub.Encode())
+			if err != nil {
+				return nil, err
+			}
+
+			// Persist state
+			jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(state.Join())))
+
+			return nil, nil
+		}),
+
 		// subscribe(name: string, { on_yjs_delta }): Promise<void>;
 		"subscribe": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			// Send a list of publications to the JS callback
@@ -486,6 +677,12 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 						continue
 					}
 
+					pmsg, err = a.decryptPub(pmsg)
+					if err != nil {
+						log.Error(nil, "Failed to decrypt publication", "err", err)
+						continue
+					}
+
 					// All possible message type conversions listed here
 					switch {
 					case pmsg.YjsDelta != nil:
@@ -493,10 +690,54 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 							"uuid":   pmsg.YjsDelta.UUID,
 							"binary": jsutil.SliceToJsArray(pmsg.YjsDelta.Binary),
 						}))
+
+					case pmsg.DSKRequest != nil:
+						if pmsg.DSKRequest.Expiry < uint64(time.Now().Unix()) {
+							continue
+						}
+
+						pub := pmsg.DSKRequest.X25519Pub
+						if pub == nil {
+							log.Warn(nil, "DSK request missing X25519 public key")
+							continue
+						}
+
+						// Randomness for some crude suppression
+						suppress := time.Duration(1+math_rand.IntN(3)) * time.Second
+
+						pubHex := hex.EncodeToString(pub)
+						a.dskReqs[pubHex] = time.AfterFunc(suppress, func() {
+							delete(a.dskReqs, pubHex)
+
+							group := alo.GroupPrefix()
+							dskRes := a.processDskRequest(client, group, pub)
+							if dskRes == nil {
+								return
+							}
+							_, state, err := alo.Publish(dskRes)
+							if err != nil {
+								log.Error(nil, "Failed to publish DSK response", "err", err)
+							}
+							jsutil.Await(persistState.Invoke(jsutil.SliceToJsArray(state.Join())))
+						})
+
+					case pmsg.DSKACK != nil:
+						if pmsg.DSKACK.X25519Peer == nil {
+							log.Warn(nil, "DSK ACK missing X25519 public key")
+							continue
+						}
+
+						// Remove the request that matches this ACK
+						peerHex := hex.EncodeToString(pmsg.DSKACK.X25519Peer)
+						if timer, ok := a.dskReqs[peerHex]; ok {
+							timer.Stop()
+							delete(a.dskReqs, peerHex)
+						}
+
 					default:
 						// This will be logged even for BlobFetch commands, which is fine
 						// (can be fixed but avoid the extra parse that is unused)
-						log.Warn(a, "Ignoring unknown message")
+						// log.Warn(a, "Ignoring unknown message", "publisher", pub.Publisher)
 					}
 				}
 
@@ -551,7 +792,7 @@ func (a *App) SvsAloJs(client ndn.Client, alo *ndn_sync.SvsALO, persistState js.
 			}), nil
 		}),
 	}
-	return js.ValueOf(svsAloJs)
+	return js.ValueOf(svsAloJs), nil
 }
 
 func (a *App) AwarenessJs(awareness *Awareness) (api js.Value) {

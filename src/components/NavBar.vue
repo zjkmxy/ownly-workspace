@@ -122,6 +122,8 @@
             <a @click="showInviteModal = true">
               <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
               Invite people
+
+              <FontAwesomeIcon v-show="showNotifBubble" class="mr-1" :icon="faCircleExclamation" size="sm"></FontAwesomeIcon>
             </a>
           </li>
         </ul>
@@ -177,6 +179,7 @@ import {
   faCircleInfo,
   faRobot,
   faTrash,
+  faCircleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -242,12 +245,20 @@ const busListeners = {
   },
 };
 
+const showNotifBubble = ref(false);
+
+let interval: ReturnType<typeof setInterval> ;
+
 onMounted(async () => {
   GlobalBus.addListener('project-list', busListeners['project-list']);
   GlobalBus.addListener('project-files', busListeners['project-files']);
   GlobalBus.addListener('chat-channels', busListeners['chat-channels']);
   GlobalBus.addListener('agent-channels', busListeners['agent-channels']);
   GlobalBus.addListener('conn-change', busListeners['conn-change']);
+  interval = setInterval(() => {
+    setNotification();
+  },
+  250)
 });
 
 onUnmounted(() => {
@@ -256,6 +267,7 @@ onUnmounted(() => {
   GlobalBus.removeListener('chat-channels', busListeners['chat-channels']);
   GlobalBus.removeListener('agent-channels', busListeners['agent-channels']);
   GlobalBus.removeListener('conn-change', busListeners['conn-change']);
+  clearInterval(interval);
 });
 
 function buildVersion() {
@@ -299,6 +311,13 @@ async function deleteAgentChannel(channel: AgentChannel) {
     console.error('Failed to delete agent channel:', error);
     Toast.error(`Failed to delete channel: ${error}`);
   }
+}
+
+function setNotification() {
+  if (_access_requests.length > 0)
+    showNotifBubble.value = true;
+  else
+    showNotifBubble.value = false;
 }
 </script>
 

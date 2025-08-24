@@ -45,3 +45,26 @@ export function normalizePath(path: string): string {
   if (path[0] !== '/') path = '/' + path;
   return path.replace(/\/+/g, '/');
 }
+
+/**
+ * Convert uint8Array to hex string.
+ *
+ * @param u8 Uint8Array to convert
+ * @returns Hex string
+ */
+export function toHex(u8: Uint8Array): string {
+  return Array.from(u8)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * Convert hex string to uint8Array.
+ *
+ * @param hex Hex string to convert
+ * @returns Uint8Array
+ */
+export function fromHex(hex: string): Uint8Array {
+  if (hex.length == 0) return new Uint8Array()
+  return new Uint8Array(hex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)));
+}

@@ -3,8 +3,10 @@
 package app
 
 import (
+	"crypto/cipher"
 	"fmt"
 	"syscall/js"
+	"time"
 
 	enc "github.com/named-data/ndnd/std/encoding"
 	"github.com/named-data/ndnd/std/ndn"
@@ -25,6 +27,15 @@ type App struct {
 	// In practice all trust configs are currently the same, but
 	// each workspace could theoretically have a different trust config.
 	trust *security.TrustConfig
+
+	// Encryption keys
+	psk []byte
+	dsk []byte
+	aes cipher.Block
+	ivb uint64
+
+	// Pending DSK requests -> cancel function
+	dskReqs map[string]*time.Timer
 }
 
 var _ndnd_store_js = js.Global().Get("_ndnd_store_js")
@@ -46,6 +57,7 @@ func NewApp() *App {
 	a := &App{
 		store:    store,
 		keychain: kc,
+		dskReqs:  make(map[string]*time.Timer),
 	}
 	a.initialize()
 	return a
@@ -67,6 +79,7 @@ func NewNodeApp() *App {
 	a := &App{
 		store:    store,
 		keychain: kc,
+		dskReqs:  make(map[string]*time.Timer),
 	}
 
 	a.initialize()
@@ -97,13 +110,20 @@ func (a *App) JsApi() js.Value {
 	api := map[string]any{
 		// has_testbed_key(): Promise<boolean>;
 		"has_testbed_key": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			key := a.GetTestbedKey()
+			key, _ := a.GetTestbedKey()
 			return key != nil, nil
+		}),
+
+		// is_testbed_cert_expiring_soon(): Promise<boolean>;
+		"is_testbed_cert_expiring_soon": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			// Check if certificate expires within one week
+			_, notAfter := a.GetTestbedKey()
+			return notAfter.Before(time.Now().Add(7 * 24 * time.Hour)), nil
 		}),
 
 		// get_identity_name(): Promise<string>;
 		"get_identity_name": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			key := a.GetTestbedKey()
+			key, _ := a.GetTestbedKey()
 			if key == nil {
 				return nil, fmt.Errorf("no testbed key")
 			}
@@ -136,9 +156,9 @@ func (a *App) JsApi() js.Value {
 			return a.IsWorkspaceOwner(p[0].String())
 		}),
 
-		// get_workspace(name: string): Promise<WorkspaceAPI>;
+		// get_workspace(name: string, ignore: boolean): Promise<WorkspaceAPI>;
 		"get_workspace": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
-			return a.GetWorkspace(p[0].String())
+			return a.GetWorkspace(p[0].String(), p[1].Bool())
 		}),
 	}
 

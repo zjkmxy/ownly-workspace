@@ -3,6 +3,7 @@
 package app
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/named-data/ndnd/std/engine/face"
 	"github.com/named-data/ndnd/std/log"
 	"github.com/named-data/ndnd/std/ndn"
+	"github.com/named-data/ndnd/std/ndn/fch"
 	spec "github.com/named-data/ndnd/std/ndn/spec_2022"
 	"github.com/named-data/ndnd/std/object"
 	"github.com/named-data/ndnd/std/security"
@@ -27,11 +29,12 @@ var testbedRootName, _ = enc.NameFromStr("/ndn/KEY/%27%C4%B2%2A%9F%7B%81%27/ndn/
 var testbedPrefix = enc.Name{enc.NewGenericComponent("ndn")}
 
 // GetTestbedKey returns the testbed key, or nil if not found.
-// Returns (signer, certData, certSigCov)
-func (a *App) GetTestbedKey() ndn.Signer {
+// Returns the latest valid certificate from the keychain.
+func (a *App) GetTestbedKey() (ndn.Signer, time.Time) {
 	// TODO: move most of this to NDNd
 
-	// Check all certificates in the keychain
+	var bestSigner ndn.Signer
+	var bestExpiry time.Time
 	for _, id := range a.keychain.Identities() {
 		if !testbedPrefix.IsPrefix(id.Name()) {
 			continue
@@ -41,7 +44,6 @@ func (a *App) GetTestbedKey() ndn.Signer {
 			for _, certName := range key.UniqueCerts() {
 				certWire, _ := a.store.Get(certName.Prefix(-1), true)
 				if certWire == nil {
-					log.Error(nil, "Failed to find certificate", "name", certName)
 					continue
 				}
 
@@ -57,15 +59,22 @@ func (a *App) GetTestbedKey() ndn.Signer {
 					continue
 				}
 
-				// Certificate is usable
+				// Get certificate expiry
 				log.Info(nil, "Found valid testbed cert", "name", certData.Name())
-
-				return key.Signer()
+				_, notAfter := certData.Signature().Validity()
+				if val, ok := notAfter.Get(); ok && (bestExpiry.IsZero() || bestExpiry.Before(val)) {
+					bestSigner = key.Signer()
+					bestExpiry = val
+				}
 			}
 		}
 	}
 
-	return nil
+	if bestSigner != nil {
+		log.Info(nil, "Using testbed certificate", "expiry", bestExpiry)
+	}
+
+	return bestSigner, bestExpiry
 }
 
 func (a *App) SetCmdKey(key ndn.Signer) {
@@ -80,8 +89,22 @@ func (a *App) ConnectTestbed() error {
 		return nil
 	}
 
-	// TODO: fch
+	// set default router to suns
 	endpoint := "wss://suns.cs.ucla.edu/ws/"
+	// if FCH returns a router, connect to that instead
+	res, err := fch.Query(context.Background(), fch.Request{
+		"",
+		"wss",
+		1,
+		"ndn",
+	})
+	if err != nil {
+		return err
+	}
+	if res.Routers != nil {
+		// TODO: give the option for which testbed node to connect to, for debugging
+		endpoint = res.Routers[0].Connect
+	}
 
 	face := face.NewWasmWsFace(endpoint, false)
 	face.OnUp(func() {
@@ -93,7 +116,7 @@ func (a *App) ConnectTestbed() error {
 
 	a.face = face
 	a.engine = engine.NewBasicEngine(a.face)
-	err := a.engine.Start()
+	err = a.engine.Start()
 	if err != nil {
 		return err
 	}

@@ -13,6 +13,7 @@ declare global {
   var _yjs_merge_updates: (updates: Uint8Array[]) => Uint8Array;
   var _ndnd_conn_change_js: (connected: boolean, router: string) => void;
   var _ndnd_conn_state: { connected: boolean; router: string };
+  var _access_requests: string[];
 
   var set_ndn: undefined | ((ndn: NDNAPI) => void);
   var ndn_api: NDNAPI;
@@ -22,6 +23,8 @@ declare global {
 interface NDNAPI {
   /** Check if there is a valid testbed key in the keychain */
   has_testbed_key(): Promise<boolean>;
+  /** Check if the testbed certificate is expiring soon (within a week) */
+  is_testbed_cert_expiring_soon(): Promise<boolean>;
   /** Get the user's identity key */
   get_identity_name(): Promise<string>;
 
@@ -37,7 +40,7 @@ interface NDNAPI {
   is_workspace_owner(wksp: string): Promise<boolean>;
 
   /** Get a Workspace API */
-  get_workspace(name: string): Promise<WorkspaceAPI>;
+  get_workspace(name: string, ignore: boolean): Promise<WorkspaceAPI>;
 }
 
 export interface WorkspaceAPI {
@@ -45,6 +48,9 @@ export interface WorkspaceAPI {
   name: string;
   /** Overall prefix of workspace */
   group: string;
+
+  /** Set the encryption keys */
+  set_encrypt_keys(psk: Uint8Array, dsk: Uint8Array): Promise<void>;
 
   /** Start the workspace */
   start(): Promise<void>;
@@ -65,6 +71,9 @@ export interface WorkspaceAPI {
 
   /** Sign an invitation for a given NDN name */
   sign_invitation(invitee: string): Promise<Uint8Array>;
+
+  /** Wait for DSK to appear for the given key */
+  wait_for_dsk(key: Uint8Array): Promise<Uint8Array>;
 }
 
 /** API of the SVS ALO instance */
@@ -87,6 +96,10 @@ export interface SvsAloApi {
   pub_yjs_delta(uuid: string, binary: Uint8Array): Promise<void>;
   /** Publish blob fetch command */
   pub_blob_fetch(name: string, encapsulate: Uint8Array | undefined): Promise<string>;
+  /** Publish request for the DSK */
+  pub_dsk_request(): Promise<Uint8Array>;
+  /** Publish ack for the DSK response */
+  pub_dsk_ack(key: Uint8Array): Promise<void>;
 
   /** Set SVS ALO subscription callbacks */
   subscribe(params: {
@@ -136,6 +149,7 @@ class NDNService {
     globalThis._yjs_merge_updates = Y.mergeUpdatesV2;
     globalThis._ndnd_conn_change_js = _ndnd_conn_change_js;
     globalThis._ndnd_conn_state = { connected: false, router: String() };
+    globalThis._access_requests = new Array<string>();
 
     // Load the Go WASM module
     const go = new Go();

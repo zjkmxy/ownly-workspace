@@ -16,7 +16,7 @@ var _yjs_merge_updates = js.Global().Get("_yjs_merge_updates")
 
 // CompressSnapshotYjs compresses Yjs updates in the history snapshot.
 // This follows the SvsALO rules for snapshot compression.
-func CompressSnapshotYjs(hs *svs_ps.HistorySnap) {
+func (a *App) CompressSnapshotYjs(hs *svs_ps.HistorySnap) {
 	// Compress Yjs updates in the snapshot.
 	// But we need to compress documents individually.
 	updateMap := make(map[string][][]byte)
@@ -27,6 +27,13 @@ func CompressSnapshotYjs(hs *svs_ps.HistorySnap) {
 		msg, err := tlv.ParseMessage(enc.NewWireView(entry.Content), true)
 		if err != nil {
 			log.Error(nil, "Failed to parse snapshot entry", "err", err)
+			continue
+		}
+
+		// Application updates are encrypted, decrypt it again
+		msg, err = a.decryptPub(msg)
+		if err != nil {
+			log.Error(nil, "Failed to decrypt snapshot entry", "err", err)
 			continue
 		}
 
@@ -52,6 +59,14 @@ func CompressSnapshotYjs(hs *svs_ps.HistorySnap) {
 				Binary: merged,
 			},
 		}
+
+		// Encrypt the snapshot entry
+		msg, err := a.encryptPub(msg, lastEntry[uuid].SeqNo)
+		if err != nil {
+			log.Error(nil, "Failed to encrypt snapshot entry", "err", err)
+			continue
+		}
+
 		lastEntry[uuid].Content = msg.Encode()
 	}
 

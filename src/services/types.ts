@@ -5,10 +5,19 @@ export type IWkspStats = {
   name: string;
   /** Is the current user the owner */
   owner: boolean;
+  /** Workspace ignore certificate lifetime */
+  ignore: boolean;
   /** Workspace is pending initial setup */
   pendingSetup?: boolean;
   /** Last access time */
   lastAccess?: number;
+
+  /** Pre-shared key */
+  psk: string;
+  /** Dynamic-shared key */
+  dsk: string | null;
+  /** DSK request key */
+  dskExch?: string;
 };
 
 export type IChatMessage = {
