@@ -145,8 +145,8 @@ export class WorkspaceAgent{
     }
 
   /**
-   * Discover an agent card form a base URL. The default lookup lath is './wellknown/agent.json' as A2A specification. On secuss, reteched Json will be returned as an {@link AgentCard}.
-   * If the request failes an exception will be thorown.
+   * Discover an agent card from a base URL. The default lookup path is './well-known/agent.json' as per the A2A specification. On success, retrieved JSON will be returned as an {@link AgentCard}.
+   * If the request fails an exception will be thrown.
    * @param baseUrl Base URL of the agent server (without trailing slash)
    * @returns Promise resolving to the discovered {@link AgentCard}
    */
