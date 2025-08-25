@@ -277,24 +277,23 @@ function getHostname(url: string): string {
 async function switchProject() {
   await loadAgentCards();
 }
+// async function repairAgentFile(proj: any, existingMeta: any) {
+//   // Delete the corrupted file entry
+//   await proj.deleteFile('.well-known/agent.json');
 
-async function repairAgentFile(proj: any, existingMeta: any) {
-  // Delete the corrupted file entry
-  await proj.deleteFile('.well-known/agent.json');
+//   // Create an empty agent.json file with proper structure
+//   const emptyAgentJson = JSON.stringify([], null, 2);
+//   const stream = new ReadableStream<Uint8Array>({
+//     start(controller) {
+//       controller.enqueue(new TextEncoder().encode(emptyAgentJson));
+//       controller.close();
+//     }
+//   });
 
-  // Create an empty agent.json file with proper structure
-  const emptyAgentJson = JSON.stringify([], null, 2);
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(new TextEncoder().encode(emptyAgentJson));
-      controller.close();
-    }
-  });
-
-  // Import the file properly
-  await proj.importFile('.well-known/agent.json', stream);
-  console.log('Agent file repaired with empty structure');
-}
+//   // Import the file properly
+//   await proj.importFile('.well-known/agent.json', stream);
+//   console.log('Agent file repaired with empty structure');
+// }
 
 async function loadAgentCards() {
   try {
@@ -353,7 +352,7 @@ async function loadAgentCards() {
             const testContent = await proj.exportFile(file.path);
             console.log(`File ${file.path} can be read:`, !!testContent);
           } catch (e) {
-            console.log(`File ${file.path} cannot be read:`, e.message);
+            console.log(`File ${file.path} cannot be read:`, (e as Error).message);
           }
         }
       }

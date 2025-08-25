@@ -6,7 +6,6 @@ import {WorkspaceAgent} from './workspace-agent'
 import ndn from '@/services/ndn';
 import { SvsProvider } from '@/services/svs-provider';
 
-import ndn from '@/services/ndn';
 import { GlobalBus } from '@/services/event-bus';
 import * as utils from '@/utils/index';
 

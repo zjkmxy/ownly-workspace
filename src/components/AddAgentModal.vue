@@ -259,7 +259,7 @@ async function saveAgentCardToWorkspace(wksp: Workspace, agentCard: AgentCard) {
     
     try {
       // Check if file exists, if not create it
-      let existingMeta = proj.getFileMeta(agentFilePath);
+      const existingMeta = proj.getFileMeta(agentFilePath);
       if (!existingMeta) {
         console.log('Creating new agent.json file...');
         await proj.newFile(agentFilePath, false); // false = text file, not blob
@@ -291,7 +291,7 @@ async function saveAgentCardToWorkspace(wksp: Workspace, agentCard: AgentCard) {
     agentCards.push(agentCard);
 
     // Ensure file exists for writing (reuse the same path)
-    let existingMeta = proj.getFileMeta(agentFilePath);
+    const existingMeta = proj.getFileMeta(agentFilePath);
     if (!existingMeta) {
       console.log('Creating new agent.json file during save...');
       await proj.newFile(agentFilePath, false); // false = text file, not blob
