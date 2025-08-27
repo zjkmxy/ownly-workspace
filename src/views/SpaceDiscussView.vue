@@ -49,7 +49,7 @@
                     <span class="time">{{ formatTime(item) }}</span>
                   </div>
 
-                  <div class="content" 
+                  <div class="content"
                        :class="{ 'agent-message': isAgentMessage(item) }"
                        v-html="marked(item.message)">
                   </div>
@@ -156,6 +156,8 @@ watch(channelName, setup);
 /** Set up the workspace and chat */
 async function setup() {
   try {
+    // Reset to loading state when switching channels
+    items.value = null;
     // Set up the workspace
     wksp.value = await Workspace.setupOrRedir(router);
     if (!wksp.value) return;
@@ -166,7 +168,7 @@ async function setup() {
     // Check if this is an agent channel
     const agentChannels = await wksp.value.agent.getChannels();
     const agentChannel = agentChannels.find(chan => chan.name === channelName.value);
-    
+
     if (agentChannel) {
       // This is an agent channel
       isAgentChannel.value = true;
@@ -197,8 +199,9 @@ function isAgentMessage(item: IChatMessage | AgentMessage): item is AgentMessage
 
 /** Skip the header if the user is the same and the message is within a minute */
 function skipHeader(item: IChatMessage | AgentMessage, index: number) {
-  if (index === 0) return false;
-  const prev = items.value![index - 1];
+  if (index === 0 || !item || !items.value) return false;
+  const prev = items.value[index - 1];
+  if (!prev) return false;
   return prev.user === item.user && item.ts - prev.ts < 1000 * 60;
 }
 
@@ -370,14 +373,14 @@ function onAgentMessage(channel: string, message: AgentMessage) {
 
       .content {
         white-space: normal;
-        
+
         &.agent-message {
           background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
           border-left: 3px solid #3273dc;
           padding: 0.75rem;
           border-radius: 6px;
           margin-top: 0.25rem;
-          
+
           :deep(p) {
             margin-bottom: 0.5rem;
             &:last-child {

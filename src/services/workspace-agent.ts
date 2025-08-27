@@ -103,7 +103,7 @@ export class WorkspaceAgentManager{
       for (const ev of events){
         if (ev.path.length > 0) {
           const channelUuid = String(ev.path[0]);
-          
+
           // Find the channel name by UUID
           const channelData = this.channels.toArray().find(ch => ch.uuid === channelUuid);
           if (!channelData) {
@@ -160,7 +160,7 @@ export class WorkspaceAgentManager{
    */
   public addOrUpdateAgentCard(agentCard: AgentCard): void {
     const existingIndex = this.agentCards.toArray().findIndex(card => card.url === agentCard.url);
-    
+
     if (existingIndex >= 0) {
       // Update existing card
       this.agentCards.delete(existingIndex, 1);
@@ -183,7 +183,7 @@ export class WorkspaceAgentManager{
    */
   public removeAgentCard(agentUrl: string): boolean {
     const existingIndex = this.agentCards.toArray().findIndex(card => card.url === agentUrl);
-    
+
     if (existingIndex >= 0) {
       this.agentCards.delete(existingIndex, 1);
       return true;
@@ -259,22 +259,22 @@ export class WorkspaceAgentManager{
     const chanName = name ?? agent.name;
     const existing = this.channels.toArray().find((ch) => ch.name === chanName);
     if (existing) throw new Error('Channel already exists');
-    
+
     // Add/update the agent card in the shared collection
     this.addOrUpdateAgentCard(agent);
-    
+
     const channel: AgentChannel = {
       uuid: nanoid(),
       name: chanName,
       agentId: agent.url, // Use URL as agent ID
     };
-    
+
     this.channels.push([channel]);
     this.messages.set(channel.uuid, new Y.Array<AgentMessage>());
-    
+
     const channelWithAgent = { ...channel, agent };
     this.events.emit('channelAdded', channelWithAgent);
-    
+
     // Add a system message announcing the new channel
     const sysMsg: AgentMessage = {
       uuid: nanoid(),
@@ -300,10 +300,10 @@ export class WorkspaceAgentManager{
   public async getMessages(channelName: string): Promise<AgentMessage[]>{
     const channel = this.channels.toArray().find(c => c.name === channelName);
     if (!channel) throw new Error('Channel not found');
-    
+
     // Try to get messages by UUID first (new system)
     let arr = this.messages.get(channel.uuid);
-    
+
     // If no messages found by UUID, try the old channel name system (for backward compatibility)
     if (!arr || arr.length === 0) {
       const oldArr = this.messages.get(channelName);
@@ -313,20 +313,20 @@ export class WorkspaceAgentManager{
         const newArr = new Y.Array<AgentMessage>();
         newArr.insert(0, messages);
         this.messages.set(channel.uuid, newArr);
-        
+
         // Remove old messages (optional, for cleanup)
         this.messages.delete(channelName);
-        
+
         arr = newArr;
       }
     }
-    
+
     if (!arr) {
       // Create empty array if no messages exist
       arr = new Y.Array<AgentMessage>();
       this.messages.set(channel.uuid, arr);
     }
-    
+
     return arr.toArray();
   }
 
@@ -346,7 +346,7 @@ export class WorkspaceAgentManager{
     this.doc.transact(() => {
       // Remove the channel from the list
       this.channels.delete(channelIndex);
-      
+
       // Remove the message history using UUID
       this.messages.delete(channel.uuid);
     });
