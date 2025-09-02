@@ -89,7 +89,7 @@ export class WorkspaceInviteManager {
         throw new Error(`Server responded with ${response.status} ${response.statusText}`);
       }
 
-      console.log(`Agent invite sent successfully to ${inviteUrl} for ${invitee.name}`);
+      console.log(`Agent invite sent successfully to ${inviteUrl}`);
     } catch (err) {
       console.error(`Failed to send agent invite to ${inviteUrl}:`, err);
       throw err; // rethrow so UI can display Toast error

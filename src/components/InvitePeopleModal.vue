@@ -375,7 +375,7 @@ async function acceptRequest(invitee: IProfile) {
   if (!wksp.value) return;
 
   // Remove from global and local list to prevent accidental duplicates
-  var idx = _access_requests.indexOf(invitee.name, 0);
+  let idx = _access_requests.indexOf(invitee.name, 0);
   if (idx > -1) {
     _access_requests.splice(idx, 1);
   }
@@ -402,7 +402,7 @@ async function acceptRequest(invitee: IProfile) {
 
 function denyRequest(invitee: IProfile) {
   // Remove from global list to prevent accidental duplicates
-  var idx = _access_requests.indexOf(invitee.name, 0);
+  let idx = _access_requests.indexOf(invitee.name, 0);
   if (idx > -1) {
     _access_requests.splice(idx, 1);
   }
