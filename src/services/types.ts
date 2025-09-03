@@ -81,3 +81,62 @@ export type IProfile = {
   /* OPTIONAL: Whether the user is the owner of the workspace */
   owner?: boolean;
 };
+
+
+
+/**
+ * AgentCard describes the metadata exposed by an A2A agent.
+ * The shape of this interface matches the common fileds in the Agent-toAgent specificaiton.
+ * Additional fields may be added when needed.
+ */
+
+export interface IAgentCard {
+  /** Human readable name for the agent */
+  name: string;
+  /** Short description of the agent */
+  description: string;
+  /** Base URL where the agent is hosted */
+  url: string;
+  /** Provider information for teh agent */
+  provider?: {
+    /** Owning organisation of the agent */
+    organization?: string;
+    /** Website for the organisaiton */
+    url?: string;
+  };
+  /** A2A protocol version implemented by the agent */
+  version?: string;
+  /** Optional extra fields */
+  [key: string]: unknown;
+
+}
+
+
+/** Individual message exchanged in an agent channel. The rule field distinguishes between. messages sent by the suer and thos sent by the agent. */
+export interface IAgentMessage{
+  /** Unique identifier of the message */
+  uuid: string;
+  /** Identifier of the sender (user name or agent name)*/
+  user: string;
+  /** timestamp when the message was sent (epoch milliseconds) */
+  ts: number;
+  /** Content of the message */
+  message: string;
+  /** The role of the sender ('user' for human, 'agent' for replies) */
+  role: 'user' | 'agent';
+}
+
+
+
+/**
+ * A chat channel bound ot a specific agent. Each agent channel keeps track of the agent card so calls can be routed correctly.
+ */
+export interface IAgentChannel {
+  /** Unique identifier for the channel */
+  uuid: string;
+  /** Display name for the channel */
+  name: string;
+  /** Reference to the agent card by its URL (used as ID) */
+  agentId: string;
+}
+

@@ -6,76 +6,27 @@ import { GlobalBus } from '@/services/event-bus';
 import type { SvsProvider } from '@/services/svs-provider';
 import type { WorkspaceAPI } from './ndn';
 import type TypedEmitter from 'typed-emitter';
+import type {IAgentCard, IAgentChannel, IAgentMessage} from '@/services/types';
 
-/**
- * AgentCard describes the metadata exposed by an A2A agent.
- * The shape of this interface matches the common fileds in the Agent-toAgent specificaiton.
- * Additional fields may be added when needed.
- */
 
-export interface AgentCard {
-  /** Human readable name for the agent */
-  name: string;
-  /** Short description of the agent */
-  description: string;
-  /** Base URL where the agent is hosted */
-  url: string;
-  /** Provider information for teh agent */
-  provider?: {
-    /** Owning organisation of the agent */
-    organization?: string;
-    /** Website for the organisaiton */
-    url?: string;
-  };
-  /** A2A protocol version implemented by the agent */
-  version?: string;
-  /** Optional extra fields */
-  [key: string]: unknown;
 
-}
-
-/**
- * A chat channel bound ot a specific agent. Each agent channel keeps track of the agent card so calls can be routed correctly.
- */
-export interface AgentChannel {
-  /** Unique identifier for the channel */
-  uuid: string;
-  /** Display name for the channel */
-  name: string;
-  /** Reference to the agent card by its URL (used as ID) */
-  agentId: string;
-}
-
-/** Individual message exchanged in an agent channel. The rule field distinguishes between. messages sent by the suer and thos sent by the agent. */
-export interface AgentMessage{
-  /** Unique identifier of the message */
-  uuid: string;
-  /** Identifier of the sender (user name or agent name)*/
-  user: string;
-  /** timestamp when the message was sent (epoch milliseconds) */
-  ts: number;
-  /** Content of the message */
-  message: string;
-  /** The role of the sender ('user' for human, 'agent' for replies) */
-  role: 'user' | 'agent';
-}
 
 
 /** WorkspaceAgent encapsulates discovery of agents, creation of dedicated channels and chat with those agents. It persists its state in a Yjs document backed by an SVS provider so taht channel lists and chat history are replicated to peers via NDN */
 export class WorkspaceAgentManager{
   /** List of all available agent cards */
-  private readonly agentCards: Y.Array<AgentCard>;
+  private readonly agentCards: Y.Array<IAgentCard>;
   /** List of all agents channels*/
-  private readonly channels: Y.Array<AgentChannel>;
+  private readonly channels: Y.Array<IAgentChannel>;
   /** Map of chat messages for each channel */
-  private readonly messages: Y.Map<Y.Array<AgentMessage>>;
+  private readonly messages: Y.Map<Y.Array<IAgentMessage>>;
   /** Event emitter to notify listenrs about new messages or channel changes.
    * - 'chat' fires when a new message is added to any channel
    * - 'channelAdded' fires when a new agent channel is created.
    */
   public readonly events = new EventEmitter() as TypedEmitter<{
-    chat: (channel: string, message: AgentMessage)=> void;
-    channelAdded: (channel: AgentChannel) => void;
+    chat: (channel: string, message: IAgentMessage) => void;
+    channelAdded: (channel: IAgentChannel) => void;
   }>;
 
   /** private constructor. instances should be created via the static {@link create} method which handles loading the underlying Yjs documents. */
@@ -84,9 +35,9 @@ export class WorkspaceAgentManager{
     private readonly api: WorkspaceAPI,
     private readonly doc: Y.Doc,
   ) {
-    this.agentCards = doc.getArray<AgentCard>('_agent_cards_');
-    this.channels = doc.getArray<AgentChannel>('_agent_chan_');
-    this.messages = doc.getMap<Y.Array<AgentMessage>>('_agent_msg_');
+    this.agentCards = doc.getArray<IAgentCard>('_agent_cards_');
+    this.channels = doc.getArray<IAgentChannel>('_agent_chan_');
+    this.messages = doc.getMap<Y.Array<IAgentMessage>>('_agent_msg_');
 
     // Observe channel list changes and forward them onto the global bus.
     const emitChannels = () => {
@@ -120,7 +71,7 @@ export class WorkspaceAgentManager{
 
               messages.forEach(msg => {
                 if (msg) {
-                  this.events.emit('chat', channelName, msg as AgentMessage);
+                  this.events.emit('chat', channelName, msg as IAgentMessage);
                 }
               });
             } catch (error) {
@@ -151,14 +102,14 @@ export class WorkspaceAgentManager{
   /**
    * Get a snapshot of the current list of agent cards.
    */
-  public getAgentCards(): AgentCard[] {
+  public getAgentCards(): IAgentCard[] {
     return this.agentCards.toArray();
   }
 
   /**
    * Add or update an agent card in the shared collection.
    */
-  public addOrUpdateAgentCard(agentCard: AgentCard): void {
+  public addOrUpdateAgentCard(agentCard: IAgentCard): void {
     const existingIndex = this.agentCards.toArray().findIndex(card => card.url === agentCard.url);
 
     if (existingIndex >= 0) {
@@ -174,7 +125,7 @@ export class WorkspaceAgentManager{
   /**
    * Get an agent card by its URL (used as ID).
    */
-  public getAgentCard(agentId: string): AgentCard | undefined {
+  public getAgentCard(agentId: string): IAgentCard | undefined {
     return this.agentCards.toArray().find(card => card.url === agentId);
   }
 
@@ -194,7 +145,7 @@ export class WorkspaceAgentManager{
   /**
    * Get a snapshot of the current list of agent channels with resolved agent cards.
    */
-  public async getChannels(): Promise<(AgentChannel & { agent: AgentCard })[]> {
+  public async getChannels(): Promise<(IAgentChannel & { agent: IAgentCard })[]> {
     return this.channels.toArray().map(channel => {
       const agent = this.getAgentCard(channel.agentId);
       if (!agent) {
@@ -210,7 +161,7 @@ export class WorkspaceAgentManager{
    * @param baseUrl Base URL of the agent server (without trailing slash)
    * @returns Promise resolving to the discovered {@link AgentCard}
    */
-  public async discoverAgent(baseUrl: string): Promise<AgentCard> {
+  public async discoverAgent(baseUrl: string): Promise<IAgentCard> {
     const trimmed = baseUrl.replace(/\/+$/,'');
 
     try {
@@ -225,8 +176,8 @@ export class WorkspaceAgentManager{
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
 
-      // The fetched JSON may include unknown properties; we can cast to AgentCard
-      const card = (await res.json()) as AgentCard;
+      // The fetched JSON may include unknown properties; we can cast to IAgentCard
+      const card = (await res.json()) as IAgentCard;
 
       // Attach the base URL if missing
       if (!card.url) {
@@ -255,7 +206,7 @@ export class WorkspaceAgentManager{
    * @param name Optional custom channel name. degaults to agent.name
    * */
 
-  public async addAgentChannel(agent: AgentCard, name?: string): Promise<AgentChannel & { agent: AgentCard }>{
+  public async addAgentChannel(agent: IAgentCard, name?: string): Promise<IAgentChannel & { agent: IAgentCard }>{
     const chanName = name ?? agent.name;
     const existing = this.channels.toArray().find((ch) => ch.name === chanName);
     if (existing) throw new Error('Channel already exists');
@@ -263,20 +214,20 @@ export class WorkspaceAgentManager{
     // Add/update the agent card in the shared collection
     this.addOrUpdateAgentCard(agent);
 
-    const channel: AgentChannel = {
+    const channel: IAgentChannel = {
       uuid: nanoid(),
       name: chanName,
       agentId: agent.url, // Use URL as agent ID
     };
 
     this.channels.push([channel]);
-    this.messages.set(channel.uuid, new Y.Array<AgentMessage>());
+    this.messages.set(channel.uuid, new Y.Array<IAgentMessage>());
 
     const channelWithAgent = { ...channel, agent };
     this.events.emit('channelAdded', channelWithAgent);
 
     // Add a system message announcing the new channel
-    const sysMsg: AgentMessage = {
+    const sysMsg: IAgentMessage = {
       uuid: nanoid(),
       user: 'ownly-bot',
       ts: Date.now(),
@@ -290,14 +241,14 @@ export class WorkspaceAgentManager{
   /**
    * Retrieve the message array for a given channel UUID or throw if it does not exist.
    * */
-  private async getMsgArray(channelUuid: string): Promise<Y.Array<AgentMessage>> {
+  private async getMsgArray(channelUuid: string): Promise<Y.Array<IAgentMessage>> {
     const arr = this.messages.get(channelUuid);
     if (!arr) throw new Error('Channel does not exist');
     return arr;
   }
 
   /** Get a snapshot of the message history for a channel */
-  public async getMessages(channelName: string): Promise<AgentMessage[]>{
+  public async getMessages(channelName: string): Promise<IAgentMessage[]>{
     const channel = this.channels.toArray().find(c => c.name === channelName);
     if (!channel) throw new Error('Channel not found');
 
@@ -310,7 +261,7 @@ export class WorkspaceAgentManager{
       if (oldArr && oldArr.length > 0) {
         // Migrate old messages to new UUID-based system
         const messages = oldArr.toArray();
-        const newArr = new Y.Array<AgentMessage>();
+        const newArr = new Y.Array<IAgentMessage>();
         newArr.insert(0, messages);
         this.messages.set(channel.uuid, newArr);
 
@@ -323,7 +274,7 @@ export class WorkspaceAgentManager{
 
     if (!arr) {
       // Create empty array if no messages exist
-      arr = new Y.Array<AgentMessage>();
+      arr = new Y.Array<IAgentMessage>();
       this.messages.set(channel.uuid, arr);
     }
 
@@ -361,13 +312,13 @@ export class WorkspaceAgentManager{
    * @param channel Name of the channel ot send to
    * @param message The message to send. 'uuid' and 'ts' will be auto set.
    */
-  public async sendMessage(channelName: string, message: Omit<AgentMessage, 'uuid' | 'ts'> & { ts?: number }): Promise<void> {
+  public async sendMessage(channelName: string, message: Omit<IAgentMessage, 'uuid' | 'ts'> & { ts?: number }): Promise<void> {
     // Find the channel by name
     const chan = this.channels.toArray().find((c) => c.name === channelName);
     if (!chan) throw new Error('Channel not found');
 
     // build the message object with auto-generated uuid and timestamp
-    const msg: AgentMessage = {
+    const msg: IAgentMessage = {
       uuid: nanoid(),
       ts: message.ts ?? Date.now(),
       user: message.user,
@@ -397,7 +348,7 @@ export class WorkspaceAgentManager{
    * @ param userMsg The user message that triggered the invocation
    * @param channel Name of the channel where the reply should be stored
    */
-  private async invokeAgent(agent: AgentCard, userMsg: AgentMessage, channel: string): Promise<void>{
+  private async invokeAgent(agent: IAgentCard, userMsg: IAgentMessage, channel: string): Promise<void>{
     // Check if agent uses JSON-RPC protocol
     // requries auto-detection update later
     const useJsonRpc = agent.preferredTransport === 'JSONRPC' ||
@@ -514,7 +465,7 @@ export class WorkspaceAgentManager{
       }
     }
     // Append the agent's reply to the channel
-    const reply: AgentMessage = {
+    const reply: IAgentMessage = {
       uuid: nanoid(),
       user: agent.name,
       ts: Date.now(),

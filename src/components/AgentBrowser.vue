@@ -227,23 +227,23 @@ import ModalComponent from './ModalComponent.vue';
 import { Workspace } from '@/services/workspace';
 import { Toast } from '@/utils/toast';
 
-import type { AgentCard } from '@/services/workspace-agent';
+import type { IAgentCard } from '@/services/types';
 
 const router = useRouter();
 
 // Component state
 const activeTab = ref<'workspace' | 'discover'>('workspace');
 const loading = ref(true);
-const agentCards = ref<AgentCard[]>([]);
+const agentCards = ref<IAgentCard[]>([]);
 const showAddModal = ref(false);
 const showChannelModal = ref(false);
-const selectedAgent = ref<AgentCard | null>(null);
+const selectedAgent = ref<IAgentCard | null>(null);
 const channelName = ref('');
 
 // Discover tab state
 const discoverUrl = ref('');
 const discovering = ref(false);
-const discoveredAgent = ref<AgentCard | null>(null);
+const discoveredAgent = ref<IAgentCard | null>(null);
 
 
 onMounted(async () => {
@@ -336,7 +336,7 @@ async function addDiscoveredAgent() {
   }
 }
 
-async function addAgentChannel(agent: AgentCard) {
+async function addAgentChannel(agent: IAgentCard) {
   selectedAgent.value = agent;
   channelName.value = '';
   showChannelModal.value = true;
@@ -363,22 +363,22 @@ async function createAgentChannel() {
   }
 }
 
-async function testAgent(agent: AgentCard) {
+async function testAgent(agent: IAgentCard) {
   try {
     Toast.info(`Testing connection to ${agent.name}...`);
 
     const response = await fetch(`${agent.url}/.well-known/agent.json`);
     if (response.ok) {
-      Toast.success(`✅ ${agent.name} is responding correctly`);
+      Toast.success(`${agent.name} is responding correctly`);
     } else {
-      Toast.warning(`⚠️ ${agent.name} returned status ${response.status}`);
+      Toast.warning(`${agent.name} returned status ${response.status}`);
     }
   } catch (error) {
     Toast.error(`Failed to connect to ${agent.name}: ${error}`);
   }
 }
 
-async function removeAgent(agent: AgentCard) {
+async function removeAgent(agent: IAgentCard) {
   if (!confirm(`Are you sure you want to remove "${agent.name}" from this workspace?`)) {
     return;
   }
@@ -389,7 +389,7 @@ async function removeAgent(agent: AgentCard) {
 
     // Remove agent card from workspace using Y.js Array
     const removed = wksp.agent.removeAgentCard(agent.url);
-    
+
     if (removed) {
       // Reload the list
       await loadAgentCards();

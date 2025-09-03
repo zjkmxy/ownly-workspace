@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
 
 import type TypedEmitter from 'typed-emitter';
-import type { IChatChannel, IProject, IProjectFile } from './types';
-import type { AgentChannel } from './workspace-agent';
+import type { IChatChannel, IProject, IProjectFile, IAgentChannel } from './types';
+
 
 /**
  * Global event bus for the application.
@@ -46,5 +46,5 @@ export const GlobalBus = new EventEmitter() as TypedEmitter<{
    * Event when agent channels are updated.
    * @param channels List of agent channels
    */
-  'agent-channels': (channels: AgentChannel[]) => void;
+  'agent-channels': (channels: IAgentChannel[]) => void;
 }>;

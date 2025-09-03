@@ -137,7 +137,7 @@ import ModalComponent from './ModalComponent.vue';
 import { Workspace } from '@/services/workspace';
 import { Toast } from '@/utils/toast';
 
-import type { AgentCard } from '@/services/workspace-agent';
+import type { IAgentCard } from '@/services/types';
 
 defineProps({
   show: {
@@ -196,7 +196,7 @@ async function create() {
     if (!wksp) return;
 
     // Build agent card
-    const agentCard: AgentCard = {
+    const agentCard: IAgentCard = {
       name: form.name.trim(),
       description: form.description.trim(),
       url: form.url.trim().replace(/\/+$/, ''), // Remove trailing slashes
