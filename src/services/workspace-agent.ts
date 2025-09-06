@@ -6,38 +6,41 @@ import { GlobalBus } from '@/services/event-bus';
 import type { SvsProvider } from '@/services/svs-provider';
 import type { WorkspaceAPI } from './ndn';
 import type TypedEmitter from 'typed-emitter';
-import type {IAgentCard, IAgentChannel, IAgentMessage} from '@/services/types';
-
-
-
+import type {IAgentCard, IAgentChannel, IAgentMessage, IChatMessage} from '@/services/types';
+import type {Workspace} from '@/services/workspace';
 
 
 /** WorkspaceAgent encapsulates discovery of agents, creation of dedicated channels and chat with those agents. It persists its state in a Yjs document backed by an SVS provider so taht channel lists and chat history are replicated to peers via NDN */
 export class WorkspaceAgentManager{
   /** List of all available agent cards */
   private readonly agentCards: Y.Array<IAgentCard>;
-  /** List of all agents channels*/
+
   private readonly channels: Y.Array<IAgentChannel>;
-  /** Map of chat messages for each channel */
-  private readonly messages: Y.Map<Y.Array<IAgentMessage>>;
-  /** Event emitter to notify listenrs about new messages or channel changes.
-   * - 'chat' fires when a new message is added to any channel
-   * - 'channelAdded' fires when a new agent channel is created.
-   */
-  public readonly events = new EventEmitter() as TypedEmitter<{
-    chat: (channel: string, message: IAgentMessage) => void;
-    channelAdded: (channel: IAgentChannel) => void;
-  }>;
+  private readonly history: Y.Map<Y.Array<IAgentMessage>>;
+  public readonly events = new EventEmitter();
+
 
   /** private constructor. instances should be created via the static {@link create} method which handles loading the underlying Yjs documents. */
 
   private constructor(
     private readonly api: WorkspaceAPI,
     private readonly doc: Y.Doc,
+    private readonly provider: SvsProvider,
+    private readonly workspace: Workspace,
+
+
   ) {
+      /** Event emitter to notify listenrs about new messages or channel changes.
+     * - 'chat' fires when a new message is added to any channel
+     * - 'channelAdded' fires when a new agent channel is created.
+     */
+    this.events = this.workspace.chat.events as TypedEmitter<{
+      chat: (channel: string, message: IChatMessage) => void;
+      channelAdded: (channel: IAgentChannel) => void;
+    }>;
     this.agentCards = doc.getArray<IAgentCard>('_agent_cards_');
     this.channels = doc.getArray<IAgentChannel>('_agent_chan_');
-    this.messages = doc.getMap<Y.Array<IAgentMessage>>('_agent_msg_');
+    this.history = doc.getMap<Y.Array<IAgentMessage>>('_agent_msg_');
 
     // Observe channel list changes and forward them onto the global bus.
     const emitChannels = () => {
@@ -49,7 +52,7 @@ export class WorkspaceAgentManager{
     emitChannels();
 
     //Observe deep changes to teh message map and notify local listeners.
-    this. messages.observeDeep((events)=> {
+    this.history.observeDeep((events)=> {
       if (this.events.listenerCount(('chat'))=== 0) return;
       for (const ev of events){
         if (ev.path.length > 0) {
@@ -81,21 +84,28 @@ export class WorkspaceAgentManager{
         }
       }
     });
+
+    // Listen for chat messages to respond when agents are active in channels
+    this.workspace.chat.events.addListener('chat', this.handleChatMessage.bind(this));
   }
   /**
    * Create the agent service for a workspace. A Yjs doc name 'agent' will be loaded or vreated via the given provider.
    * @param api WorkspaceAPI instance associated with teh workspave
    * @param provider SVS provider used to persist and sync state
    */
-  public static async create(api: WorkspaceAPI, provider: SvsProvider): Promise<WorkspaceAgentManager> {
+
+
+
+  public static async create(api: WorkspaceAPI, provider: SvsProvider, workspace: Workspace): Promise<WorkspaceAgentManager> {
       const doc = await provider.getDoc('agent');
-      return new WorkspaceAgentManager(api,doc);
+      return new WorkspaceAgentManager(api, doc, provider, workspace);
     }
 
   /**
    * Destroy the agent service and release its resources.
    */
   public async destroy() {
+    this.workspace.chat.events.removeListener('chat', this.handleChatMessage.bind(this));
     this.doc.destroy();
   }
 
@@ -198,51 +208,136 @@ export class WorkspaceAgentManager{
   }
 
   /**
-   * Create a new agent channel and initialize its message history.
-   * if a channel with same dispaly name already exists, throw an exception
-   * An initial system message iwll be added to the history indicating the agent has been added.
+   * Invite an agent to join an existing chat channel.
+   * The agent will participate in the regular chat channel, not create a separate agent channel.
+   * Message history will be tracked for context purposes.
    *
-   * @param agent The agent card obtained via {@link discoverAgent}
-   * @param name Optional custom channel name. degaults to agent.name
+   * @param agent The agent card to invite
+   * @param channelName The existing chat channel to invite the agent to
    * */
+  public async inviteAgentToChannel(agent: IAgentCard, channelName: string): Promise<void> {
+    // Check if chat channel exists
+    const chatChannels = await this.workspace.chat.getChannels();
+    const channel = chatChannels.find(ch => ch.name === channelName);
 
-  public async addAgentChannel(agent: IAgentCard, name?: string): Promise<IAgentChannel & { agent: IAgentCard }>{
-    const chanName = name ?? agent.name;
-    const existing = this.channels.toArray().find((ch) => ch.name === chanName);
-    if (existing) throw new Error('Channel already exists');
+    if (!channel) {
+      throw new Error(`Chat channel '${channelName}' not found`);
+    }
 
-    // Add/update the agent card in the shared collection
+    // Add/update the agent card in workspace
     this.addOrUpdateAgentCard(agent);
 
-    const channel: IAgentChannel = {
+    // Create agent participation record for this channel
+    const agentParticipation: IAgentChannel = {
       uuid: nanoid(),
-      name: chanName,
-      agentId: agent.url, // Use URL as agent ID
+      name: channelName, // Same name as chat channel
+      agentId: agent.url,
     };
 
-    this.channels.push([channel]);
-    this.messages.set(channel.uuid, new Y.Array<IAgentMessage>());
+    // Track agent participation (allow multiple invitations)
+    this.channels.push([agentParticipation]);
 
-    const channelWithAgent = { ...channel, agent };
-    this.events.emit('channelAdded', channelWithAgent);
+    // Initialize message history tracking for context (but don't create separate messages)
+    this.history.set(agentParticipation.uuid, new Y.Array<IAgentMessage>());
 
-    // Add a system message announcing the new channel
-    const sysMsg: IAgentMessage = {
+    // Send NDN invitation to agent
+    await this.workspace.invite.invokeAgent(channelName, agent.url);
+
+    // Add system message to the CHAT channel (not agent history)
+    await this.workspace.chat.sendMessage(channelName, {
       uuid: nanoid(),
       user: 'ownly-bot',
       ts: Date.now(),
-      message: `#${chanName} agent channel was created by ${this.api.name}`,
-      role: 'agent',
-    };
-    (await this.getMsgArray(channel.uuid)).push([sysMsg]);
-    return channelWithAgent;
+      message: `${agent.name} agent has been invited to join #${channelName}`
+    });
+
+    console.log(`Agent ${agent.name} invited to chat channel #${channelName}`);
+  }
+
+  /**
+   * Get message history context for an agent in a specific channel
+   * This retrieves the last N messages
+   * It doesn't help for the client side, but if you are an agent, you can use this method to provide context.
+   */
+  public async getChannelContextForAgent(channelName: string, agentId: string, limit: number = 20): Promise<IAgentMessage[]> {
+    // Get actual chat messages from the channel
+    const chatMessages = await this.workspace.chat.getMessages(channelName);
+
+    // Convert to agent message format and return last N messages
+    const contextMessages: IAgentMessage[] = chatMessages
+      .slice(-limit)
+      .map(msg => ({
+        uuid: msg.uuid,
+        user: msg.user,
+        ts: msg.ts,
+        message: msg.message,
+        role: 'user' // Assume human messages for context
+      }));
+
+    return contextMessages;
+  }
+
+  /**
+   * Get all agents participating in a specific chat channel
+   */
+  public getAgentsInChannel(channelName: string): IAgentCard[] {
+    const agentParticipations = this.channels.toArray().filter(ch => ch.name === channelName);
+    return agentParticipations
+      .map(participation => {
+        const agent = this.getAgentCard(participation.agentId);
+        if (!agent) {
+          console.warn(`Agent card not found for participation: ${participation.agentId}. Cleaning up orphaned participation.`);
+          // Clean up orphaned participation record
+          const participationIndex = this.channels.toArray().indexOf(participation);
+          if (participationIndex >= 0) {
+            this.channels.delete(participationIndex, 1);
+          }
+          return null;
+        }
+        return agent;
+      })
+      .filter((agent): agent is IAgentCard => agent !== null);
+  }
+
+  /**
+   * Remove an agent from a chat channel
+   * to REALLY remove it we still have to get the certificate expiration time correct and have server side support.
+   * This will be implemented in the future.
+   */
+  public async removeAgentFromChannel(agentId: string, channelName: string): Promise<void> {
+    const participationIndex = this.channels.toArray().findIndex(ch =>
+      ch.name === channelName && ch.agentId === agentId
+    );
+
+    if (participationIndex === -1) {
+      throw new Error(`Agent not found in channel ${channelName}`);
+    }
+
+    const participation = this.channels.toArray()[participationIndex];
+
+    // Remove participation record and history
+    this.channels.delete(participationIndex);
+    this.history.delete(participation.uuid);
+
+    // Add system message to chat channel
+    const agent = this.getAgentCard(agentId);
+    if (agent) {
+      await this.workspace.chat.sendMessage(channelName, {
+        uuid: nanoid(),
+        user: 'ownly-bot',
+        ts: Date.now(),
+        message: `${agent.name} agent has left #${channelName}`
+      });
+    }
   }
 
   /**
    * Retrieve the message array for a given channel UUID or throw if it does not exist.
+   * This function can be deleted after further inspection.
+   * We already have retrieve for history method.
    * */
   private async getMsgArray(channelUuid: string): Promise<Y.Array<IAgentMessage>> {
-    const arr = this.messages.get(channelUuid);
+    const arr = this.history.get(channelUuid);
     if (!arr) throw new Error('Channel does not exist');
     return arr;
   }
@@ -253,20 +348,20 @@ export class WorkspaceAgentManager{
     if (!channel) throw new Error('Channel not found');
 
     // Try to get messages by UUID first (new system)
-    let arr = this.messages.get(channel.uuid);
+    let arr = this.history.get(channel.uuid);
 
     // If no messages found by UUID, try the old channel name system (for backward compatibility)
     if (!arr || arr.length === 0) {
-      const oldArr = this.messages.get(channelName);
+      const oldArr = this.history.get(channelName);
       if (oldArr && oldArr.length > 0) {
         // Migrate old messages to new UUID-based system
         const messages = oldArr.toArray();
         const newArr = new Y.Array<IAgentMessage>();
         newArr.insert(0, messages);
-        this.messages.set(channel.uuid, newArr);
+        this.history.set(channel.uuid, newArr);
 
         // Remove old messages (optional, for cleanup)
-        this.messages.delete(channelName);
+        this.history.delete(channelName);
 
         arr = newArr;
       }
@@ -275,7 +370,7 @@ export class WorkspaceAgentManager{
     if (!arr) {
       // Create empty array if no messages exist
       arr = new Y.Array<IAgentMessage>();
-      this.messages.set(channel.uuid, arr);
+      this.history.set(channel.uuid, arr);
     }
 
     return arr.toArray();
@@ -299,7 +394,7 @@ export class WorkspaceAgentManager{
       this.channels.delete(channelIndex);
 
       // Remove the message history using UUID
-      this.messages.delete(channel.uuid);
+      this.history.delete(channel.uuid);
     });
 
     console.log(`Deleted agent channel: ${channelName}`);
@@ -473,6 +568,225 @@ export class WorkspaceAgentManager{
       role: 'agent',
     };
     (await this.getMsgArray(channel)).push([reply]);
+  }
+
+  /**
+   * Handle incoming chat messages and respond if agents are active in the channel
+   */
+  private async handleChatMessage(channelName: string, message: IChatMessage): Promise<void> {
+    console.log(`[AGENT] Processing message in channel #${channelName} from ${message.user}:`, message.message);
+
+    // Check if any agents are active in this channel first
+    const agentsInChannel = this.getAgentsInChannel(channelName);
+    if (agentsInChannel.length === 0) {
+      console.log(`[AGENT] No agents active in channel #${channelName}, skipping`);
+      return;
+    }
+
+    console.log(`[AGENT] Found ${agentsInChannel.length} active agent(s):`, agentsInChannel.map(a => a.name));
+
+    // Skip if this is a message from an agent (to avoid loops)
+    if (this.isMessageFromAgent(channelName, message)) {
+      console.log(`[AGENT] Skipping message from agent ${message.user} to prevent infinite loop`);
+      return;
+    }
+
+    // Get conversation history (last 20 messages) for context
+    const chatHistory = await this.workspace.chat.getMessages(channelName);
+    const contextMessages = chatHistory.slice(-20);
+
+    // Invoke each agent with the context
+    for (const agent of agentsInChannel) {
+      try {
+        await this.invokeAgentWithContext(agent, message, channelName, contextMessages);
+      } catch (error) {
+        console.error(`Failed to invoke agent ${agent.name}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Check if a message is from an agent to avoid response loops
+   */
+  private isMessageFromAgent(channelName: string, message: IChatMessage): boolean {
+    const agentsInChannel = this.getAgentsInChannel(channelName);
+    console.log(`[AGENT] Checking if message from "${message.user}" is from agent. Agents in channel:`, agentsInChannel.map(a => a.name));
+
+    const isFromAgent = agentsInChannel.some(agent => agent.name === message.user);
+    console.log(`[AGENT] Message from "${message.user}" is from agent: ${isFromAgent}`);
+
+    return isFromAgent;
+  }
+
+  /**
+   * Internal helper to perform an A2A invocation against the given agent with conversation context.
+   * This method uses a simple HTTP POST to an '/invoke' endpoint;
+   * if the agent implements a different contract adjust this accordingly.
+   * replies will be recorded in the chat channel as regular chat messages
+   *
+   * @param agent The agent card used to determine the endpoint
+   * @param userMsg The user message that triggered the invocation
+   * @param channelName Name of the channel where the reply should be stored
+   * @param contextMessages Previous messages for context (last 20)
+   */
+  private async invokeAgentWithContext(agent: IAgentCard, userMsg: IChatMessage, channelName: string, contextMessages: IChatMessage[]): Promise<void> {
+    // Check if agent uses JSON-RPC protocol
+    // requires auto-detection update later
+    const useJsonRpc = agent.preferredTransport === 'JSONRPC' ||
+                       (agent as any).preferredTransport === 'JSONRPC' ||
+                       agent.protocolVersion === '0.3.0' ||  // Our agent card at llama server currently has this
+                       (agent as any).protocolVersion === '0.3.0';
+
+    console.log(`Invoking agent ${agent.name} with context for channel ${channelName}`);
+    console.log('Context messages count:', contextMessages.length);
+    console.log('Will use JSON-RPC:', useJsonRpc);
+
+    // Build conversation history for context
+    const conversationHistory = contextMessages.map(msg => ({
+      role: this.isMessageFromAgent(channelName, msg) ? 'assistant' : 'user',
+      content: msg.message,
+      user: msg.user,
+      timestamp: msg.ts
+    }));
+
+    let payload: any;
+    let endpoint: string;
+
+    if (useJsonRpc) {
+      // Use JSON-RPC 2.0 format with conversation history
+      payload = {
+        jsonrpc: "2.0",
+        id: userMsg.uuid,
+        method: "message/send",
+        params: {
+          message: {
+            role: "user",
+            messageId: userMsg.uuid,
+            parts: [
+              { text: userMsg.message }
+            ]
+          },
+          context: {
+            channel: channelName,
+            conversationHistory: conversationHistory
+          }
+        }
+      };
+      endpoint = agent.url.replace(/\/+$/, ''); // Use base URL for JSON-RPC
+    } else {
+      // Use A2A REST format with conversation history
+      payload = {
+        input: {
+          text: userMsg.message,
+          context: {
+            channel: channelName,
+            conversationHistory: conversationHistory
+          }
+        },
+      };
+      endpoint = `${agent.url.replace(/\/+$/, '')}/invoke`;
+    }
+
+    let responseText: string | undefined;
+
+    try {
+      console.log(`Invoking agent at: ${endpoint}`);
+      console.log('Protocol:', useJsonRpc ? 'JSON-RPC' : 'REST');
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log('Response status:', res.status);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      }
+
+      // Parse response based on protocol
+      const data = await res.json();
+      console.log('Response data:', data);
+
+      if (useJsonRpc) {
+        // Handle JSON-RPC response
+        if (data.error) {
+          throw new Error(`JSON-RPC Error: ${data.error.message || JSON.stringify(data.error)}`);
+        }
+
+        const result = data.result;
+        if (typeof result === 'string') {
+          responseText = result;
+        } else if (result && typeof result.content === 'string') {
+          responseText = result.content;
+        } else if (result && typeof result.text === 'string') {
+          responseText = result.text;
+        } else if (result && typeof result.message === 'string') {
+          responseText = result.message;
+        } else if (result && result.parts && Array.isArray(result.parts) && result.parts[0]?.text) {
+          responseText = result.parts[0].text;
+        } else {
+          responseText = JSON.stringify(result || data);
+        }
+      } else {
+        // Handle REST/A2A response
+        if (typeof data === 'string') {
+          responseText = data;
+        } else if (typeof (data as any).content === 'string') {
+          responseText = (data as any).content;
+        } else if (typeof (data as any).text === 'string') {
+          responseText = (data as any).text;
+        } else if (typeof (data as any).message === 'string') {
+          responseText = (data as any).message;
+        } else if (typeof (data as any).response === 'string') {
+          responseText = (data as any).response;
+        } else {
+          responseText = JSON.stringify(data);
+        }
+      }
+
+    } catch (e) {
+      console.error('Agent invocation error:', e);
+
+      if (e instanceof TypeError && e.message.includes('Failed to fetch') ) {
+        responseText = `CORS Error: Cannot connect to agent at ${agent.url}. The agent server needs to allow cross-origin requests from your domain. Please contact the agent provider to add CORS headers.`;
+      } else if (e instanceof Error) {
+        responseText = `Error from agent: ${e.message}`;
+      } else {
+        responseText = `Unknown error: ${e}`;
+      }
+    }
+
+    // Send the agent's reply to the chat channel (not agent channel)
+    // But don't send error messages as chat messages to avoid loops
+    if (responseText && responseText.trim()) {
+      // Check if this is an error message that shouldn't be sent as a chat message
+      const isErrorMessage = responseText.includes('Error from agent:') ||
+                           responseText.includes('CORS Error:') ||
+                           responseText.includes('HTTP 4') ||
+                           responseText.includes('HTTP 5') ||
+                           responseText.includes('Unknown error:');
+
+      if (isErrorMessage) {
+        console.error(`[AGENT] Agent ${agent.name} returned error, not sending to chat: ${responseText}`);
+        return;
+      }
+
+      const reply: IChatMessage = {
+        uuid: nanoid(),
+        user: agent.name,
+        ts: Date.now(),
+        message: responseText.trim(),
+      };
+
+      await this.workspace.chat.sendMessage(channelName, reply);
+      console.log(`[AGENT] Agent ${agent.name} replied successfully in channel ${channelName}: "${responseText.slice(0, 100)}${responseText.length > 100 ? '...' : ''}"`);
+    }
   }
 
 }

@@ -113,7 +113,6 @@ import * as utils from '@/utils';
 import { Toast } from '@/utils/toast';
 
 import type { IChatMessage } from '@/services/types';
-import type { AgentMessage, AgentChannel } from '@/services/workspace-agent';
 import { marked } from 'marked';
 import 'highlight.js/styles/vs.min.css';
 
@@ -129,25 +128,19 @@ const chatbox = useTemplateRef('chatbox');
 
 // Data state
 const wksp = shallowRef(null as Workspace | null);
-const items = ref(null as (IChatMessage | AgentMessage)[] | null);
+const items = ref(null as IChatMessage[] | null);
 const outMessage = ref(String());
-const isAgentChannel = ref(false);
-const currentAgentChannel = ref(null as AgentChannel | null);
 
 // Show the unread scroll button if the user is not at the bottom
 const unreadCount = ref(0);
 
 onMounted(async () => {
   await setup();
-
-  // Subscribe to chat messages
   wksp.value?.chat.events.addListener('chat', onChatMessage);
-  wksp.value?.agent.events.addListener('chat', onAgentMessage);
 });
 
 onUnmounted(() => {
   wksp.value?.chat.events.removeListener('chat', onChatMessage);
-  wksp.value?.agent.events.removeListener('chat', onAgentMessage);
 });
 
 // Setup again when the channel changes
@@ -165,21 +158,8 @@ async function setup() {
     // Update tab name
     document.title = utils.formTabName(wksp.value.metadata.label);
 
-    // Check if this is an agent channel
-    const agentChannels = await wksp.value.agent.getChannels();
-    const agentChannel = agentChannels.find(chan => chan.name === channelName.value);
-
-    if (agentChannel) {
-      // This is an agent channel
-      isAgentChannel.value = true;
-      currentAgentChannel.value = agentChannel;
-      items.value = await wksp.value.agent.getMessages(channelName.value);
-    } else {
-      // This is a regular chat channel
-      isAgentChannel.value = false;
-      currentAgentChannel.value = null;
-      items.value = await wksp.value.chat.getMessages(channelName.value);
-    }
+    // Load regular chat channel messages (agents now participate in regular channels)
+    items.value = await wksp.value.chat.getMessages(channelName.value);
   } catch (e) {
     console.error(e);
     Toast.error(`Failed to load channel: ${e}`);
@@ -193,12 +173,15 @@ async function setup() {
 }
 
 /** Check if a message is from an agent */
-function isAgentMessage(item: IChatMessage | AgentMessage): item is AgentMessage {
-  return 'role' in item;
+function isAgentMessage(item: IChatMessage): boolean {
+  if (!wksp.value || !item) return false;
+  // Check if the user name matches any agents in this channel
+  const agents = wksp.value.agent.getAgentsInChannel(channelName.value) || [];
+  return agents.some(agent => agent.name === item.user);
 }
 
 /** Skip the header if the user is the same and the message is within a minute */
-function skipHeader(item: IChatMessage | AgentMessage, index: number) {
+function skipHeader(item: IChatMessage, index: number) {
   if (index === 0 || !item || !items.value) return false;
   const prev = items.value[index - 1];
   if (!prev) return false;
@@ -206,8 +189,8 @@ function skipHeader(item: IChatMessage | AgentMessage, index: number) {
 }
 
 /** Format the time of a chat message */
-function formatTime(item: IChatMessage | AgentMessage) {
-  if ('tsStr' in item && item.tsStr) return item.tsStr;
+function formatTime(item: IChatMessage) {
+  if (item.tsStr) return item.tsStr;
   if (!item.ts) return 'Unknown Time';
 
   const formatter = new Intl.DateTimeFormat(undefined, {
@@ -218,9 +201,7 @@ function formatTime(item: IChatMessage | AgentMessage) {
     minute: 'numeric',
   });
   const formatted = formatter.format(new Date(item.ts));
-  if ('tsStr' in item) {
-    item.tsStr = formatted;
-  }
+  item.tsStr = formatted;
   return formatted;
 }
 
@@ -232,24 +213,14 @@ async function send(event: Event) {
   }
   if (!outMessage.value.trim()) return;
 
-  if (isAgentChannel.value) {
-    // Send message to agent channel
-    const agentMessage = {
-      user: wksp.value!.username,
-      message: outMessage.value,
-      role: 'user' as const,
-    };
-    await wksp.value?.agent.sendMessage(channelName.value, agentMessage);
-  } else {
-    // Send message to regular chat channel
-    const message = {
-      uuid: String(), // auto
-      user: wksp.value!.username,
-      ts: Date.now(),
-      message: outMessage.value,
-    };
-    await wksp.value?.chat.sendMessage(channelName.value, message);
-  }
+  // Send message to regular chat channel (agents participate in same channels)
+  const message = {
+    uuid: String(), // auto
+    user: wksp.value!.username,
+    ts: Date.now(),
+    message: outMessage.value,
+  };
+  await wksp.value?.chat.sendMessage(channelName.value, message);
 
   // Reset the input
   outMessage.value = String();
@@ -258,7 +229,7 @@ async function send(event: Event) {
 
 /** Trigger for receiving a chat message */
 function onChatMessage(channel: string, message: IChatMessage) {
-  if (channel !== channelName.value || isAgentChannel.value) return; // not for us or wrong channel type
+  if (channel !== channelName.value) return; // not for us
 
   // Add the message to the chat
   items.value!.push(message);
@@ -272,21 +243,6 @@ function onChatMessage(channel: string, message: IChatMessage) {
   }
 }
 
-/** Trigger for receiving an agent message */
-function onAgentMessage(channel: string, message: AgentMessage) {
-  if (channel !== channelName.value || !isAgentChannel.value) return; // not for us or wrong channel type
-
-  // Add the message to the chat
-  items.value!.push(message);
-
-  // Scroll to the bottom of the chat if the user is within 200px of the bottom
-  const wrapper = scroller.value.$el;
-  if (wrapper.scrollTop + wrapper.clientHeight + 200 >= wrapper.scrollHeight) {
-    scroller.value.scrollToBottom();
-  } else if (message.user !== wksp.value!.username) {
-    unreadCount.value++;
-  }
-}
 </script>
 
 <style scoped lang="scss">

@@ -92,26 +92,10 @@
 
         <p class="menu-label">AI Agents</p>
         <ul class="menu-list">
-          <li v-for="chan in agentChannels" :key="chan.uuid">
-            <router-link :to="linkDiscuss(chan)">
-              <div class="link-inner">
-                <FontAwesomeIcon class="mr-1" :icon="faRobot" size="sm" />
-                {{ chan.name }}
-              </div>
-
-              <button
-                class="link-button delete-button"
-                @click.prevent="deleteAgentChannel(chan)"
-                :title="`Delete ${chan.name} channel`"
-              >
-                <FontAwesomeIcon :icon="faTrash" size="sm" />
-              </button>
-            </router-link>
-          </li>
           <li>
             <a @click="showAgentModal = true">
-              <FontAwesomeIcon class="mr-1" :icon="faPlus" size="sm" />
-              Browse agents
+              <FontAwesomeIcon class="mr-1" :icon="faRobot" size="sm" />
+              Manage agents
             </a>
           </li>
         </ul>
@@ -195,7 +179,6 @@ import { Toast } from '@/utils/toast';
 import { Workspace } from '@/services/workspace';
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
-import type { AgentChannel } from '@/services/workspace-agent';
 import InvitePeopleModal from './InvitePeopleModal.vue';
 import QRIdentityModal from './QRIdentityModal.vue';
 
@@ -218,7 +201,6 @@ const showAgentModal = ref(false);
 const projectTree = useTemplateRef<Array<InstanceType<typeof ProjectTree>>>('projectTree');
 
 const channels = ref([] as IChatChannel[]);
-const agentChannels = ref([] as AgentChannel[]);
 
 // Use channels directly as chatChannels since they're now separate
 const chatChannels = computed(() => channels.value);
@@ -236,7 +218,6 @@ const busListeners = {
     projectFiles.value = files;
   },
   'chat-channels': (chans: IChatChannel[]) => (channels.value = chans),
-  'agent-channels': (chans: AgentChannel[]) => (agentChannels.value = chans),
   'conn-change': () => {
     connState.value = globalThis._ndnd_conn_state;
     if (!connState.value.connected) {
@@ -253,7 +234,6 @@ onMounted(async () => {
   GlobalBus.addListener('project-list', busListeners['project-list']);
   GlobalBus.addListener('project-files', busListeners['project-files']);
   GlobalBus.addListener('chat-channels', busListeners['chat-channels']);
-  GlobalBus.addListener('agent-channels', busListeners['agent-channels']);
   GlobalBus.addListener('conn-change', busListeners['conn-change']);
   interval = setInterval(() => {
     setNotification();
@@ -265,7 +245,6 @@ onUnmounted(() => {
   GlobalBus.removeListener('project-list', busListeners['project-list']);
   GlobalBus.removeListener('project-files', busListeners['project-files']);
   GlobalBus.removeListener('chat-channels', busListeners['chat-channels']);
-  GlobalBus.removeListener('agent-channels', busListeners['agent-channels']);
   GlobalBus.removeListener('conn-change', busListeners['conn-change']);
   clearInterval(interval);
 });
@@ -296,22 +275,6 @@ function linkDiscuss(channel: IChatChannel) {
   };
 }
 
-async function deleteAgentChannel(channel: AgentChannel) {
-  if (!confirm(`Are you sure you want to delete the "${channel.name}" agent channel? This will permanently remove all messages.`)) {
-    return;
-  }
-
-  try {
-    const wksp = await Workspace.setupOrRedir(router);
-    if (!wksp) return;
-
-    await wksp.agent.deleteAgentChannel(channel.name);
-    Toast.success(`Deleted agent channel: ${channel.name}`);
-  } catch (error) {
-    console.error('Failed to delete agent channel:', error);
-    Toast.error(`Failed to delete channel: ${error}`);
-  }
-}
 
 function setNotification() {
   if (_access_requests.length > 0)

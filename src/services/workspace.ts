@@ -62,12 +62,19 @@ export class Workspace {
 
       // Create general modules
       const chat = await WorkspaceChat.create(api, provider);
-    const agent = await WorkspaceAgentManager.create(api, provider);
       const proj = await WorkspaceProjManager.create(api, provider);
       const invite = await WorkspaceInviteManager.create(api, metadata, provider);
-
-      // Create workspace object
-      return new Workspace(metadata, api, provider, chat, proj, invite, agent);
+      
+      // Create workspace object first (without agent)
+      const workspace = new Workspace(metadata, api, provider, chat, proj, invite, null);
+      
+      // Then create agent with workspace reference
+      const agent = await WorkspaceAgentManager.create(api, provider, workspace);
+      
+      // Update workspace with agent
+      (workspace as any).agent = agent;
+      
+      return workspace;
     } catch (e) {
       // Clean up if we failed to start
       api?.stop();

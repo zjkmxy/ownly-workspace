@@ -76,9 +76,9 @@
                 </div>
               </div>
               <footer class="card-footer">
-                <a class="card-footer-item" @click="addAgentChannel(agent)">
+                <a class="card-footer-item" @click="inviteToChannel(agent)">
                   <FontAwesomeIcon :icon="faPlus" class="mr-1" />
-                  Add Channel
+                  Invite to Channel
                 </a>
                 <a class="card-footer-item" @click="testAgent(agent)">
                   <FontAwesomeIcon :icon="faFlask" class="mr-1" />
@@ -138,9 +138,9 @@
                     <FontAwesomeIcon :icon="faPlus" class="mr-1" />
                     Add to Workspace
                   </button>
-                  <button class="button is-small" @click="addAgentChannel(discoveredAgent)">
+                  <button class="button is-small" @click="inviteToChannel(discoveredAgent)">
                     <FontAwesomeIcon :icon="faComments" class="mr-1" />
-                    Create Channel
+                    Invite to Channel
                   </button>
                 </div>
               </div>
@@ -175,28 +175,30 @@
       @close="showAddModal = false"
     />
 
-    <!-- Add Channel Modal -->
+    <!-- Invite to Channel Modal -->
     <ModalComponent :show="showChannelModal" @close="showChannelModal = false">
-      <div class="title is-5 mb-4">Add Agent Channel</div>
+      <div class="title is-5 mb-4">Invite Agent to Channel</div>
 
       <div class="field">
-        <label class="label">Channel Name</label>
+        <label class="label">Select Channel</label>
         <div class="control">
-          <input
-            class="input"
-            type="text"
-            v-model="channelName"
-            :placeholder="selectedAgent?.name || 'agent-channel'"
-          />
-          <p class="help">Leave empty to use the agent's name</p>
+          <div class="select is-fullwidth">
+            <select v-model="selectedChannelName">
+              <option value="">Choose a channel...</option>
+              <option v-for="channel in availableChannels" :key="channel.name" :value="channel.name">
+                #{{ channel.name }}
+              </option>
+            </select>
+          </div>
+          <p class="help">Select an existing chat channel to invite the agent to</p>
         </div>
       </div>
 
       <div class="field has-text-right">
         <div class="control">
           <button class="button mr-2" @click="showChannelModal = false">Cancel</button>
-          <button class="button is-primary soft-if-dark" @click="createAgentChannel">
-            Create Channel
+          <button class="button is-primary soft-if-dark" @click="inviteAgentToSelectedChannel" :disabled="!selectedChannelName">
+            Send Invitation
           </button>
         </div>
       </div>
@@ -238,7 +240,8 @@ const agentCards = ref<IAgentCard[]>([]);
 const showAddModal = ref(false);
 const showChannelModal = ref(false);
 const selectedAgent = ref<IAgentCard | null>(null);
-const channelName = ref('');
+const selectedChannelName = ref('');
+const availableChannels = ref<{name: string}[]>([]);
 
 // Discover tab state
 const discoverUrl = ref('');
@@ -336,30 +339,40 @@ async function addDiscoveredAgent() {
   }
 }
 
-async function addAgentChannel(agent: IAgentCard) {
+async function inviteToChannel(agent: IAgentCard) {
   selectedAgent.value = agent;
-  channelName.value = '';
-  showChannelModal.value = true;
+  selectedChannelName.value = '';
+  
+  try {
+    const wksp = await Workspace.setupOrRedir(router);
+    if (!wksp) return;
+    
+    // Load available chat channels
+    availableChannels.value = await wksp.chat.getChannels();
+    showChannelModal.value = true;
+  } catch (error) {
+    console.error('Failed to load channels:', error);
+    Toast.error('Failed to load channels');
+  }
 }
 
-async function createAgentChannel() {
-  if (!selectedAgent.value) return;
+async function inviteAgentToSelectedChannel() {
+  if (!selectedAgent.value || !selectedChannelName.value) return;
 
   try {
     const wksp = await Workspace.setupOrRedir(router);
     if (!wksp) return;
 
-    const name = channelName.value.trim() || selectedAgent.value.name;
+    // Use the new invitation system instead of creating separate agent channels
+    await wksp.agent.inviteAgentToChannel(selectedAgent.value, selectedChannelName.value);
 
-    await wksp.agent.addAgentChannel(selectedAgent.value, name);
-
-    Toast.success(`Created agent channel: ${name}`);
+    Toast.success(`Invited ${selectedAgent.value.name} to #${selectedChannelName.value}`);
     showChannelModal.value = false;
-    channelName.value = '';
+    selectedChannelName.value = '';
     selectedAgent.value = null;
   } catch (error) {
-    console.error('Failed to create agent channel:', error);
-    Toast.error(`Failed to create channel: ${error}`);
+    console.error('Failed to invite agent:', error);
+    Toast.error(`Failed to invite agent: ${error}`);
   }
 }
 
