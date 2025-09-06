@@ -134,22 +134,6 @@
       <code>{{ members.join('\n') }}</code>
     </p>
 
-    <div class="title is-6 mb-4">Invoke Agent</div>
-    <div class="field mt-2">
-      <input class="input" type="text" placeholder="Channel (default: general)" v-model="inviteChannel" :disabled="!isOwner" />
-    </div>
-
-    <div class="field mt-2">
-      <input class="input" type="text" placeholder="Invocation URL" v-model="inviteUrl" :disabled="!isOwner" />
-    </div>
-
-    <div class="field has-text-right mt-2">
-      <div class="control">
-        <button class="button is-primary soft-if-dark mr-2" @click="invokeAgent">
-          Invoke
-        </button>
-      </div>
-    </div>
   </ModalComponent>
 </template>
 
@@ -182,8 +166,6 @@ const scroller = useTemplateRef<typeof DynamicScroller>('scroller');
 const wksp = shallowRef<Workspace | null>(null);
 const inviteLink = ref(String());
 const inviteInput = ref(String())
-const inviteChannel = ref('general'); // default channel
-const inviteUrl = ref('');            // default empty URL
 const isOwner = computed(() => !!wksp.value?.metadata.owner);
 const members = ref([] as string[]);
 const invitees = ref([] as IProfile[]);
@@ -433,11 +415,6 @@ async function send() {
   emit('close');
 }
 
-async function invokeAgent() {
-  if (!wksp.value) return
-
-  wksp.value.invite.invokeAgent(inviteChannel.value, inviteUrl.value);
-}
 </script>
 
 <style scoped lang="scss">
