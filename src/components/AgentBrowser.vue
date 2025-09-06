@@ -80,10 +80,6 @@
                   <FontAwesomeIcon :icon="faPlus" class="mr-1" />
                   Invite to Channel
                 </a>
-                <a class="card-footer-item" @click="testAgent(agent)">
-                  <FontAwesomeIcon :icon="faFlask" class="mr-1" />
-                  Test
-                </a>
                 <a class="card-footer-item has-text-danger" @click="removeAgent(agent)">
                   <FontAwesomeIcon :icon="faTrash" class="mr-1" />
                   Remove
@@ -215,7 +211,6 @@ import {
   faRobot,
   faPlus,
   faLink,
-  faFlask,
   faTrash,
   faSearch,
   faComments,
@@ -342,11 +337,11 @@ async function addDiscoveredAgent() {
 async function inviteToChannel(agent: IAgentCard) {
   selectedAgent.value = agent;
   selectedChannelName.value = '';
-  
+
   try {
     const wksp = await Workspace.setupOrRedir(router);
     if (!wksp) return;
-    
+
     // Load available chat channels
     availableChannels.value = await wksp.chat.getChannels();
     showChannelModal.value = true;
@@ -376,20 +371,7 @@ async function inviteAgentToSelectedChannel() {
   }
 }
 
-async function testAgent(agent: IAgentCard) {
-  try {
-    Toast.info(`Testing connection to ${agent.name}...`);
 
-    const response = await fetch(`${agent.url}/.well-known/agent.json`);
-    if (response.ok) {
-      Toast.success(`${agent.name} is responding correctly`);
-    } else {
-      Toast.warning(`${agent.name} returned status ${response.status}`);
-    }
-  } catch (error) {
-    Toast.error(`Failed to connect to ${agent.name}: ${error}`);
-  }
-}
 
 async function removeAgent(agent: IAgentCard) {
   if (!confirm(`Are you sure you want to remove "${agent.name}" from this workspace?`)) {
