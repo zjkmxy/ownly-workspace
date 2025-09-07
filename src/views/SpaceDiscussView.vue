@@ -175,9 +175,12 @@ async function setup() {
 /** Check if a message is from an agent */
 function isAgentMessage(item: IChatMessage): boolean {
   if (!wksp.value || !item) return false;
-  // Check if the user name matches any agents in this channel
-  const agents = wksp.value.agent.getAgentsInChannel(channelName.value) || [];
-  return agents.some(agent => agent.name === item.user);
+  // Check if the user name matches any agents in this channel (make sure it's not null)
+  if (wksp.value.agent) {
+    const agents = wksp.value.agent.getAgentsInChannel(channelName.value) || [];
+    return agents.some(agent => agent.name === item.user);
+  }
+  return false;
 }
 
 /** Skip the header if the user is the same and the message is within a minute */

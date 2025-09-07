@@ -33,7 +33,7 @@ export class Workspace {
     public readonly chat: WorkspaceChat,
     public readonly proj: WorkspaceProjManager,
     public readonly invite: WorkspaceInviteManager,
-    public readonly agent: WorkspaceAgentManager
+    public readonly agent: WorkspaceAgentManager | null
   ) { }
 
   /**
@@ -64,16 +64,16 @@ export class Workspace {
       const chat = await WorkspaceChat.create(api, provider);
       const proj = await WorkspaceProjManager.create(api, provider);
       const invite = await WorkspaceInviteManager.create(api, metadata, provider);
-      
+
       // Create workspace object first (without agent)
       const workspace = new Workspace(metadata, api, provider, chat, proj, invite, null);
-      
+
       // Then create agent with workspace reference
       const agent = await WorkspaceAgentManager.create(api, provider, workspace);
-      
+
       // Update workspace with agent
       (workspace as any).agent = agent;
-      
+
       return workspace;
     } catch (e) {
       // Clean up if we failed to start
@@ -90,7 +90,9 @@ export class Workspace {
     await this.proj.destroy();
     await this.chat.destroy();
     await this.provider?.destroy();
-    await this.agent.destroy();
+    if (this.agent) {
+      await this.agent.destroy();
+    }
     await this.api?.stop();
     await this.invite.destroy();
   }
@@ -212,7 +214,7 @@ export class Workspace {
 
     // Generate DSK if creating a new workspace
     const dsk = create ? new Uint8Array(32) : null;
-    if (create) globalThis.crypto.getRandomValues(dsk);
+    if (create && dsk) globalThis.crypto.getRandomValues(dsk);
 
     // Join workspace - this will check invitation etc.
     const finalName = await ndn.api.join_workspace(wksp, create);

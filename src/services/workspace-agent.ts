@@ -259,7 +259,7 @@ export class WorkspaceAgentManager{
    * This retrieves the last N messages
    * It doesn't help for the client side, but if you are an agent, you can use this method to provide context.
    */
-  public async getChannelContextForAgent(channelName: string, agentId: string, limit: number = 20): Promise<IAgentMessage[]> {
+  public async getChannelContextForAgent(channelName: string, limit: number = 20): Promise<IAgentMessage[]> {
     // Get actual chat messages from the channel
     const chatMessages = await this.workspace.chat.getMessages(channelName);
 
@@ -302,6 +302,7 @@ export class WorkspaceAgentManager{
   /**
    * Remove an agent from a chat channel
    * to REALLY remove it we still have to get the certificate expiration time correct and have server side support.
+   * Also, it works differently for HTTP VS NDN, so we should have a clear policy for both.
    * This will be implemented in the future.
    */
   public async removeAgentFromChannel(agentId: string, channelName: string): Promise<void> {
@@ -331,16 +332,6 @@ export class WorkspaceAgentManager{
     }
   }
 
-  /**
-   * Retrieve the message array for a given channel UUID or throw if it does not exist.
-   * This function can be deleted after further inspection.
-   * We already have retrieve for history method.
-   * */
-  private async getMsgArray(channelUuid: string): Promise<Y.Array<IAgentMessage>> {
-    const arr = this.history.get(channelUuid);
-    if (!arr) throw new Error('Channel does not exist');
-    return arr;
-  }
 
   /** Get a snapshot of the message history for a channel */
   public async getMessages(channelName: string): Promise<IAgentMessage[]>{
@@ -374,63 +365,6 @@ export class WorkspaceAgentManager{
     }
 
     return arr.toArray();
-  }
-
-  /**
-   * Delete an agent channel and all its messages.
-   * @param channelName Name of the channel to delete
-   */
-  public async deleteAgentChannel(channelName: string): Promise<void> {
-    const channelIndex = this.channels.toArray().findIndex((ch) => ch.name === channelName);
-    if (channelIndex === -1) {
-      throw new Error('Channel not found');
-    }
-
-    const channel = this.channels.toArray()[channelIndex];
-
-    // Perform all deletions in a single Y.js transaction for atomicity
-    this.doc.transact(() => {
-      // Remove the channel from the list
-      this.channels.delete(channelIndex);
-
-      // Remove the message history using UUID
-      this.history.delete(channel.uuid);
-    });
-
-    console.log(`Deleted agent channel: ${channelName}`);
-  }
-
-  /**
-   * Send a message to a channel.
-   * if the message role is user it will be forwarded to the underlying agent via {@link invokeAgent}
-   * Reply will be appended to the same channel once received.
-   * @param channel Name of the channel ot send to
-   * @param message The message to send. 'uuid' and 'ts' will be auto set.
-   */
-  public async sendMessage(channelName: string, message: Omit<IAgentMessage, 'uuid' | 'ts'> & { ts?: number }): Promise<void> {
-    // Find the channel by name
-    const chan = this.channels.toArray().find((c) => c.name === channelName);
-    if (!chan) throw new Error('Channel not found');
-
-    // build the message object with auto-generated uuid and timestamp
-    const msg: IAgentMessage = {
-      uuid: nanoid(),
-      ts: message.ts ?? Date.now(),
-      user: message.user,
-      message: message.message,
-      role: message.role,
-    };
-    (await this.getMsgArray(chan.uuid)).push([msg]);
-    //If this is a user message, forward it to the agent asynchronously
-    if (msg.role === 'user'){
-      const agentCard = this.getAgentCard(chan.agentId);
-      if (agentCard) {
-        this.invokeAgent(agentCard, msg, chan.uuid).catch((e) => {
-          console.error('Agent invocation failed', e);
-        });
-      }
-    }
-
   }
 
   /**
@@ -567,7 +501,18 @@ export class WorkspaceAgentManager{
       message: responseText ??  '',
       role: 'agent',
     };
-    (await this.getMsgArray(channel)).push([reply]);
+
+    // Find the channel and append to its message history
+    const channelData = this.channels.toArray().find(ch => ch.name === channel);
+    if (channelData) {
+      let arr = this.history.get(channelData.uuid);
+      if (!arr) {
+        arr = new Y.Array<IAgentMessage>();
+        this.history.set(channelData.uuid, arr);
+      }
+      arr.push([reply]);
+    }
+
   }
 
   /**

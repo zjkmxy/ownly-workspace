@@ -281,7 +281,9 @@ async function loadAgentCards() {
     if (!wksp) return;
 
     // Load agent cards from WorkspaceAgentManager Y.js Array
-    agentCards.value = wksp.agent.getAgentCards();
+    if (wksp.agent) {
+      agentCards.value = wksp.agent.getAgentCards();
+    }
     console.log('Loaded agent cards from Y.js Array:', agentCards.value);
   } catch (error) {
     console.error('Failed to load agent cards:', error);
@@ -299,9 +301,13 @@ async function discoverAgent() {
     discovering.value = true;
     const wksp = await Workspace.setupOrRedir(router);
     if (!wksp) return;
+    if (wksp.agent) {
+      discoveredAgent.value = await wksp.agent.discoverAgent(discoverUrl.value.trim());
+      if (discoveredAgent.value) {
+        Toast.success(`Discovered agent: ${discoveredAgent.value.name}`);
+      }
+    }
 
-    discoveredAgent.value = await wksp.agent.discoverAgent(discoverUrl.value.trim());
-    Toast.success(`Discovered agent: ${discoveredAgent.value.name}`);
   } catch (error) {
     console.error('Discovery failed:', error);
     Toast.error(`Failed to discover agent: ${error}`);
@@ -319,7 +325,9 @@ async function addDiscoveredAgent() {
     if (!wksp) return;
 
     // Add agent card to workspace using Y.js Array
-    wksp.agent.addOrUpdateAgentCard(discoveredAgent.value);
+    if (wksp.agent) {
+      wksp.agent.addOrUpdateAgentCard(discoveredAgent.value);
+    }
 
     // Reload the list
     await loadAgentCards();
@@ -359,7 +367,9 @@ async function inviteAgentToSelectedChannel() {
     if (!wksp) return;
 
     // Use the new invitation system instead of creating separate agent channels
-    await wksp.agent.inviteAgentToChannel(selectedAgent.value, selectedChannelName.value);
+    if (wksp.agent) {
+      await wksp.agent.inviteAgentToChannel(selectedAgent.value, selectedChannelName.value);
+    }
 
     Toast.success(`Invited ${selectedAgent.value.name} to #${selectedChannelName.value}`);
     showChannelModal.value = false;
@@ -383,14 +393,17 @@ async function removeAgent(agent: IAgentCard) {
     if (!wksp) return;
 
     // Remove agent card from workspace using Y.js Array
-    const removed = wksp.agent.removeAgentCard(agent.url);
+    if (wksp.agent) {
+      const removed = wksp.agent.removeAgentCard(agent.url);
 
-    if (removed) {
-      // Reload the list
-      await loadAgentCards();
-      Toast.success(`Removed agent "${agent.name}"`);
-    } else {
-      Toast.error(`Agent "${agent.name}" not found`);
+      if (removed) {
+        // Reload the list
+        await loadAgentCards();
+        Toast.success(`Removed agent "${agent.name}"`);
+      }
+      else {
+        Toast.error(`Agent "${agent.name}" not found`);
+      }
     }
   } catch (error) {
     console.error('Failed to remove agent:', error);

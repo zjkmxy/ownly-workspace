@@ -149,8 +149,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, useTemplateRef } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-
+import { useRoute } from 'vue-router';
+//import { useRouter } from 'vue-router';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import {
   faLayerGroup,
@@ -162,7 +162,6 @@ import {
   faQrcode,
   faCircleInfo,
   faRobot,
-  faTrash,
   faCircleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
@@ -176,14 +175,14 @@ import ModalComponent from './ModalComponent.vue';
 
 import { GlobalBus } from '@/services/event-bus';
 import { Toast } from '@/utils/toast';
-import { Workspace } from '@/services/workspace';
+//import { Workspace } from '@/services/workspace';
 
 import type { IChatChannel, IProject, IProjectFile } from '@/services/types';
 import InvitePeopleModal from './InvitePeopleModal.vue';
 import QRIdentityModal from './QRIdentityModal.vue';
 
 const route = useRoute();
-const router = useRouter();
+//const router = useRouter();
 const routeIsDashboard = computed(() =>
   ['dashboard', 'join', 'about'].includes(String(route.name)),
 );

@@ -36,13 +36,13 @@
         <input
           class="input"
           type="url"
-          placeholder="https://example.com"
+          placeholder="http://localhost:3000/agent"
           v-model="form.url"
         />
-        <p class="help">Base URL where the agent is hosted (without trailing slash)</p>
+        <p class="help">Base URL where the NDN agent is hosted (without trailing slash)</p>
       </div>
     </div>
-
+<!--
     <div class="field">
       <label class="label">Provider Organization</label>
       <div class="control">
@@ -114,7 +114,7 @@
         </button>
         <p class="help">Optional: Additional custom properties for the agent card</p>
       </div>
-    </div>
+    </div> -->
 
     <div class="field has-text-right">
       <div class="control">
@@ -129,8 +129,8 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+// import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+// import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 import ModalComponent from './ModalComponent.vue';
 
@@ -159,13 +159,13 @@ const form = reactive({
 
 const customFields = ref<{ key: string; value: string }[]>([]);
 
-function addCustomField() {
-  customFields.value.push({ key: '', value: '' });
-}
+// function addCustomField() {
+//   customFields.value.push({ key: '', value: '' });
+// }
 
-function removeCustomField(index: number) {
-  customFields.value.splice(index, 1);
-}
+// function removeCustomField(index: number) {
+//   customFields.value.splice(index, 1);
+// }
 
 async function create() {
   try {
@@ -226,7 +226,9 @@ async function create() {
     }
 
     // Save agent card to workspace using Y.js Array
-    wksp.agent.addOrUpdateAgentCard(agentCard);
+    if (wksp.agent) {
+      wksp.agent.addOrUpdateAgentCard(agentCard);
+    }
 
     Toast.success(`Agent card "${form.name}" added successfully`);
     emit('close');
