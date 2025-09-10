@@ -56,9 +56,7 @@
                   </div>
                   <div class="media-content">
                     <p class="title is-6">{{ agent.name }}</p>
-                    <p class="subtitle is-7 has-text-grey">
-                      {{ agent.provider?.organization || 'Unknown Provider' }}
-                    </p>
+                    <p class="subtitle is-7">{{ agent.url }}</p>
                   </div>
                 </div>
 
@@ -68,9 +66,6 @@
                     <span class="tag is-light is-small">
                       <FontAwesomeIcon :icon="faLink" class="mr-1" />
                       {{ getHostname(agent.url) }}
-                    </span>
-                    <span v-if="agent.version" class="tag is-light is-small ml-1">
-                      v{{ agent.version }}
                     </span>
                   </div>
                 </div>

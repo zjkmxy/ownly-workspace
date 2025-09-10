@@ -97,16 +97,7 @@ export interface IAgentCard {
   description: string;
   /** Base URL where the agent is hosted */
   url: string;
-  /** Provider information for teh agent */
-  provider?: {
-    /** Owning organisation of the agent */
-    organization?: string;
-    /** Website for the organisaiton */
-    url?: string;
-  };
-  /** A2A protocol version implemented by the agent */
-  version?: string;
-  /** Optional extra fields */
+
   [key: string]: unknown;
 
 }

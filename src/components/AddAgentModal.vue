@@ -202,21 +202,8 @@ async function create() {
       url: form.url.trim().replace(/\/+$/, ''), // Remove trailing slashes
     };
 
-    // Add optional provider info
-    if (form.providerOrganization.trim() || form.providerUrl.trim()) {
-      agentCard.provider = {};
-      if (form.providerOrganization.trim()) {
-        agentCard.provider.organization = form.providerOrganization.trim();
-      }
-      if (form.providerUrl.trim()) {
-        agentCard.provider.url = form.providerUrl.trim();
-      }
-    }
 
-    // Add version if provided
-    if (form.version.trim()) {
-      agentCard.version = form.version.trim();
-    }
+
 
     // Add custom fields
     for (const field of customFields.value) {
