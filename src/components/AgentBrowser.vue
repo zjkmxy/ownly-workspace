@@ -21,9 +21,6 @@
         <li :class="{ 'is-active': activeTab === 'workspace' }">
           <a @click="activeTab = 'workspace'">Workspace Agents</a>
         </li>
-        <li :class="{ 'is-active': activeTab === 'discover' }">
-          <a @click="activeTab = 'discover'">Discover</a>
-        </li>
       </ul>
     </div>
 
@@ -84,80 +81,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Discover Tab -->
-      <div v-if="activeTab === 'discover'" class="discover-agents">
-        <div class="field has-addons">
-          <div class="control is-expanded">
-            <input
-              class="input"
-              type="url"
-              v-model="discoverUrl"
-              placeholder="Enter agent URL to discover (e.g. https://example.com)"
-              @keyup.enter="discoverAgent"
-            />
-          </div>
-          <div class="control">
-            <button
-              class="button is-primary"
-              @click="discoverAgent"
-              :class="{ 'is-loading': discovering }"
-              :disabled="!discoverUrl.trim()"
-            >
-              <FontAwesomeIcon :icon="faSearch" class="mr-1" />
-              Discover
-            </button>
-          </div>
-        </div>
-
-        <div v-if="discoveredAgent" class="discovered-agent mt-4">
-          <div class="notification is-info">
-            <button class="delete" @click="discoveredAgent = null"></button>
-            <div class="media">
-              <div class="media-left">
-                <figure class="image is-48x48">
-                  <div class="agent-avatar">
-                    <FontAwesomeIcon :icon="faRobot" size="lg" />
-                  </div>
-                </figure>
-              </div>
-              <div class="media-content">
-                <p class="title is-6">{{ discoveredAgent.name }}</p>
-                <p class="subtitle is-7">{{ discoveredAgent.description }}</p>
-                <div class="buttons mt-3">
-                  <button class="button is-primary is-small" @click="addDiscoveredAgent">
-                    <FontAwesomeIcon :icon="faPlus" class="mr-1" />
-                    Add to Workspace
-                  </button>
-                  <button class="button is-small" @click="inviteToChannel(discoveredAgent)">
-                    <FontAwesomeIcon :icon="faComments" class="mr-1" />
-                    Invite to Channel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="help-section mt-4">
-          <h6 class="title is-6">How to discover agents:</h6>
-          <ul>
-            <li>Enter the base URL of an agent server</li>
-            <li>The system will look for <code>/.well-known/agent.json</code></li>
-            <li>Compatible agents will be automatically detected</li>
-          </ul>
-
-          <div class="notification is-warning mt-3">
-            <strong>CORS Issues?</strong> If you get a "Failed to fetch" error, the agent server doesn't allow cross-origin requests.
-            You can:
-            <ol class="mt-2">
-              <li>Ask the agent provider to add CORS headers</li>
-              <li>Use the "Add Agent" tab to manually create the agent card</li>
-              <li>Copy the agent.json content from your browser and paste the details manually</li>
-            </ol>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Add Agent Modal -->
@@ -207,8 +130,6 @@ import {
   faPlus,
   faLink,
   faTrash,
-  faSearch,
-  faComments,
   faRefresh
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -224,7 +145,7 @@ import type { IAgentCard } from '@/services/types';
 const router = useRouter();
 
 // Component state
-const activeTab = ref<'workspace' | 'discover'>('workspace');
+const activeTab = ref<'workspace'>('workspace');
 const loading = ref(true);
 const agentCards = ref<IAgentCard[]>([]);
 const showAddModal = ref(false);
@@ -233,10 +154,6 @@ const selectedAgent = ref<IAgentCard | null>(null);
 const selectedChannelName = ref('');
 const availableChannels = ref<{name: string}[]>([]);
 
-// Discover tab state
-const discoverUrl = ref('');
-const discovering = ref(false);
-const discoveredAgent = ref<IAgentCard | null>(null);
 
 
 onMounted(async () => {
@@ -250,24 +167,6 @@ function getHostname(url: string): string {
     return url;
   }
 }
-
-// async function repairAgentFile(proj: any, existingMeta: any) {
-//   // Delete the corrupted file entry
-//   await proj.deleteFile('.well-known/agent.json');
-
-//   // Create an empty agent.json file with proper structure
-//   const emptyAgentJson = JSON.stringify([], null, 2);
-//   const stream = new ReadableStream<Uint8Array>({
-//     start(controller) {
-//       controller.enqueue(new TextEncoder().encode(emptyAgentJson));
-//       controller.close();
-//     }
-//   });
-
-//   // Import the file properly
-//   await proj.importFile('.well-known/agent.json', stream);
-//   console.log('Agent file repaired with empty structure');
-// }
 
 async function loadAgentCards() {
   try {
@@ -289,53 +188,6 @@ async function loadAgentCards() {
   }
 }
 
-async function discoverAgent() {
-  if (!discoverUrl.value.trim()) return;
-
-  try {
-    discovering.value = true;
-    const wksp = await Workspace.setupOrRedir(router);
-    if (!wksp) return;
-    if (wksp.agent) {
-      discoveredAgent.value = await wksp.agent.discoverAgent(discoverUrl.value.trim());
-      if (discoveredAgent.value) {
-        Toast.success(`Discovered agent: ${discoveredAgent.value.name}`);
-      }
-    }
-
-  } catch (error) {
-    console.error('Discovery failed:', error);
-    Toast.error(`Failed to discover agent: ${error}`);
-    discoveredAgent.value = null;
-  } finally {
-    discovering.value = false;
-  }
-}
-
-async function addDiscoveredAgent() {
-  if (!discoveredAgent.value) return;
-
-  try {
-    const wksp = await Workspace.setupOrRedir(router);
-    if (!wksp) return;
-
-    // Add agent card to workspace using Y.js Array
-    if (wksp.agent) {
-      wksp.agent.addOrUpdateAgentCard(discoveredAgent.value);
-    }
-
-    // Reload the list
-    await loadAgentCards();
-
-    Toast.success(`Added agent "${discoveredAgent.value.name}" to workspace`);
-    discoveredAgent.value = null;
-    discoverUrl.value = '';
-    activeTab.value = 'workspace';
-  } catch (error) {
-    console.error('Failed to add agent:', error);
-    Toast.error(`Failed to add agent: ${error}`);
-  }
-}
 
 async function inviteToChannel(agent: IAgentCard) {
   selectedAgent.value = agent;

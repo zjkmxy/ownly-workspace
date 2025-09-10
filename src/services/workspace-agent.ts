@@ -93,9 +93,6 @@ export class WorkspaceAgentManager{
    * @param api WorkspaceAPI instance associated with teh workspave
    * @param provider SVS provider used to persist and sync state
    */
-
-
-
   public static async create(api: WorkspaceAPI, provider: SvsProvider, workspace: Workspace): Promise<WorkspaceAgentManager> {
       const doc = await provider.getDoc('agent');
       return new WorkspaceAgentManager(api, doc, provider, workspace);
@@ -163,48 +160,6 @@ export class WorkspaceAgentManager{
       }
       return { ...channel, agent };
     });
-  }
-
-  /**
-   * Discover an agent card from a base URL. The default lookup path is './well-known/agent.json' as per the A2A specification. On success, retrieved JSON will be returned as an {@link AgentCard}.
-   * If the request fails an exception will be thrown.
-   * @param baseUrl Base URL of the agent server (without trailing slash)
-   * @returns Promise resolving to the discovered {@link AgentCard}
-   */
-  public async discoverAgent(baseUrl: string): Promise<IAgentCard> {
-    const trimmed = baseUrl.replace(/\/+$/,'');
-
-    try {
-      const res = await fetch(`${trimmed}/.well-known/agent.json`, {
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-      }
-
-      // The fetched JSON may include unknown properties; we can cast to IAgentCard
-      const card = (await res.json()) as IAgentCard;
-
-      // Attach the base URL if missing
-      if (!card.url) {
-        card.url = trimmed;
-      }
-
-      return card;
-    } catch (error) {
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        throw new Error(
-          `CORS Error: Cannot connect to ${baseUrl}. ` +
-          `The agent server needs to allow cross-origin requests from your domain. ` +
-          `Please add CORS headers or use a CORS proxy.`
-        );
-      }
-      throw new Error(`Failed to discover agent at ${baseUrl}: ${error}`);
-    }
   }
 
   /**
