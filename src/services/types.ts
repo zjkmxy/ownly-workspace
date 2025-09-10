@@ -86,7 +86,7 @@ export type IProfile = {
 
 /**
  * AgentCard describes the metadata exposed by an A2A agent.
- * The shape of this interface matches the common fileds in the Agent-toAgent specificaiton.
+ * The shape of this interface matches the common fields in the Agent-to-Agent specification.
  * Additional fields may be added when needed.
  */
 
