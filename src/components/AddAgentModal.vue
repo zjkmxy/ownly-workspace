@@ -129,8 +129,6 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 
-// import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-// import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 
 import ModalComponent from './ModalComponent.vue';
 
@@ -159,13 +157,6 @@ const form = reactive({
 
 const customFields = ref<{ key: string; value: string }[]>([]);
 
-// function addCustomField() {
-//   customFields.value.push({ key: '', value: '' });
-// }
-
-// function removeCustomField(index: number) {
-//   customFields.value.splice(index, 1);
-// }
 
 async function create() {
   try {
