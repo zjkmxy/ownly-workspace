@@ -89,7 +89,7 @@ export class WorkspaceAgentManager{
     // this.workspace.chat.events.addListener('chat', this.handleChatMessage.bind(this));
   }
   /**
-   * Create the agent service for a workspace. A Yjs doc name 'agent' will be loaded or vreated via the given provider.
+   * Create the agent service for a workspace. A Yjs doc name 'agent' will be loaded or created via the given provider.
    * @param api WorkspaceAPI instance associated with teh workspave
    * @param provider SVS provider used to persist and sync state
    */
