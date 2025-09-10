@@ -103,7 +103,7 @@ export interface IAgentCard {
 }
 
 
-/** Individual message exchanged in an agent channel. The rule field distinguishes between. messages sent by the suer and thos sent by the agent. */
+/** Individual message exchanged in an agent channel. The role field distinguishes between messages sent by the user and those sent by the agent. */
 export interface IAgentMessage{
   /** Unique identifier of the message */
   uuid: string;
