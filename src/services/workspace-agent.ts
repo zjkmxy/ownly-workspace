@@ -10,7 +10,7 @@ import type {IAgentCard, IAgentChannel, IAgentMessage, IChatMessage} from '@/ser
 import type {Workspace} from '@/services/workspace';
 
 
-/** WorkspaceAgent encapsulates discovery of agents, creation of dedicated channels and chat with those agents. It persists its state in a Yjs document backed by an SVS provider so taht channel lists and chat history are replicated to peers via NDN */
+/** WorkspaceAgent encapsulates discovery of agents, creation of dedicated channels and chat with those agents. It persists its state in a Yjs document backed by an SVS provider so that channel lists and chat history are replicated to peers via NDN */
 export class WorkspaceAgentManager{
   /** List of all available agent cards */
   private readonly agentCards: Y.Array<IAgentCard>;
