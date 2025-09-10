@@ -42,79 +42,7 @@
         <p class="help">Base URL where the NDN agent is hosted (without trailing slash)</p>
       </div>
     </div>
-<!--
-    <div class="field">
-      <label class="label">Provider Organization</label>
-      <div class="control">
-        <input
-          class="input"
-          type="text"
-          placeholder="e.g. Acme Corp"
-          v-model="form.providerOrganization"
-        />
-        <p class="help">Optional: Organization that owns this agent</p>
-      </div>
-    </div>
 
-    <div class="field">
-      <label class="label">Provider URL</label>
-      <div class="control">
-        <input
-          class="input"
-          type="url"
-          placeholder="https://acme.com"
-          v-model="form.providerUrl"
-        />
-        <p class="help">Optional: Website for the organization</p>
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="label">A2A Protocol Version</label>
-      <div class="control">
-        <input
-          class="input"
-          type="text"
-          placeholder="1.0"
-          v-model="form.version"
-        />
-        <p class="help">Optional: A2A protocol version implemented by the agent</p>
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="label">Custom Fields</label>
-      <div class="control">
-        <div v-for="(field, index) in customFields" :key="index" class="field is-grouped mb-2">
-          <div class="control is-expanded">
-            <input
-              class="input"
-              type="text"
-              placeholder="Key"
-              v-model="field.key"
-            />
-          </div>
-          <div class="control is-expanded">
-            <input
-              class="input"
-              type="text"
-              placeholder="Value"
-              v-model="field.value"
-            />
-          </div>
-          <div class="control">
-            <button class="button is-danger" @click="removeCustomField(index)">
-              <FontAwesomeIcon :icon="faTrash" />
-            </button>
-          </div>
-        </div>
-        <button class="button is-small" @click="addCustomField">
-          <FontAwesomeIcon :icon="faPlus" class="mr-1" />
-          Add Field
-        </button>
-        <p class="help">Optional: Additional custom properties for the agent card</p>
-      </div>
-    </div> -->
 
     <div class="field has-text-right">
       <div class="control">
