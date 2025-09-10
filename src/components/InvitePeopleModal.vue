@@ -133,6 +133,7 @@
     <p v-if="members.length > 0" class="mt-4">
       <code>{{ members.join('\n') }}</code>
     </p>
+
   </ModalComponent>
 </template>
 
@@ -420,6 +421,7 @@ async function send() {
   Toast.success(`Invited ${pendingInvitees.value.length} users to workspace!`);
   emit('close');
 }
+
 </script>
 
 <style scoped lang="scss">

@@ -42,11 +42,17 @@
 
                 <div class="message">
                   <div class="header" v-if="!skipHeader(item, index)">
-                    <span class="name">{{ item.user }}</span>
+                    <span class="name" :class="{ 'is-agent': isAgentMessage(item) }">
+                      {{ item.user }}
+                      <span v-if="isAgentMessage(item)" class="tag is-small is-info ml-1">AI</span>
+                    </span>
                     <span class="time">{{ formatTime(item) }}</span>
                   </div>
 
-                  <div class="content" v-html="marked(item.message)"></div>
+                  <div class="content"
+                       :class="{ 'agent-message': isAgentMessage(item) }"
+                       v-html="marked(item.message)">
+                  </div>
                 </div>
               </div>
             </div>
@@ -130,8 +136,6 @@ const unreadCount = ref(0);
 
 onMounted(async () => {
   await setup();
-
-  // Subscribe to chat messages
   wksp.value?.chat.events.addListener('chat', onChatMessage);
 });
 
@@ -145,6 +149,8 @@ watch(channelName, setup);
 /** Set up the workspace and chat */
 async function setup() {
   try {
+    // Reset to loading state when switching channels
+    items.value = null;
     // Set up the workspace
     wksp.value = await Workspace.setupOrRedir(router);
     if (!wksp.value) return;
@@ -152,8 +158,7 @@ async function setup() {
     // Update tab name
     document.title = utils.formTabName(wksp.value.metadata.label);
 
-    // Load the chat messages
-    items.value = null;
+    // Load regular chat channel messages (agents now participate in regular channels)
     items.value = await wksp.value.chat.getMessages(channelName.value);
   } catch (e) {
     console.error(e);
@@ -167,10 +172,22 @@ async function setup() {
   globalThis.setTimeout(() => scroller.value?.scrollToBottom(), 500); // uhh
 }
 
+/** Check if a message is from an agent */
+function isAgentMessage(item: IChatMessage): boolean {
+  if (!wksp.value || !item) return false;
+  // Check if the user name matches any agents in this channel (make sure it's not null)
+  if (wksp.value.agent) {
+    const agents = wksp.value.agent.getAgentsInChannel(channelName.value) || [];
+    return agents.some(agent => agent.name === item.user);
+  }
+  return false;
+}
+
 /** Skip the header if the user is the same and the message is within a minute */
 function skipHeader(item: IChatMessage, index: number) {
-  if (index === 0) return false;
-  const prev = items.value![index - 1];
+  if (index === 0 || !item || !items.value) return false;
+  const prev = items.value[index - 1];
+  if (!prev) return false;
   return prev.user === item.user && item.ts - prev.ts < 1000 * 60;
 }
 
@@ -186,7 +203,9 @@ function formatTime(item: IChatMessage) {
     hour: 'numeric',
     minute: 'numeric',
   });
-  return (item.tsStr = formatter.format(new Date(item.ts)));
+  const formatted = formatter.format(new Date(item.ts));
+  item.tsStr = formatted;
+  return formatted;
 }
 
 /** Send a message to the workspace */
@@ -197,7 +216,7 @@ async function send(event: Event) {
   }
   if (!outMessage.value.trim()) return;
 
-  // Send the message to the workspace
+  // Send message to regular chat channel (agents participate in same channels)
   const message = {
     uuid: String(), // auto
     user: wksp.value!.username,
@@ -206,7 +225,7 @@ async function send(event: Event) {
   };
   await wksp.value?.chat.sendMessage(channelName.value, message);
 
-  // Add the message to the chat and reset
+  // Reset the input
   outMessage.value = String();
   chatbox.value?.focus();
 }
@@ -216,8 +235,6 @@ function onChatMessage(channel: string, message: IChatMessage) {
   if (channel !== channelName.value) return; // not for us
 
   // Add the message to the chat
-  // This is done for both sender and receiver messages, so our
-  // send() function does not actually update the UI
   items.value!.push(message);
 
   // Scroll to the bottom of the chat if the user is within 200px of the bottom
@@ -228,6 +245,7 @@ function onChatMessage(channel: string, message: IChatMessage) {
     unreadCount.value++;
   }
 }
+
 </script>
 
 <style scoped lang="scss">
@@ -314,6 +332,28 @@ function onChatMessage(channel: string, message: IChatMessage) {
 
       .content {
         white-space: normal;
+
+        &.agent-message {
+          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+          border-left: 3px solid #3273dc;
+          padding: 0.75rem;
+          border-radius: 6px;
+          margin-top: 0.25rem;
+
+          :deep(p) {
+            margin-bottom: 0.5rem;
+            &:last-child {
+              margin-bottom: 0;
+            }
+          }
+        }
+      }
+
+      .name {
+        &.is-agent {
+          color: #3273dc;
+          font-weight: 600;
+        }
       }
     }
   }
