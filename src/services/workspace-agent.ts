@@ -51,7 +51,7 @@ export class WorkspaceAgentManager{
     //broadcast the current state of channels when the WorkspaceAgent is first created, ensuring the UI starts with the correct channel list.
     emitChannels();
 
-    //Observe deep changes to teh message map and notify local listeners.
+    //Observe deep changes to the message map and notify local listeners.
     this.history.observeDeep((events)=> {
       if (this.events.listenerCount(('chat'))=== 0) return;
       for (const ev of events){
