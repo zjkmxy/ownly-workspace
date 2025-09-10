@@ -120,7 +120,7 @@ export interface IAgentMessage{
 
 
 /**
- * A chat channel bound ot a specific agent. Each agent channel keeps track of the agent card so calls can be routed correctly.
+ * A chat channel bound to a specific agent. Each agent channel keeps track of the agent card so calls can be routed correctly.
  */
 export interface IAgentChannel {
   /** Unique identifier for the channel */
