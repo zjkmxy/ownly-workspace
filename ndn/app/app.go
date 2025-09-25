@@ -146,6 +146,17 @@ func (a *App) JsApi() js.Value {
 			})
 		}),
 
+		// ndncert_dns(domain: string, confirm: (recordName: string, recordValue: string, status: string) => Promise<string>): Promise<void>;
+		"ndncert_dns": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
+			return nil, a.NdncertDns(p[0].String(), func(recordName, expectedValue, status string) string {
+				confirmation, err := jsutil.Await(p[1].Invoke(recordName, expectedValue, status))
+				if err != nil {
+					return ""
+				}
+				return confirmation.String()
+			})
+		}),
+
 		// join_workspace(wksp: string, create: boolean): Promise<string>;
 		"join_workspace": jsutil.AsyncFunc(func(this js.Value, p []js.Value) (any, error) {
 			return a.JoinWorkspace(p[0].String(), p[1].Bool())

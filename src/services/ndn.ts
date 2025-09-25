@@ -35,6 +35,11 @@ interface NDNAPI {
 
   /** NDNCERT email verfication challenge */
   ndncert_email(email: string, code: (status: string) => Promise<string>): Promise<void>;
+  /** NDNCERT dns verification challenge */
+  ndncert_dns(
+    domain: string,
+    confirm: (recordName: string, recordValue: string, status: string) => Promise<string>,
+  ): Promise<void>;
 
   /** Join Workspace (generate keys etc.) */
   join_workspace(wksp: string, create: boolean): Promise<string>;
