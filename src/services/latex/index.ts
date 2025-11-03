@@ -5,6 +5,7 @@ import type { WorkspaceProj } from '../workspace-proj';
 
 let activeProject: string | null = null;
 let activeEngine: PdfTeXEngine | null = null;
+let texlive_endpoint = 'https://texlive.emaily.re/';
 
 export async function compile(project: WorkspaceProj): Promise<Uint8Array> {
   let progress: typeof Toast.Handle | undefined;
@@ -27,6 +28,7 @@ export async function compile(project: WorkspaceProj): Promise<Uint8Array> {
       activeEngine?.closeWorker();
       activeEngine = new PdfTeXEngine();
       await activeEngine.loadEngine();
+      activeEngine.setTexliveEndpoint(texlive_endpoint);
       activeProject = project.uuid;
     }
 
