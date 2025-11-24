@@ -43,7 +43,8 @@
 #dsk: #owner/wksp/"root"/"32=DSK"/_ <= #user_cert
 
 // TODO: Repo commands
-#repo_cmd: /"ndnd"/"ucla"/"repo"/_ <= #user_cert
+#user_testbed_cert: #user/#KEY <= #testbed_site_cert | #testbed_root_cert
+#repo_cmd: /"ndnd"/"ucla"/"repo"/_ <= #user_testbed_cert
 
 // Standard NDN conventions
 #KEY: "KEY"/_/_/_
