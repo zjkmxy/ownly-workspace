@@ -44,7 +44,7 @@
 
 // TODO: Repo commands
 #user_testbed_cert: #user/#KEY <= #testbed_site_cert | #testbed_root_cert
-#repo_cmd: /"ndnd"/"ucla"/"repo"/_ <= #user_testbed_cert
+#repo_cmd: #proj/#user/_/"32=repo-cmd" <= #user_testbed_cert
 
 // Standard NDN conventions
 #KEY: "KEY"/_/_/_
