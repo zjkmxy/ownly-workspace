@@ -137,42 +137,10 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 		log.Info(a, "Joining workspace in own namespace", "name", wkspStr)
 	}
 
-	// Generate key and certificate for this workspace
-	appIdName := wkspName.Append(idName...)
-	appIdKeyName := security.MakeKeyName(appIdName)
-	appIdSigner, err := sig.KeygenEcc(appIdKeyName, elliptic.P256())
+	err = a.signWorkspaceCert(wkspName, idName, idSigner, invitation)
 	if err != nil {
-		return
+		log.Error(a, "Failed to resign workspace certificate")
 	}
-
-	// Get key secret to sign certificate
-	appIdSecret, err := sig.MarshalSecretToData(appIdSigner)
-	if err != nil {
-		return
-	}
-
-	// Create certificate for this workspace
-	// TODO: limit validity to same as invite validity
-	appIdCert, err := security.SignCert(security.SignCertArgs{
-		Data:        appIdSecret,
-		Signer:      idSigner,
-		IssuerId:    enc.NewGenericComponent("self"),
-		NotBefore:   time.Now().Add(-time.Hour),
-		NotAfter:    time.Now().AddDate(10, 0, 0), // for now
-		CrossSchema: invitation,
-	})
-	if err != nil {
-		return
-	}
-
-	// Insert key and certificate into keychain
-	if err = a.keychain.InsertKey(appIdSigner); err != nil {
-		return
-	}
-	if err = a.keychain.InsertCert(appIdCert.Join()); err != nil {
-		return
-	}
-
 	return
 }
 
@@ -268,6 +236,17 @@ func (a *App) GetWorkspace(groupStr string, ignoreValidity bool) (api js.Value, 
 		return
 	} else {
 		log.Info(a, "Found valid user key", "name", userKey.KeyName())
+	}
+
+	// If [idKey ==> userKey] does not exist, resign
+	certWire, _ := a.keychain.Store().Get(userKey.KeyName(), false)
+	if certWire != nil {
+		certData, _, err := spec.Spec{}.ReadData(enc.NewWireView(enc.Wire{certWire}))
+		if err == nil && !idKey.KeyName().IsPrefix(certData.Signature().KeyName()) {
+			if err := a.signWorkspaceCert(group, idName, idKey, nil); err != nil {
+				log.Warn(a, "Failed to resign workspace cert", "err", err)
+			}
+		}
 	}
 
 	// Create client object for this workspace
@@ -485,6 +464,50 @@ func (a *App) GetWorkspace(groupStr string, ignoreValidity bool) (api js.Value, 
 	}
 
 	return js.ValueOf(workspaceJs), nil
+}
+
+func (a *App) signWorkspaceCert(
+	wkspName enc.Name,
+	idName enc.Name,
+	idSigner ndn.Signer,
+	invitation enc.Wire,
+) error {
+	// Generate key and certificate for this workspace
+	appIdName := wkspName.Append(idName...)
+	appIdKeyName := security.MakeKeyName(appIdName)
+	appIdSigner, err := sig.KeygenEcc(appIdKeyName, elliptic.P256())
+	if err != nil {
+		return err
+	}
+
+	// Get key secret to sign certificate
+	appIdSecret, err := sig.MarshalSecretToData(appIdSigner)
+	if err != nil {
+		return err
+	}
+
+	// Create certificate for this workspace
+	// TODO: limit validity to same as invite validity
+	appIdCert, err := security.SignCert(security.SignCertArgs{
+		Data:        appIdSecret,
+		Signer:      idSigner,
+		IssuerId:    enc.NewGenericComponent("self"),
+		NotBefore:   time.Now().Add(-time.Hour),
+		NotAfter:    time.Now().AddDate(10, 0, 0), // for now
+		CrossSchema: invitation,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Insert key and certificate into keychain
+	if err = a.keychain.InsertKey(appIdSigner); err != nil {
+		return err
+	}
+	if err = a.keychain.InsertCert(appIdCert.Join()); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (a *App) SvsAloJs(
