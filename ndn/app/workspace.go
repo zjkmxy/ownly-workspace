@@ -139,7 +139,7 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 
 	err = a.signWorkspaceCert(wkspName, idName, idSigner, invitation)
 	if err != nil {
-		log.Error(a, "Failed to resign workspace certificate")
+		log.Error(a, "Failed to sign workspace certificate")
 	}
 	return
 }
@@ -239,14 +239,16 @@ func (a *App) GetWorkspace(groupStr string, ignoreValidity bool) (api js.Value, 
 	}
 
 	// If [idKey ==> userKey] does not exist, resign
-	certWire, _ := a.keychain.Store().Get(userKey.KeyName(), false)
+	certWire, _ := a.keychain.Store().Get(userKey.KeyName(), true)
 	if certWire != nil {
 		certData, _, err := spec.Spec{}.ReadData(enc.NewWireView(enc.Wire{certWire}))
 		if err == nil && !idKey.KeyName().IsPrefix(certData.Signature().KeyName()) {
 			if err := a.signWorkspaceCert(group, idName, idKey, nil); err != nil {
-				log.Warn(a, "Failed to resign workspace cert", "err", err)
+				log.Error(a, "Failed to resign workspace cert", "err", err)
 			}
 		}
+	} else {
+		log.Error(a, "No workspace cert to resign")
 	}
 
 	// Create client object for this workspace
