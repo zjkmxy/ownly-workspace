@@ -137,7 +137,7 @@ func (a *App) JoinWorkspace(wkspStr_ string, create bool) (wkspStr string, err e
 		log.Info(a, "Joining workspace in own namespace", "name", wkspStr)
 	}
 
-	err = a.signWorkspaceCert(wkspName, idName, idSigner, invitation)
+	err = a.SignWorkspaceCert(wkspName, idName, idSigner, invitation)
 	if err != nil {
 		log.Error(a, "Failed to sign workspace certificate")
 	}
@@ -243,7 +243,7 @@ func (a *App) GetWorkspace(groupStr string, ignoreValidity bool) (api js.Value, 
 	if certWire != nil {
 		certData, _, err := spec.Spec{}.ReadData(enc.NewWireView(enc.Wire{certWire}))
 		if err == nil && !idKey.KeyName().IsPrefix(certData.Signature().KeyName()) {
-			if err := a.signWorkspaceCert(group, idName, idKey, nil); err != nil {
+			if err := a.SignWorkspaceCert(group, idName, idKey, nil); err != nil {
 				log.Error(a, "Failed to resign workspace cert", "err", err)
 			}
 		}
@@ -468,7 +468,7 @@ func (a *App) GetWorkspace(groupStr string, ignoreValidity bool) (api js.Value, 
 	return js.ValueOf(workspaceJs), nil
 }
 
-func (a *App) signWorkspaceCert(
+func (a *App) SignWorkspaceCert(
 	wkspName enc.Name,
 	idName enc.Name,
 	idSigner ndn.Signer,
