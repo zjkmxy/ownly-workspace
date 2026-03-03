@@ -19,6 +19,7 @@ import milkdownFrameDark from '@milkdown/crepe/theme/frame-dark.css?url';
 import { Workspace } from '@/services/workspace';
 import * as opfs from '@/services/opfs';
 import * as utils from '@/utils';
+import { useThemeWatch } from '@/utils';
 import type { WorkspaceProj } from '@/services/workspace-proj';
 import * as pathjs from 'path-browserify';
 
@@ -45,8 +46,7 @@ let collabService: CollabService | null = null;
 let opfsPath: string | null = null;
 let proj: WorkspaceProj | null = null;
 const objectURLs: Map<string, string> = new Map();
-let themeObserver: MutationObserver | null = null;
-const preferredDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
+let unwatchTheme: (() => void) | null = null;
 const MILKDOWN_THEME_LINK_ID = 'ownly-milkdown-theme';
 
 watch(
@@ -60,7 +60,8 @@ onMounted(async () => {
   await create();
 });
 onBeforeUnmount(() => {
-  unwatchThemeChanges();
+  unwatchTheme?.();
+  unwatchTheme = null;
   void destroy();
 });
 
@@ -132,7 +133,7 @@ async function create() {
   });
 
   applyThemeToEditor();
-  watchThemeChanges();
+  unwatchTheme = useThemeWatch(applyThemeToEditor);
 }
 
 async function destroy() {
@@ -140,6 +141,9 @@ async function destroy() {
   await crepe?.destroy();
   crepe = null;
   collabService = null;
+
+  // Remove the injected <link> so it doesn't leak when the editor is closed
+  document.getElementById(MILKDOWN_THEME_LINK_ID)?.remove();
 
   for (const url of objectURLs.values()) {
     URL.revokeObjectURL(url);
@@ -158,28 +162,12 @@ function applyThemeToEditor() {
     document.head.appendChild(link);
   }
 
-  if (link.href !== href) {
+  if (link.getAttribute('href') !== href) {
     link.href = href;
   }
 }
 
-function watchThemeChanges() {
-  preferredDark?.addEventListener('change', applyThemeToEditor);
 
-  themeObserver = new MutationObserver(() => {
-    applyThemeToEditor();
-  });
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-theme'],
-  });
-}
-
-function unwatchThemeChanges() {
-  preferredDark?.removeEventListener('change', applyThemeToEditor);
-  themeObserver?.disconnect();
-  themeObserver = null;
-}
 </script>
 
 <style scoped lang="scss">

@@ -312,6 +312,9 @@ function onThemeMediaChange(event: MediaQueryListEvent) {
 function toggleTheme() {
   const nextTheme = effectiveTheme.value === 'dark' ? 'light' : 'dark';
 
+  // Remove any existing curtain to prevent orphaned overlays on rapid clicks
+  document.querySelector('.theme-curtain')?.remove();
+
   // Solid curtain colored to match the DESTINATION theme so the
   // reveal is seamless.  Fade in fast → hold while repaint → fade out slow.
   const curtain = document.createElement('div');
@@ -343,8 +346,6 @@ function toggleTheme() {
 }
 
 function startSidebarResize(event: PointerEvent) {
-  if (!canResizeSidebar.value) return;
-
   sidebarLeft.value = navRoot.value?.getBoundingClientRect().left ?? 0;
   isResizing.value = true;
   document.body.style.userSelect = 'none';

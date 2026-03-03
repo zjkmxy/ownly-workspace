@@ -14,6 +14,7 @@ import { MonacoBinding } from 'y-monaco';
 import type { Awareness } from 'y-protocols/awareness.js';
 
 import * as utils from '@/utils';
+import { useThemeWatch } from '@/utils';
 import { monacoRegister } from '@/utils/monaco';
 
 self.MonacoEnvironment = {
@@ -42,8 +43,7 @@ const outer = useTemplateRef('outer');
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 let ybinding: MonacoBinding | null = null;
-let themeObserver: MutationObserver | null = null;
-const preferredDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
+let unwatchTheme: (() => void) | null = null;
 
 watch(
   () => props.ytext,
@@ -91,7 +91,7 @@ function create() {
   });
 
   applyEditorTheme();
-  watchThemeChanges();
+  unwatchTheme = useThemeWatch(applyEditorTheme);
 
   ybinding = new MonacoBinding(
     props.ytext,
@@ -102,7 +102,8 @@ function create() {
 }
 
 function destroy() {
-  unwatchThemeChanges();
+  unwatchTheme?.();
+  unwatchTheme = null;
   ybinding?.destroy();
   editor?.getModel()?.dispose();
   editor?.dispose();
@@ -110,24 +111,6 @@ function destroy() {
 
 function applyEditorTheme() {
   monaco.editor.setTheme(utils.themeIsDark() ? 'vs-dark' : 'vs');
-}
-
-function watchThemeChanges() {
-  preferredDark?.addEventListener('change', applyEditorTheme);
-
-  themeObserver = new MutationObserver(() => {
-    applyEditorTheme();
-  });
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-theme'],
-  });
-}
-
-function unwatchThemeChanges() {
-  preferredDark?.removeEventListener('change', applyEditorTheme);
-  themeObserver?.disconnect();
-  themeObserver = null;
 }
 </script>
 
