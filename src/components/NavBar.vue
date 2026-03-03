@@ -9,15 +9,18 @@
         <router-link to="/" v-slot="{ navigate }">
           <img alt="logo" class="logo" src="@/assets/logo-white.svg" @click="navigate" />
         </router-link>
-        <button
-          type="button"
-          class="theme-toggle"
+        <label
+          class="theme-switch"
           :aria-label="`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`"
           :title="`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`"
-          @click.stop.prevent="toggleTheme"
         >
-          <FontAwesomeIcon :icon="effectiveTheme === 'dark' ? faSun : faMoon" size="sm" />
-        </button>
+          <input type="checkbox" :checked="effectiveTheme === 'dark'" @change="toggleTheme" />
+          <span class="track">
+            <FontAwesomeIcon class="track-icon sun" :icon="faSun" />
+            <FontAwesomeIcon class="track-icon moon" :icon="faMoon" />
+            <span class="knob" />
+          </span>
+        </label>
       </div>
 
       <!-- non-workspace general routes -->
@@ -267,10 +270,12 @@ const sidebarStyle = computed(() => ({
   flex: `0 0 ${sidebarWidth.value}px`,
 }));
 
+const THEME_KEY = 'ownly.theme';
 const preferredDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
 const systemTheme = ref<'dark' | 'light'>(preferredDark?.matches ? 'dark' : 'light');
 const userTheme = ref<'dark' | 'light' | null>(
-  document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null,
+  (globalThis.localStorage?.getItem(THEME_KEY) as 'dark' | 'light' | null) ??
+  (document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null),
 );
 const effectiveTheme = computed<'dark' | 'light'>(() => userTheme.value ?? systemTheme.value);
 
@@ -326,6 +331,11 @@ function toggleTheme() {
   curtain.getBoundingClientRect();
   curtain.classList.add('visible');
 
+  // Safety net: if CSS transitions are disabled (prefers-reduced-motion, devtools, etc.)
+  // the transitionend event never fires, so force-remove after a generous timeout.
+  const CURTAIN_TIMEOUT = 800;
+  const fallback = setTimeout(() => curtain.remove(), CURTAIN_TIMEOUT);
+
   curtain.addEventListener('transitionend', function onIn(e) {
     // Only react to the opacity fade-in completing
     if (e.propertyName !== 'opacity') return;
@@ -334,13 +344,17 @@ function toggleTheme() {
     // Switch theme behind the opaque curtain
     document.documentElement.setAttribute('data-theme', nextTheme);
     userTheme.value = nextTheme;
+    globalThis.localStorage?.setItem(THEME_KEY, nextTheme);
 
     // Hold the curtain for a beat so the browser can fully repaint,
     // then fade out slowly.
     setTimeout(() => {
       curtain.classList.add('out');
       curtain.classList.remove('visible');
-      curtain.addEventListener('transitionend', () => curtain.remove(), { once: true });
+      curtain.addEventListener('transitionend', () => {
+        clearTimeout(fallback);
+        curtain.remove();
+      }, { once: true });
     }, 120);
   });
 }
@@ -477,20 +491,65 @@ function setNotification() {
     margin: 0 5px 15px;
   }
 
-  .theme-toggle {
-    width: 30px;
-    height: 30px;
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.1);
+  .theme-switch {
+    position: relative;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     cursor: pointer;
 
-    &:hover {
-      background: rgba(255, 255, 255, 0.2);
+    input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .track {
+      position: relative;
+      width: 40px;
+      height: 20px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      transition: background 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 5px;
+      box-sizing: border-box;
+    }
+
+    .track-icon {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.35);
+      transition: color 0.25s ease;
+      z-index: 1;
+    }
+
+    .knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+      transition: left 0.25s ease, background 0.25s ease;
+    }
+
+    input:checked ~ .track .knob {
+      left: 22px;
+    }
+
+    &:hover .track {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    &:hover .track-icon {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    &:hover .knob {
+      background: rgba(255, 255, 255, 0.8);
     }
   }
 
@@ -511,8 +570,21 @@ function setNotification() {
 
     &.is-active,
     &.router-link-active {
-      background-color: var(--highlight-on-primary-color);
-      color: var(--bulma-white-on-scheme);
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        border-radius: 6px 0 0 6px;
+        background: var(--sidebar-highlight-bg);
+        pointer-events: none;
+      }
     }
     .link-inner {
       flex: 1;
@@ -557,6 +629,11 @@ function setNotification() {
     border-radius: 6px;
     border: 0;
     background-color: transparent;
+
+    &.router-link-active,
+    &.is-active {
+      background: rgba(255, 255, 255, 0.08);
+    }
   }
 
   :deep(.project-item > a.project-link:hover) {

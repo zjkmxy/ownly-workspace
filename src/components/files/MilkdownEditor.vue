@@ -166,8 +166,6 @@ function applyThemeToEditor() {
     link.href = href;
   }
 }
-
-
 </script>
 
 <style scoped lang="scss">
