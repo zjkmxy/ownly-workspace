@@ -5,9 +5,20 @@
     :style="sidebarStyle"
   >
     <div class="top-sheet">
-      <router-link to="/" v-slot="{ navigate }">
-        <img alt="logo" class="logo" src="@/assets/logo-white.svg" @click="navigate" />
-      </router-link>
+      <div class="logo-row">
+        <router-link to="/" v-slot="{ navigate }">
+          <img alt="logo" class="logo" src="@/assets/logo-white.svg" @click="navigate" />
+        </router-link>
+        <button
+          type="button"
+          class="theme-toggle"
+          :aria-label="`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`"
+          :title="`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`"
+          @click.stop.prevent="toggleTheme"
+        >
+          <FontAwesomeIcon :icon="effectiveTheme === 'dark' ? faSun : faMoon" size="sm" />
+        </button>
+      </div>
 
       <!-- non-workspace general routes -->
       <template v-if="routeIsDashboard">
@@ -144,7 +155,7 @@
       </div>
     </div>
 
-    <div class="sidebar-resizer" @pointerdown.prevent="startSidebarResize"></div>
+    <div v-if="canResizeSidebar" class="sidebar-resizer" @pointerdown.prevent="startSidebarResize"></div>
 
     <AddChannelModal :show="showChannelModal" @close="showChannelModal = false" />
     <AddProjectModal :show="showProjectModal" @close="showProjectModal = false" />
@@ -173,6 +184,8 @@ import {
   faCircleInfo,
   faRobot,
   faCircleExclamation,
+  faMoon,
+  faSun,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -199,6 +212,7 @@ const routeIsDashboard = computed(() =>
 const routeIsWorkspace = computed(() =>
   ['space-home', 'project', 'discuss', 'project-file'].includes(String(route.name)),
 );
+const canResizeSidebar = computed(() => routeIsWorkspace.value);
 
 const showChannelModal = ref(false);
 const showProjectModal = ref(false);
@@ -253,6 +267,13 @@ const sidebarStyle = computed(() => ({
   flex: `0 0 ${sidebarWidth.value}px`,
 }));
 
+const preferredDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
+const systemTheme = ref<'dark' | 'light'>(preferredDark?.matches ? 'dark' : 'light');
+const userTheme = ref<'dark' | 'light' | null>(
+  document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null,
+);
+const effectiveTheme = computed<'dark' | 'light'>(() => userTheme.value ?? systemTheme.value);
+
 let interval: ReturnType<typeof setInterval> ;
 
 onMounted(async () => {
@@ -268,7 +289,9 @@ onMounted(async () => {
   interval = setInterval(() => {
     setNotification();
   },
-  250)
+  250);
+
+  preferredDark?.addEventListener('change', onThemeMediaChange);
 });
 
 onUnmounted(() => {
@@ -279,9 +302,49 @@ onUnmounted(() => {
   GlobalBus.removeListener('chat-channels', busListeners['chat-channels']);
   GlobalBus.removeListener('conn-change', busListeners['conn-change']);
   clearInterval(interval);
+  preferredDark?.removeEventListener('change', onThemeMediaChange);
 });
 
+function onThemeMediaChange(event: MediaQueryListEvent) {
+  systemTheme.value = event.matches ? 'dark' : 'light';
+}
+
+function toggleTheme() {
+  const nextTheme = effectiveTheme.value === 'dark' ? 'light' : 'dark';
+
+  // Solid curtain colored to match the DESTINATION theme so the
+  // reveal is seamless.  Fade in fast → hold while repaint → fade out slow.
+  const curtain = document.createElement('div');
+  curtain.className = 'theme-curtain';
+  curtain.style.background = nextTheme === 'dark' ? '#111' : '#fff';
+  document.body.appendChild(curtain);
+
+  // Commit opacity:0, then trigger fade-in
+  curtain.getBoundingClientRect();
+  curtain.classList.add('visible');
+
+  curtain.addEventListener('transitionend', function onIn(e) {
+    // Only react to the opacity fade-in completing
+    if (e.propertyName !== 'opacity') return;
+    curtain.removeEventListener('transitionend', onIn);
+
+    // Switch theme behind the opaque curtain
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    userTheme.value = nextTheme;
+
+    // Hold the curtain for a beat so the browser can fully repaint,
+    // then fade out slowly.
+    setTimeout(() => {
+      curtain.classList.add('out');
+      curtain.classList.remove('visible');
+      curtain.addEventListener('transitionend', () => curtain.remove(), { once: true });
+    }, 120);
+  });
+}
+
 function startSidebarResize(event: PointerEvent) {
+  if (!canResizeSidebar.value) return;
+
   sidebarLeft.value = navRoot.value?.getBoundingClientRect().left ?? 0;
   isResizing.value = true;
   document.body.style.userSelect = 'none';
@@ -403,8 +466,31 @@ function setNotification() {
   .logo {
     display: block;
     height: 35px;
-    margin: 5px;
-    margin-bottom: 15px;
+    margin: 5px 0;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 5px 15px;
+  }
+
+  .theme-toggle {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
   }
 
   .menu-label {

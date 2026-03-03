@@ -525,6 +525,7 @@ async function executeRename(name: string) {
   position: relative;
 
   font-size: var(--tree-font-size);
+  color: white;
 
   > li {
     margin: 0;
@@ -588,7 +589,7 @@ async function executeRename(name: string) {
   box-sizing: border-box;
   margin: 0;
   padding-right: calc(var(--tree-action-size) + 8px);
-  color: var(--bulma-white-on-scheme);
+  color: inherit;
 
   position: relative;
 
@@ -640,7 +641,7 @@ async function executeRename(name: string) {
   margin-left: 3px;
   border: 0;
   background: transparent;
-  color: var(--bulma-white-on-scheme) !important;
+  color: inherit !important;
   opacity: 1;
   cursor: pointer;
   position: relative;
@@ -664,14 +665,14 @@ async function executeRename(name: string) {
 }
 
 .disclosure-icon {
-  color: var(--bulma-white-on-scheme) !important;
+  color: inherit !important;
   opacity: 1;
   font-size: 0.85rem;
 }
 
 .tree-disclosure :deep(svg) {
   display: block;
-  color: var(--bulma-white-on-scheme) !important;
+  color: inherit !important;
   opacity: 1;
 }
 

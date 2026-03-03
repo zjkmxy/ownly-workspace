@@ -15,6 +15,7 @@ html {
   --z-navbar: 500;
   --z-dropdown: 550;
   --z-modal: 800;
+  --theme-is-dark: 0;
 
   // This color is white on light mode and primary on dark mode
   --highlight-on-primary-color: var(--bulma-body-background-color);
@@ -45,5 +46,50 @@ html {
 
   .invert-if-dark {
     filter: invert(1);
+  }
+}
+
+@include cv.bulma-theme($name: 'dark') {
+  --theme-is-dark: 1;
+  --highlight-on-primary-color: var(--bulma-primary);
+
+  .has-background-primary.soft-if-dark,
+  .is-primary.soft-if-dark {
+    background-color: var(--bulma-primary-soft) !important;
+  }
+  .is-warning.soft-if-dark {
+    background-color: var(--bulma-warning-soft) !important;
+  }
+
+  * {
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  .invert-if-dark {
+    filter: invert(1);
+  }
+}
+
+@include cv.bulma-theme($name: 'light') {
+  --theme-is-dark: 0;
+  --highlight-on-primary-color: var(--bulma-body-background-color);
+}
+
+// Smooth curtain overlay for theme transitions
+.theme-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  // background is set inline per-toggle to match the destination theme
+  transition: opacity 0.22s ease-in;
+
+  &.visible {
+    opacity: 1;
+  }
+
+  &.out {
+    transition: opacity 0.35s ease-out;
   }
 }

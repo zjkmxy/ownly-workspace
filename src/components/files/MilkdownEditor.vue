@@ -13,6 +13,8 @@ import { editorViewCtx } from '@milkdown/core';
 import { Crepe } from '@milkdown/crepe';
 import { collab, CollabService, collabServiceCtx } from '@milkdown/plugin-collab';
 import '@milkdown/crepe/theme/common/style.css';
+import milkdownFrameLight from '@milkdown/crepe/theme/frame.css?url';
+import milkdownFrameDark from '@milkdown/crepe/theme/frame-dark.css?url';
 
 import { Workspace } from '@/services/workspace';
 import * as opfs from '@/services/opfs';
@@ -43,6 +45,9 @@ let collabService: CollabService | null = null;
 let opfsPath: string | null = null;
 let proj: WorkspaceProj | null = null;
 const objectURLs: Map<string, string> = new Map();
+let themeObserver: MutationObserver | null = null;
+const preferredDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
+const MILKDOWN_THEME_LINK_ID = 'ownly-milkdown-theme';
 
 watch(
   () => props.yxml,
@@ -51,8 +56,13 @@ watch(
     await create();
   },
 );
-onMounted(create);
-onBeforeUnmount(destroy);
+onMounted(async () => {
+  await create();
+});
+onBeforeUnmount(() => {
+  unwatchThemeChanges();
+  void destroy();
+});
 
 const onUpload = async (file: File): Promise<string> => {
   const parts = props.path.split('/').filter(Boolean);
@@ -79,12 +89,6 @@ const proxyDomURL = async (url: string): Promise<string> => {
 async function create() {
   proj = await Workspace.setupAndGetActiveProj(router);
   opfsPath = await proj.syncFs();
-
-  if (utils.themeIsDark()) {
-    await import('@milkdown/crepe/theme/frame-dark.css');
-  } else {
-    await import('@milkdown/crepe/theme/frame.css');
-  }
 
   crepe = new Crepe({
     root: outer.value!,
@@ -126,15 +130,55 @@ async function create() {
     view.dom.addEventListener('paste', () => handleLinkSpace());
     view.dom.addEventListener('keydown', (e) => e.key === ' ' && handleLinkSpace(e));
   });
+
+  applyThemeToEditor();
+  watchThemeChanges();
 }
 
 async function destroy() {
   collabService?.disconnect();
   await crepe?.destroy();
+  crepe = null;
+  collabService = null;
 
   for (const url of objectURLs.values()) {
     URL.revokeObjectURL(url);
   }
+  objectURLs.clear();
+}
+
+function applyThemeToEditor() {
+  const href = utils.themeIsDark() ? milkdownFrameDark : milkdownFrameLight;
+  let link = document.getElementById(MILKDOWN_THEME_LINK_ID) as HTMLLinkElement | null;
+
+  if (!link) {
+    link = document.createElement('link');
+    link.id = MILKDOWN_THEME_LINK_ID;
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+  }
+
+  if (link.href !== href) {
+    link.href = href;
+  }
+}
+
+function watchThemeChanges() {
+  preferredDark?.addEventListener('change', applyThemeToEditor);
+
+  themeObserver = new MutationObserver(() => {
+    applyThemeToEditor();
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+}
+
+function unwatchThemeChanges() {
+  preferredDark?.removeEventListener('change', applyThemeToEditor);
+  themeObserver?.disconnect();
+  themeObserver = null;
 }
 </script>
 

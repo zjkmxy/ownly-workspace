@@ -42,6 +42,8 @@ const outer = useTemplateRef('outer');
 
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 let ybinding: MonacoBinding | null = null;
+let themeObserver: MutationObserver | null = null;
+const preferredDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
 
 watch(
   () => props.ytext,
@@ -88,6 +90,9 @@ function create() {
     padding: { top: 20, bottom: 10 },
   });
 
+  applyEditorTheme();
+  watchThemeChanges();
+
   ybinding = new MonacoBinding(
     props.ytext,
     editor!.getModel()!,
@@ -97,9 +102,32 @@ function create() {
 }
 
 function destroy() {
+  unwatchThemeChanges();
   ybinding?.destroy();
   editor?.getModel()?.dispose();
   editor?.dispose();
+}
+
+function applyEditorTheme() {
+  monaco.editor.setTheme(utils.themeIsDark() ? 'vs-dark' : 'vs');
+}
+
+function watchThemeChanges() {
+  preferredDark?.addEventListener('change', applyEditorTheme);
+
+  themeObserver = new MutationObserver(() => {
+    applyEditorTheme();
+  });
+  themeObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+}
+
+function unwatchThemeChanges() {
+  preferredDark?.removeEventListener('change', applyEditorTheme);
+  themeObserver?.disconnect();
+  themeObserver = null;
 }
 </script>
 
