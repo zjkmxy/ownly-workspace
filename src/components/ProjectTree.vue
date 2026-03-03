@@ -514,7 +514,7 @@ async function executeRename(name: string) {
   --tree-guide: rgba(255, 255, 255, 0.12);
   --tree-hover: rgba(255, 255, 255, 0.06);
   --tree-active-bg: rgba(255, 255, 255, 0.08);
-  --tree-active-bar: var(--color-primary, var(--bulma-primary, #1583cb));
+  --tree-active-bar: var(--highlight-on-primary-color);
   --tree-connector-x: var(--tree-line-left-gap);
 
   list-style: none;
