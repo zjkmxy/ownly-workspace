@@ -137,6 +137,9 @@ async function create() {
 }
 
 async function destroy() {
+  unwatchTheme?.();
+  unwatchTheme = null;
+
   collabService?.disconnect();
   await crepe?.destroy();
   crepe = null;

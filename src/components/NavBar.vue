@@ -334,7 +334,15 @@ function toggleTheme() {
   // Safety net: if CSS transitions are disabled (prefers-reduced-motion, devtools, etc.)
   // the transitionend event never fires, so force-remove after a generous timeout.
   const CURTAIN_TIMEOUT = 800;
-  const fallback = setTimeout(() => curtain.remove(), CURTAIN_TIMEOUT);
+  const fallback = setTimeout(() => {
+    // Fallback path when no transition events fire: still apply the theme.
+    if (document.documentElement.getAttribute('data-theme') !== nextTheme) {
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      userTheme.value = nextTheme;
+      globalThis.localStorage?.setItem(THEME_KEY, nextTheme);
+    }
+    curtain.remove();
+  }, CURTAIN_TIMEOUT);
 
   curtain.addEventListener('transitionend', function onIn(e) {
     // Only react to the opacity fade-in completing
