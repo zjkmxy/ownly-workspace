@@ -48,9 +48,13 @@ html {
   }
 }
 
-/** Override background color to be darker on dark mode */
-@include cv.system-theme($name: 'dark') {
-  @include dark-theme-overrides;
+/** Override background color to be darker on dark mode.
+ *  Use html:not([data-theme]) so that when the user explicitly picks
+ *  light mode the OS-level dark preference doesn't bleed through. */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    @include dark-theme-overrides;
+  }
 }
 
 @include cv.bulma-theme($name: 'dark') {
