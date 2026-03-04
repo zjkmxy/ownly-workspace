@@ -314,54 +314,56 @@ function onThemeMediaChange(event: MediaQueryListEvent) {
   systemTheme.value = event.matches ? 'dark' : 'light';
 }
 
+function commitTheme(theme: string) {
+  document.documentElement.setAttribute('data-theme', theme);
+  userTheme.value = theme;
+  globalThis.localStorage?.setItem(THEME_KEY, theme);
+}
+
+let pendingToggle: { theme: string; curtain: HTMLElement; timer: ReturnType<typeof setTimeout> } | null = null;
+
+function cleanupToggle() {
+  if (!pendingToggle) return;
+  clearTimeout(pendingToggle.timer);
+  commitTheme(pendingToggle.theme);
+  pendingToggle.curtain.remove();
+  pendingToggle = null;
+}
+
 function toggleTheme() {
+  // If a transition is in-flight, finish it immediately so we start clean
+  cleanupToggle();
+
   const nextTheme = effectiveTheme.value === 'dark' ? 'light' : 'dark';
 
-  // Remove any existing curtain to prevent orphaned overlays on rapid clicks
-  document.querySelector('.theme-curtain')?.remove();
-
-  // Solid curtain colored to match the DESTINATION theme so the
-  // reveal is seamless.  Fade in fast → hold while repaint → fade out slow.
   const curtain = document.createElement('div');
   curtain.className = 'theme-curtain';
   curtain.style.background = nextTheme === 'dark' ? '#111' : '#fff';
   document.body.appendChild(curtain);
 
-  // Commit opacity:0, then trigger fade-in
+  // Force layout so the browser sees opacity:0 before we trigger fade-in
   curtain.getBoundingClientRect();
   curtain.classList.add('visible');
 
-  // Safety net: if CSS transitions are disabled (prefers-reduced-motion, devtools, etc.)
-  // the transitionend event never fires, so force-remove after a generous timeout.
-  const CURTAIN_TIMEOUT = 800;
-  const fallback = setTimeout(() => {
-    // Fallback path when no transition events fire: still apply the theme.
-    if (document.documentElement.getAttribute('data-theme') !== nextTheme) {
-      document.documentElement.setAttribute('data-theme', nextTheme);
-      userTheme.value = nextTheme;
-      globalThis.localStorage?.setItem(THEME_KEY, nextTheme);
-    }
-    curtain.remove();
-  }, CURTAIN_TIMEOUT);
+  const TIMEOUT = 800;
+  const timer = setTimeout(() => cleanupToggle(), TIMEOUT);
+  pendingToggle = { theme: nextTheme, curtain, timer };
 
-  curtain.addEventListener('transitionend', function onIn(e) {
-    // Only react to the opacity fade-in completing
+  curtain.addEventListener('transitionend', function onFadeIn(e) {
     if (e.propertyName !== 'opacity') return;
-    curtain.removeEventListener('transitionend', onIn);
+    curtain.removeEventListener('transitionend', onFadeIn);
 
-    // Switch theme behind the opaque curtain
-    document.documentElement.setAttribute('data-theme', nextTheme);
-    userTheme.value = nextTheme;
-    globalThis.localStorage?.setItem(THEME_KEY, nextTheme);
+    // Apply the theme behind the opaque curtain
+    commitTheme(nextTheme);
 
-    // Hold the curtain for a beat so the browser can fully repaint,
-    // then fade out slowly.
+    // Brief hold for repaint, then fade out
     setTimeout(() => {
       curtain.classList.add('out');
       curtain.classList.remove('visible');
       curtain.addEventListener('transitionend', () => {
-        clearTimeout(fallback);
+        clearTimeout(timer);
         curtain.remove();
+        if (pendingToggle?.curtain === curtain) pendingToggle = null;
       }, { once: true });
     }, 120);
   });
