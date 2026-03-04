@@ -831,15 +831,15 @@ watch(awareness, (newAwareness, oldAwareness) => {
       padding: 0;
       font-size: 12px;
       line-height: 1;
-      color: rgba(255, 255, 255, 0.85);
-      background: rgba(255, 255, 255, 0.12);
+      color: var(--bulma-text);
+      background: color-mix(in srgb, var(--bulma-text) 12%, transparent);
       cursor: pointer;
       z-index: 3;
       transition: background-color 0.12s ease;
 
       &:hover,
       &:focus-visible {
-        background: rgba(255, 255, 255, 0.24);
+        background: color-mix(in srgb, var(--bulma-text) 24%, transparent);
       }
     }
 
@@ -870,8 +870,10 @@ watch(awareness, (newAwareness, oldAwareness) => {
       width: 4px;
       height: 4px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.65);
-      box-shadow: 0 -6px 0 rgba(255, 255, 255, 0.65), 0 6px 0 rgba(255, 255, 255, 0.65);
+      background: color-mix(in srgb, var(--bulma-text) 55%, transparent);
+      box-shadow:
+        0 -6px 0 color-mix(in srgb, var(--bulma-text) 55%, transparent),
+        0  6px 0 color-mix(in srgb, var(--bulma-text) 55%, transparent);
       transition: background-color 0.12s ease, box-shadow 0.12s ease;
     }
 
