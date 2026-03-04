@@ -314,13 +314,13 @@ function onThemeMediaChange(event: MediaQueryListEvent) {
   systemTheme.value = event.matches ? 'dark' : 'light';
 }
 
-function commitTheme(theme: string) {
+function commitTheme(theme: 'dark' | 'light') {
   document.documentElement.setAttribute('data-theme', theme);
   userTheme.value = theme;
   globalThis.localStorage?.setItem(THEME_KEY, theme);
 }
 
-let pendingToggle: { theme: string; curtain: HTMLElement; timer: ReturnType<typeof setTimeout> } | null = null;
+let pendingToggle: { theme: 'dark' | 'light'; curtain: HTMLElement; timer: ReturnType<typeof setTimeout> } | null = null;
 
 function cleanupToggle() {
   if (!pendingToggle) return;
