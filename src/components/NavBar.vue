@@ -5,9 +5,23 @@
     :style="sidebarStyle"
   >
     <div class="top-sheet">
-      <router-link to="/" v-slot="{ navigate }">
-        <img alt="logo" class="logo" src="@/assets/logo-white.svg" @click="navigate" />
-      </router-link>
+      <div class="logo-row">
+        <router-link to="/" v-slot="{ navigate }">
+          <img alt="logo" class="logo" src="@/assets/logo-white.svg" @click="navigate" />
+        </router-link>
+        <label
+          class="theme-switch"
+          :aria-label="`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`"
+          :title="`Switch to ${effectiveTheme === 'dark' ? 'light' : 'dark'} mode`"
+        >
+          <input type="checkbox" :checked="effectiveTheme === 'dark'" @change="toggleTheme" />
+          <span class="track">
+            <FontAwesomeIcon class="track-icon sun" :icon="faSun" />
+            <FontAwesomeIcon class="track-icon moon" :icon="faMoon" />
+            <span class="knob" />
+          </span>
+        </label>
+      </div>
 
       <!-- non-workspace general routes -->
       <template v-if="routeIsDashboard">
@@ -144,7 +158,7 @@
       </div>
     </div>
 
-    <div class="sidebar-resizer" @pointerdown.prevent="startSidebarResize"></div>
+    <div v-if="canResizeSidebar" class="sidebar-resizer" @pointerdown.prevent="startSidebarResize"></div>
 
     <AddChannelModal :show="showChannelModal" @close="showChannelModal = false" />
     <AddProjectModal :show="showProjectModal" @close="showProjectModal = false" />
@@ -173,6 +187,8 @@ import {
   faCircleInfo,
   faRobot,
   faCircleExclamation,
+  faMoon,
+  faSun,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -199,6 +215,7 @@ const routeIsDashboard = computed(() =>
 const routeIsWorkspace = computed(() =>
   ['space-home', 'project', 'discuss', 'project-file'].includes(String(route.name)),
 );
+const canResizeSidebar = computed(() => routeIsWorkspace.value);
 
 const showChannelModal = ref(false);
 const showProjectModal = ref(false);
@@ -253,6 +270,15 @@ const sidebarStyle = computed(() => ({
   flex: `0 0 ${sidebarWidth.value}px`,
 }));
 
+const THEME_KEY = 'ownly.theme';
+const preferredDark = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
+const systemTheme = ref<'dark' | 'light'>(preferredDark?.matches ? 'dark' : 'light');
+const userTheme = ref<'dark' | 'light' | null>(
+  (globalThis.localStorage?.getItem(THEME_KEY) as 'dark' | 'light' | null) ??
+  (document.documentElement.getAttribute('data-theme') as 'dark' | 'light' | null),
+);
+const effectiveTheme = computed<'dark' | 'light'>(() => userTheme.value ?? systemTheme.value);
+
 let interval: ReturnType<typeof setInterval> ;
 
 onMounted(async () => {
@@ -268,7 +294,9 @@ onMounted(async () => {
   interval = setInterval(() => {
     setNotification();
   },
-  250)
+  250);
+
+  preferredDark?.addEventListener('change', onThemeMediaChange);
 });
 
 onUnmounted(() => {
@@ -279,7 +307,67 @@ onUnmounted(() => {
   GlobalBus.removeListener('chat-channels', busListeners['chat-channels']);
   GlobalBus.removeListener('conn-change', busListeners['conn-change']);
   clearInterval(interval);
+  preferredDark?.removeEventListener('change', onThemeMediaChange);
 });
+
+function onThemeMediaChange(event: MediaQueryListEvent) {
+  systemTheme.value = event.matches ? 'dark' : 'light';
+}
+
+function commitTheme(theme: 'dark' | 'light') {
+  document.documentElement.setAttribute('data-theme', theme);
+  userTheme.value = theme;
+  globalThis.localStorage?.setItem(THEME_KEY, theme);
+}
+
+let pendingToggle: { theme: 'dark' | 'light'; curtain: HTMLElement; timer: ReturnType<typeof setTimeout> } | null = null;
+
+function cleanupToggle() {
+  if (!pendingToggle) return;
+  clearTimeout(pendingToggle.timer);
+  commitTheme(pendingToggle.theme);
+  pendingToggle.curtain.remove();
+  pendingToggle = null;
+}
+
+function toggleTheme() {
+  // If a transition is in-flight, finish it immediately so we start clean
+  cleanupToggle();
+
+  const nextTheme = effectiveTheme.value === 'dark' ? 'light' : 'dark';
+
+  const curtain = document.createElement('div');
+  curtain.className = 'theme-curtain';
+  curtain.style.background = nextTheme === 'dark' ? '#111' : '#fff';
+  document.body.appendChild(curtain);
+
+  // Force layout so the browser sees opacity:0 before we trigger fade-in
+  curtain.getBoundingClientRect();
+  curtain.classList.add('visible');
+
+  const TIMEOUT = 800;
+  const timer = setTimeout(() => cleanupToggle(), TIMEOUT);
+  pendingToggle = { theme: nextTheme, curtain, timer };
+
+  curtain.addEventListener('transitionend', function onFadeIn(e) {
+    if (e.propertyName !== 'opacity') return;
+    curtain.removeEventListener('transitionend', onFadeIn);
+
+    // Apply the theme behind the opaque curtain
+    commitTheme(nextTheme);
+
+    // Brief hold for repaint, then fade out
+    setTimeout(() => {
+      curtain.classList.add('out');
+      curtain.classList.remove('visible');
+      curtain.addEventListener('transitionend', () => {
+        clearTimeout(timer);
+        curtain.remove();
+        if (pendingToggle?.curtain === curtain) pendingToggle = null;
+      }, { once: true });
+    }, 120);
+  });
+}
 
 function startSidebarResize(event: PointerEvent) {
   sidebarLeft.value = navRoot.value?.getBoundingClientRect().left ?? 0;
@@ -403,8 +491,76 @@ function setNotification() {
   .logo {
     display: block;
     height: 35px;
-    margin: 5px;
-    margin-bottom: 15px;
+    margin: 5px 0;
+  }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 5px 15px;
+  }
+
+  .theme-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+
+    input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .track {
+      position: relative;
+      width: 40px;
+      height: 20px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      transition: background 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 5px;
+      box-sizing: border-box;
+    }
+
+    .track-icon {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.35);
+      transition: color 0.25s ease;
+      z-index: 1;
+    }
+
+    .knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+      transition: left 0.25s ease, background 0.25s ease;
+    }
+
+    input:checked ~ .track .knob {
+      left: 22px;
+    }
+
+    &:hover .track {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    &:hover .track-icon {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    &:hover .knob {
+      background: rgba(255, 255, 255, 0.8);
+    }
   }
 
   .menu-label {
@@ -424,8 +580,21 @@ function setNotification() {
 
     &.is-active,
     &.router-link-active {
-      background-color: var(--highlight-on-primary-color);
-      color: var(--bulma-white-on-scheme);
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        border-radius: 6px 0 0 6px;
+        background: var(--sidebar-highlight-bg);
+        pointer-events: none;
+      }
     }
     .link-inner {
       flex: 1;
@@ -470,6 +639,11 @@ function setNotification() {
     border-radius: 6px;
     border: 0;
     background-color: transparent;
+
+    &.router-link-active,
+    &.is-active {
+      background: rgba(255, 255, 255, 0.08);
+    }
   }
 
   :deep(.project-item > a.project-link:hover) {
